@@ -1,7 +1,7 @@
 import pytest
 
 from agent.errors import MoAPresetNotFoundError
-from hermes_cli.moa_config import (
+from jimmy_cli.moa_config import (
     DEFAULT_MOA_AGGREGATOR,
     DEFAULT_MOA_PRESET_NAME,
     DEFAULT_MOA_REFERENCE_MODELS,
@@ -15,7 +15,7 @@ from hermes_cli.moa_config import (
 
 
 def test_moa_slot_picker_excludes_unconfigured_providers(monkeypatch):
-    from hermes_cli import moa_cmd
+    from jimmy_cli import moa_cmd
 
     captured = {}
     monkeypatch.setattr(moa_cmd, "load_picker_context", lambda: object())
@@ -89,7 +89,7 @@ def test_resolve_missing_moa_preset_has_actionable_error():
     assert "日常对话-高峰期" in message
     assert "日常对话-高峰" in message
     assert "日常对话-非高峰" in message
-    assert "hermes moa list" in message
+    assert "jimmy moa list" in message
 
 
 def test_missing_moa_preset_is_non_retryable():
@@ -146,7 +146,7 @@ def test_validate_moa_payload_agrees_with_clean_slot():
     """Contract: a payload validate accepts must survive normalize UNCHANGED in
     its slots — validate and _clean_slot can never disagree (else a payload
     could pass validation and still be swapped for defaults)."""
-    from hermes_cli.moa_config import validate_moa_payload
+    from jimmy_cli.moa_config import validate_moa_payload
 
     payload = {"presets": {"p": _valid_preset_payload()}}
     assert validate_moa_payload(payload) == []

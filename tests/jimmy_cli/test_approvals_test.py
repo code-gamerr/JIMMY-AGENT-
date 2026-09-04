@@ -1,4 +1,4 @@
-"""Tests for ``hermes approvals test`` — dry-run approval verdict CLI.
+"""Tests for ``jimmy approvals test`` — dry-run approval verdict CLI.
 
 The tester must compose the REAL runtime evaluators from ``tools.approval``
 (detect_hardline_command, _match_user_deny_rule, detect_dangerous_command,
@@ -16,7 +16,7 @@ import json
 import pytest
 
 import tools.approval as A
-from hermes_cli import approvals_test as at
+from jimmy_cli import approvals_test as at
 
 
 def _args(command, env_type="local", as_json=False):
@@ -184,7 +184,7 @@ class TestOutputAndWiring:
         assert rc == 1
 
     def test_dispatcher_routes_test_subcommand(self, isolated_approvals, capsys):
-        from hermes_cli.approvals_suggest import approvals_command
+        from jimmy_cli.approvals_suggest import approvals_command
         args = _args(["ls"])
         args.approvals_command = "test"
         rc = approvals_command(args)
@@ -193,7 +193,7 @@ class TestOutputAndWiring:
         assert "allow" in out
 
     def test_parser_wires_test_subcommand(self, isolated_approvals, capsys):
-        from hermes_cli.subcommands.approvals import build_approvals_parser
+        from jimmy_cli.subcommands.approvals import build_approvals_parser
         parser = argparse.ArgumentParser()
         sub = parser.add_subparsers()
         sentinel = []

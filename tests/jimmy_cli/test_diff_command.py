@@ -2,7 +2,7 @@
 
 ``/diff`` shows git changes in the working directory (unstaged + untracked by
 default; ``staged``/``all`` modes) and ``/diff session`` shows the cumulative
-checkpoint-baseline diff of everything Hermes changed. These drive the mixin
+checkpoint-baseline diff of everything Jimmy changed. These drive the mixin
 handler against real git repos (default modes) and a stubbed checkpoint
 manager (session mode), asserting rendering, ``--stat``, and graceful
 degradation.
@@ -15,7 +15,7 @@ import subprocess
 
 import pytest
 
-from hermes_cli.cli_commands_mixin import CLICommandsMixin
+from jimmy_cli.cli_commands_mixin import CLICommandsMixin
 
 requires_git = pytest.mark.skipif(
     shutil.which("git") is None, reason="git required"

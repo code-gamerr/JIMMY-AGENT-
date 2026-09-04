@@ -16,15 +16,15 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban_db as kb
-from hermes_cli.plugins import VALID_HOOKS, get_plugin_manager
+from jimmy_cli import kanban_db as kb
+from jimmy_cli.plugins import VALID_HOOKS, get_plugin_manager
 
 
 @pytest.fixture
 def kanban_home(tmp_path, monkeypatch):
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb.init_db()
     return home
@@ -110,7 +110,7 @@ def test_misbehaving_subscriber_does_not_break_dispatcher(kanban_home):
 
 def test_no_subscriber_short_circuits_tick_hook(kanban_home, monkeypatch):
     """With nothing registered, the tick observer is never invoked."""
-    from hermes_cli import lifecycle
+    from jimmy_cli import lifecycle
 
     invoked: list[str] = []
     real_invoke = lifecycle.invoke_hook

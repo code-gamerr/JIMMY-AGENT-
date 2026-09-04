@@ -1,10 +1,10 @@
-"""Regression: ``hermes update`` should take a managed checkout off autocrlf=true.
+"""Regression: ``jimmy update`` should take a managed checkout off autocrlf=true.
 
 Git for Windows ships ``core.autocrlf=true`` in its system config, which
 renormalizes this repo's LF text files to CRLF in the working tree and breaks
 ``git checkout`` on update. ``install.ps1`` pins ``core.autocrlf=false`` on new
 installs, but checkouts created before that landed cannot receive the fix, so
-``hermes update`` has to repair them.
+``jimmy update`` has to repair them.
 
 The pin and the cleanup are one operation: under ``autocrlf=true`` git compares
 normalized content, so the CRLF tree reads clean and pinning alone would expose
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.update_cmd import _normalize_managed_eol
+from jimmy_cli.update_cmd import _normalize_managed_eol
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
 

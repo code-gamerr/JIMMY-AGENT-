@@ -8,7 +8,7 @@ Generated: 2026-08-21
 
 ## 1. Project Overview
 
-**Goal:** Host Jimmy (Hermes fork) on Azure with exactly 4 password logins. Each login maps to an isolated Hermes profile (sessions, Telegram, memory). All four share one Azure OpenAI endpoint/API key and can chat simultaneously without chat overlap.
+**Goal:** Host Jimmy (Jimmy fork) on Azure with exactly 4 password logins. Each login maps to an isolated Jimmy profile (sessions, Telegram, memory). All four share one Azure OpenAI endpoint/API key and can chat simultaneously without chat overlap.
 
 **Path:** Modernize Existing
 
@@ -55,7 +55,7 @@ Generated: 2026-08-21
 | Jimmy runtime | Container Apps | Consumption / 1 CPU 2Gi |
 | Image | Azure Container Registry | Basic |
 | Secrets | Key Vault | Standard |
-| HERMES_HOME data | Container local disk (ephemeral) | — |
+| JIMMY_HOME data | Container local disk (ephemeral) | — |
 
 > **Note (2026-08-21):** Azure Files was removed from the Jimmy Container App.
 > SQLite session DBs hang on SMB even with `journal_mode=delete`, which showed up

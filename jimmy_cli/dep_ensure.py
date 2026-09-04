@@ -21,20 +21,20 @@ import subprocess
 import sys
 from pathlib import Path
 
-from hermes_constants import agent_browser_runnable, find_node_executable
-from tools.environments.local import hermes_subprocess_env
+from jimmy_constants import agent_browser_runnable, find_node_executable
+from tools.environments.local import jimmy_subprocess_env
 
 _IS_WINDOWS = platform.system() == "Windows"
 
 _DEP_CHECKS = {
-    # find_node_executable() rather than a bare which(): $HERMES_HOME/node is
+    # find_node_executable() rather than a bare which(): $JIMMY_HOME/node is
     # not on PATH, so which() would report Node missing on an install that has
     # a managed one and trigger a redundant re-install.
     "node": lambda: find_node_executable("node") is not None,
     "browser": lambda: (
         agent_browser_runnable(shutil.which("agent-browser"))
         or _has_system_browser()
-        or _has_hermes_agent_browser()
+        or _has_jimmy_agent_browser()
         or _has_npx_agent_browser()
     ),
     "ripgrep": lambda: shutil.which("rg") is not None,
@@ -79,13 +79,13 @@ def _has_npx_agent_browser() -> bool:
     return not _requires_real_termux_browser_install(browser_cmd)
 
 
-def _has_hermes_agent_browser() -> bool:
-    from hermes_constants import get_hermes_home
-    home = get_hermes_home()
+def _has_jimmy_agent_browser() -> bool:
+    from jimmy_constants import get_jimmy_home
+    home = get_jimmy_home()
     if _IS_WINDOWS:
         # npm -g --prefix puts .cmd shims directly in the prefix dir on Windows
         return (home / "node" / "agent-browser.cmd").is_file()
-    # install.sh installs globally into $HERMES_HOME/node/bin/ via npm -g --prefix
+    # install.sh installs globally into $JIMMY_HOME/node/bin/ via npm -g --prefix
     # Also check legacy node_modules/.bin/ path for git-clone installs.
     return (
         (home / "node" / "bin" / "agent-browser").is_file()
@@ -155,7 +155,7 @@ def ensure_dependency(
             return False
 
     if shell == "powershell":
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
         ps_bin = shutil.which("powershell") or shutil.which("pwsh")
         if not ps_bin:
             if interactive:
@@ -166,12 +166,12 @@ def ensure_dependency(
             "-ExecutionPolicy", "Bypass",
             "-File", str(script),
             "-Ensure", dep,
-            "-HermesHome", str(get_hermes_home()),
+            "-JimmyHome", str(get_jimmy_home()),
         ]
     else:
         cmd = ["bash", str(script), "--ensure", dep]
 
-    run_env = hermes_subprocess_env(inherit_credentials=False)
+    run_env = jimmy_subprocess_env(inherit_credentials=False)
     run_env["IS_INTERACTIVE"] = "false"
     result = subprocess.run(
         cmd,

@@ -15,21 +15,21 @@ def _client():
         from starlette.testclient import TestClient
     except ImportError:
         pytest.skip("fastapi/starlette not installed")
-    import hermes_state
-    from hermes_constants import get_hermes_home
-    from hermes_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
+    import jimmy_state
+    from jimmy_constants import get_jimmy_home
+    from jimmy_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
     client = TestClient(app)
     client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
-    # Keep the state DB under the isolated HERMES_HOME for any handler that
+    # Keep the state DB under the isolated JIMMY_HOME for any handler that
     # touches it.
-    hermes_state.DEFAULT_DB_PATH = get_hermes_home() / "state.db"
+    jimmy_state.DEFAULT_DB_PATH = get_jimmy_home() / "state.db"
     return client, _SESSION_HEADER_NAME
 
 
 class TestMcpEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, self.header = _client()
 
 
@@ -47,9 +47,9 @@ class TestMcpEndpoints:
         assert srv["env"]["API_KEY"] != "sk-secret-1234567890"
 
     def test_http_bearer_auth_separates_secret_from_config(
-        self, _isolate_hermes_home
+        self, _isolate_jimmy_home
     ):
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
 
         secret = "dashboard-secret-value"
         response = self.client.post(
@@ -66,9 +66,9 @@ class TestMcpEndpoints:
         assert response.json()["auth"] == "header"
         assert "bearer_token" not in response.json()
 
-        hermes_home = get_hermes_home()
-        config_text = (hermes_home / "config.yaml").read_text()
-        env_text = (hermes_home / ".env").read_text()
+        jimmy_home = get_jimmy_home()
+        config_text = (jimmy_home / "config.yaml").read_text()
+        env_text = (jimmy_home / ".env").read_text()
         assert secret not in config_text
         assert "Bearer ${MCP_BEARER_SERVER_API_KEY}" in config_text
         assert f"MCP_BEARER_SERVER_API_KEY={secret}" in env_text
@@ -86,7 +86,7 @@ class TestMcpEndpoints:
         assert response.status_code == 200
         assert response.json()["auth"] == "oauth"
 
-        from hermes_cli.mcp_config import _get_mcp_servers
+        from jimmy_cli.mcp_config import _get_mcp_servers
 
         assert _get_mcp_servers()["oauth-server"]["auth"] == "oauth"
 
@@ -144,7 +144,7 @@ class TestMcpEndpoints:
 
 class TestCredentialPoolEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
@@ -152,14 +152,14 @@ class TestCredentialPoolEndpoints:
     def test_env_seeded_delete_stays_deleted(self):
         """#55217: DELETE must suppress the source or load_pool() resurrects it.
 
-        load_pool() re-seeds from ~/.hermes/.env on every call, so removing
+        load_pool() re-seeds from ~/.jimmy/.env on every call, so removing
         just the pool row silently reverts on the next dashboard refresh.
-        The endpoint must mirror `hermes auth remove`: clean up the backing
+        The endpoint must mirror `jimmy auth remove`: clean up the backing
         source and suppress (provider, source).
         """
         from agent.credential_pool import load_pool
-        from hermes_cli.auth import is_source_suppressed
-        from hermes_cli.config import save_env_value
+        from jimmy_cli.auth import is_source_suppressed
+        from jimmy_cli.config import save_env_value
 
         fake_key = "sk-or-" + "x" * 20  # constructed, never a real key shape
         save_env_value("OPENROUTER_API_KEY", fake_key)
@@ -182,13 +182,13 @@ class TestCredentialPoolEndpoints:
     def test_post_readd_lifts_suppression(self):
         """Re-adding via POST is an explicit re-engagement — suppressions lift.
 
-        Mirrors `hermes auth add`, which clears every suppression for the
+        Mirrors `jimmy auth add`, which clears every suppression for the
         provider so a user who deleted a credential and re-adds one isn't
         silently blocked from env re-seeding.
         """
         from agent.credential_pool import load_pool
-        from hermes_cli.auth import is_source_suppressed
-        from hermes_cli.config import save_env_value
+        from jimmy_cli.auth import is_source_suppressed
+        from jimmy_cli.config import save_env_value
 
         fake_key = "sk-or-" + "y" * 20
         save_env_value("OPENROUTER_API_KEY", fake_key)
@@ -214,11 +214,11 @@ class TestCredentialPoolEndpoints:
 
 class TestMemoryEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
 
-        (get_hermes_home() / "memories").mkdir(parents=True, exist_ok=True)
+        (get_jimmy_home() / "memories").mkdir(parents=True, exist_ok=True)
 
     def test_status_and_select(self):
         data = self.client.get("/api/memory").json()
@@ -233,9 +233,9 @@ class TestMemoryEndpoints:
         assert r.status_code == 400
 
     def test_reset_targets(self):
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
 
-        mem = get_hermes_home() / "memories"
+        mem = get_jimmy_home() / "memories"
         (mem / "MEMORY.md").write_text("notes")
         (mem / "USER.md").write_text("user")
 
@@ -250,7 +250,7 @@ class TestMemoryEndpoints:
 
 class TestPairingEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
     def test_approve_pending_request_id(self):
@@ -282,9 +282,9 @@ class TestPairingEndpoints:
         as approved.
         """
         from gateway.pairing import PairingStore
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
 
-        (get_hermes_home() / "profiles" / "work").mkdir(parents=True, exist_ok=True)
+        (get_jimmy_home() / "profiles" / "work").mkdir(parents=True, exist_ok=True)
         PairingStore().generate_code("telegram", "global-1", "GlobalGuy")
         PairingStore(profile="work").generate_code("telegram", "work-1", "WorkGal")
 
@@ -319,12 +319,12 @@ class TestPairingEndpoints:
 
 class TestWebhookEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
     def test_create_webhook_persists_script(self):
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.config import load_config, save_config
 
         cfg = load_config()
         cfg.setdefault("platforms", {})["webhook"] = {
@@ -348,8 +348,8 @@ class TestWebhookEndpoints:
         assert subs[0]["script"] == "todoist_filter.py"
 
     def test_enable_platform_starts_gateway_restart(self, monkeypatch):
-        import hermes_cli.web_server as ws
-        from hermes_cli.config import load_config
+        import jimmy_cli.web_server as ws
+        from jimmy_cli.config import load_config
 
         ws._ACTION_PROCS.pop("gateway-restart", None)
         restart_calls = []
@@ -361,7 +361,7 @@ class TestWebhookEndpoints:
             restart_calls.append((subcommand, name))
             return FakeRestartProc()
 
-        monkeypatch.setattr(ws, "_spawn_hermes_action", fake_spawn_action)
+        monkeypatch.setattr(ws, "_spawn_jimmy_action", fake_spawn_action)
 
         r = self.client.post("/api/webhooks/enable")
 
@@ -381,8 +381,8 @@ class TestWebhookEndpoints:
 
 
     def test_enable_platform_reuses_inflight_gateway_restart(self, monkeypatch):
-        import hermes_cli.web_server as ws
-        from hermes_cli.config import load_config
+        import jimmy_cli.web_server as ws
+        from jimmy_cli.config import load_config
 
         ws._ACTION_PROCS.pop("gateway-restart", None)
 
@@ -397,7 +397,7 @@ class TestWebhookEndpoints:
         def fail_spawn_action(subcommand, name):
             raise AssertionError("must not spawn a second concurrent restart")
 
-        monkeypatch.setattr(ws, "_spawn_hermes_action", fail_spawn_action)
+        monkeypatch.setattr(ws, "_spawn_jimmy_action", fail_spawn_action)
 
         r = self.client.post("/api/webhooks/enable")
 
@@ -411,13 +411,13 @@ class TestWebhookEndpoints:
 
 class TestOpsEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
 
     def test_hooks_list_reads_config(self):
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.config import load_config, save_config
 
         cfg = load_config()
         cfg["hooks"] = {
@@ -467,7 +467,7 @@ class TestOpsEndpoints:
 
 class TestSystemStatsEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
     def test_stats_shape(self):
@@ -475,7 +475,7 @@ class TestSystemStatsEndpoint:
         assert r.status_code == 200
         s = r.json()
         # Identity fields always present (stdlib-sourced).
-        for key in ("os", "arch", "hostname", "python_version", "hermes_version"):
+        for key in ("os", "arch", "hostname", "python_version", "jimmy_version"):
             assert key in s and s[key]
         # psutil flag tells the UI whether the richer metrics are populated.
         assert "psutil" in s
@@ -483,21 +483,21 @@ class TestSystemStatsEndpoint:
 
 class TestCuratorEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
 class TestPortalEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
 class TestSessionManagementEndpoints:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         db.create_session(session_id="sess-x", source="cli")
@@ -512,7 +512,7 @@ class TestSessionManagementEndpoints:
         instead of ``list_sessions_rich`` and build preview/last-active rows
         just to count source labels.
         """
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         def fail_list_sessions_rich(self, *args, **kwargs):
             raise AssertionError("stats should use grouped source counts, not list_sessions_rich")
@@ -531,7 +531,7 @@ class TestSessionManagementEndpoints:
         # ages (mirrors the CLI: any filter disables the implicit 90-day
         # default). dry_run so nothing is deleted; the seeded session is
         # recent + ended, so it would be invisible under a 90-day cutoff.
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         db.create_session(session_id="sess-recent-ended", source="cli")
@@ -551,7 +551,7 @@ class TestSessionManagementEndpoints:
         assert all("last_active" in session for session in body["sessions"])
 
     def test_prune_reports_open_sessions_excluded_by_safety_guard(self):
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         db.create_session(session_id="sess-old-open", source="skip-test")
@@ -579,7 +579,7 @@ class TestSessionManagementEndpoints:
 
 class TestSkillsHubSearchEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
@@ -618,7 +618,7 @@ class _FakeBundle:
 
 class TestSkillsHubSourcesEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
     def test_sources_lists_configured_hubs(self, monkeypatch):
@@ -634,12 +634,12 @@ class TestSkillsHubSourcesEndpoint:
                 return self._sid
 
             def search(self, q, limit=10):
-                return [_FakeMeta("hermes-index/featured-skill", "trusted")]
+                return [_FakeMeta("jimmy-index/featured-skill", "trusted")]
 
         def _fake_router():
             srcs = [_Src("official"), _Src("github")]
-            # hermes-index source advertises availability + featured search.
-            idx = _Src("hermes-index")
+            # jimmy-index source advertises availability + featured search.
+            idx = _Src("jimmy-index")
             idx.is_available = True
             srcs.insert(1, idx)
             return srcs
@@ -651,7 +651,7 @@ class TestSkillsHubSourcesEndpoint:
         assert r.status_code == 200
         body = r.json()
         ids = {s["id"] for s in body["sources"]}
-        assert {"official", "github", "hermes-index"} <= ids
+        assert {"official", "github", "jimmy-index"} <= ids
         # Every source carries a human label.
         assert all(s.get("label") for s in body["sources"])
         assert body["index_available"] is True
@@ -663,7 +663,7 @@ class TestSkillsHubSourcesEndpoint:
 
 class TestSkillsHubPreviewEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
@@ -674,7 +674,7 @@ class TestSkillsHubPreviewEndpoint:
         bundle = _FakeBundle("github/owner/repo/x")
         meta = _FakeMeta("github/owner/repo/x")
         monkeypatch.setattr(
-            "hermes_cli.skills_hub._resolve_source_meta_and_bundle",
+            "jimmy_cli.skills_hub._resolve_source_meta_and_bundle",
             lambda ident, sources: (meta, bundle, None),
         )
         r = self.client.get(
@@ -693,7 +693,7 @@ class TestSkillsHubPreviewEndpoint:
             "tools.skills_hub.create_source_router", lambda: []
         )
         monkeypatch.setattr(
-            "hermes_cli.skills_hub._resolve_source_meta_and_bundle",
+            "jimmy_cli.skills_hub._resolve_source_meta_and_bundle",
             lambda ident, sources: (None, None, None),
         )
         r = self.client.get("/api/skills/hub/preview?identifier=nope/x")
@@ -702,7 +702,7 @@ class TestSkillsHubPreviewEndpoint:
 
 class TestSkillsHubScanEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
 
@@ -714,7 +714,7 @@ class TestSkillsHubScanEndpoint:
         )
         bundle = _FakeBundle("github/owner/repo/x", trust_level="community")
         monkeypatch.setattr(
-            "hermes_cli.skills_hub._resolve_source_meta_and_bundle",
+            "jimmy_cli.skills_hub._resolve_source_meta_and_bundle",
             lambda ident, sources: (None, bundle, None),
         )
 
@@ -765,10 +765,10 @@ class TestSkillsHubScanEndpoint:
 
 class TestWebhookToggleEndpoint:
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
         # Enable the webhook platform so a subscription can be created.
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.config import load_config, save_config
 
         cfg = load_config()
         cfg.setdefault("platforms", {})["webhook"] = {
@@ -782,36 +782,36 @@ class TestAdminEndpointsAuthGate:
     """Every admin endpoint must sit behind the dashboard session-token gate."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         from starlette.testclient import TestClient
-        from hermes_cli.web_server import app
+        from jimmy_cli.web_server import app
 
         # No session header → must be rejected.
         self.client = TestClient(app)
 
 
 class TestUpdateCheckEndpoint:
-    """``GET /api/hermes/update/check`` reports availability without applying.
+    """``GET /api/jimmy/update/check`` reports availability without applying.
 
     Powers the dashboard's check-before-you-update flow: the System page
     shows the commit-behind count and asks the user to confirm before
-    ``POST /api/hermes/update`` runs ``hermes update``.
+    ``POST /api/jimmy/update`` runs ``jimmy update``.
     """
 
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, _ = _client()
 
     def test_git_install_reports_behind_count(self, monkeypatch):
-        import hermes_cli.web_server as ws
+        import jimmy_cli.web_server as ws
 
         monkeypatch.setattr(ws, "detect_install_method", lambda *a, **k: "git")
         # Stub the shared checker so the contract is deterministic (no network).
-        import hermes_cli.banner as banner
+        import jimmy_cli.banner as banner
 
         monkeypatch.setattr(banner, "check_for_updates", lambda: 5)
 
-        r = self.client.get("/api/hermes/update/check")
+        r = self.client.get("/api/jimmy/update/check")
         assert r.status_code == 200
         body = r.json()
         assert {
@@ -832,7 +832,7 @@ class TestUpdateCheckEndpoint:
 
 
     def test_managed_runtime_dashboard_is_not_applyable(self, monkeypatch):
-        import hermes_cli.web_server as ws
+        import jimmy_cli.web_server as ws
 
         monkeypatch.setattr(ws, "_dashboard_local_update_managed_externally", lambda: True)
         monkeypatch.setattr(
@@ -843,7 +843,7 @@ class TestUpdateCheckEndpoint:
             ),
         )
 
-        body = self.client.get("/api/hermes/update/check").json()
+        body = self.client.get("/api/jimmy/update/check").json()
         assert body["install_method"] == "managed-runtime"
         assert body["can_apply"] is False
         assert body["update_available"] is False
@@ -858,11 +858,11 @@ class TestDebugShareEndpoint:
     dashboard can render them as copyable links (not a backgrounded log tail)."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, self.header = _client()
-        from hermes_constants import get_hermes_home
+        from jimmy_constants import get_jimmy_home
 
-        logs = get_hermes_home() / "logs"
+        logs = get_jimmy_home() / "logs"
         logs.mkdir(parents=True, exist_ok=True)
         (logs / "agent.log").write_text("agent line\n")
         (logs / "errors.log").write_text("err line\n")
@@ -870,28 +870,28 @@ class TestDebugShareEndpoint:
 
 
     def test_redact_false_is_honored(self, monkeypatch):
-        import hermes_cli.debug as dbg
+        import jimmy_cli.debug as dbg
 
         monkeypatch.setattr(
             dbg, "upload_to_pastebin", lambda c, expiry_days=7: "https://paste.rs/x"
         )
         monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
         monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
-        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("jimmy_cli.dump.run_dump", lambda a: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": False})
         assert r.status_code == 200
         assert r.json()["redacted"] is False
 
     def test_default_body_redacts(self, monkeypatch):
-        import hermes_cli.debug as dbg
+        import jimmy_cli.debug as dbg
 
         monkeypatch.setattr(
             dbg, "upload_to_pastebin", lambda c, expiry_days=7: "https://paste.rs/x"
         )
         monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
         monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
-        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("jimmy_cli.dump.run_dump", lambda a: None)
 
         # No JSON body at all — should default redact=True.
         r = self.client.post("/api/ops/debug-share")
@@ -899,7 +899,7 @@ class TestDebugShareEndpoint:
         assert r.json()["redacted"] is True
 
     def test_upload_failure_returns_502(self, monkeypatch):
-        import hermes_cli.debug as dbg
+        import jimmy_cli.debug as dbg
 
         monkeypatch.setattr(
             dbg,
@@ -908,7 +908,7 @@ class TestDebugShareEndpoint:
         )
         monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
         monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
-        monkeypatch.setattr("hermes_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("jimmy_cli.dump.run_dump", lambda a: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": True})
         assert r.status_code == 502
@@ -917,17 +917,17 @@ class TestDebugShareEndpoint:
 
 class TestToolsConfigEndpoints:
     """Provider selection, API-key save, and post-setup spawn for toolsets —
-    the dashboard surface that replicates the `hermes tools` configurator."""
+    the dashboard surface that replicates the `jimmy tools` configurator."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, _isolate_hermes_home):
+    def _setup(self, _isolate_jimmy_home):
         self.client, self.header = _client()
 
 
 
 
     def test_save_env_writes_key_and_validates_allowlist(self):
-        from hermes_cli.config import get_env_value
+        from jimmy_cli.config import get_env_value
 
         cfg = self.client.get("/api/tools/toolsets/web/config").json()
         # Find a real env-var key from the visible provider matrix.
@@ -964,20 +964,20 @@ class TestToolsConfigEndpoints:
 
 
 # ---------------------------------------------------------------------------
-# _spawn_hermes_action env scrubbing (#52470)
+# _spawn_jimmy_action env scrubbing (#52470)
 # ---------------------------------------------------------------------------
 
-def test_spawn_hermes_action_scrubs_gateway_loop_guard_env(monkeypatch, tmp_path):
+def test_spawn_jimmy_action_scrubs_gateway_loop_guard_env(monkeypatch, tmp_path):
     """The dashboard runs inside the gateway, so os.environ has
-    _HERMES_GATEWAY=1. Spawned actions (e.g. `gateway restart`) must NOT inherit
+    _JIMMY_GATEWAY=1. Spawned actions (e.g. `gateway restart`) must NOT inherit
     it, or the in-process restart-loop guard rejects the restart and it silently
     fails (#52470).
     """
-    import hermes_cli.web_server as ws
+    import jimmy_cli.web_server as ws
 
-    monkeypatch.setenv("_HERMES_GATEWAY", "1")
+    monkeypatch.setenv("_JIMMY_GATEWAY", "1")
     monkeypatch.setattr(ws, "_ACTION_LOG_DIR", tmp_path)
-    # Isolate the module-global proc registry: _spawn_hermes_action stores
+    # Isolate the module-global proc registry: _spawn_jimmy_action stores
     # _FakeProc (no poll()) in _ACTION_PROCS, and later tests' lifespan
     # shutdown (_terminate_desktop_managed_gateway) would trip over it.
     monkeypatch.setattr(ws, "_ACTION_PROCS", {})
@@ -993,10 +993,10 @@ def test_spawn_hermes_action_scrubs_gateway_loop_guard_env(monkeypatch, tmp_path
 
     monkeypatch.setattr(ws.subprocess, "Popen", _fake_popen)
 
-    ws._spawn_hermes_action(["gateway", "restart"], "gateway-restart")
+    ws._spawn_jimmy_action(["gateway", "restart"], "gateway-restart")
 
-    assert "_HERMES_GATEWAY" not in captured["env"]
-    assert captured["env"]["HERMES_NONINTERACTIVE"] == "1"
+    assert "_JIMMY_GATEWAY" not in captured["env"]
+    assert captured["env"]["JIMMY_NONINTERACTIVE"] == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -1004,7 +1004,7 @@ def test_spawn_hermes_action_scrubs_gateway_loop_guard_env(monkeypatch, tmp_path
 # ---------------------------------------------------------------------------
 
 def test_desktop_lifespan_reaps_orphan_gateways_on_startup(
-    monkeypatch, _isolate_hermes_home
+    monkeypatch, _isolate_jimmy_home
 ):
     """Starting a Desktop serve backend should reap orphan gateways left by a
     previous serve session before forking a fresh one (#77276).
@@ -1012,9 +1012,9 @@ def test_desktop_lifespan_reaps_orphan_gateways_on_startup(
     Graceful shutdown reaps the managed child, but an abnormal exit reparents
     the old gateway to launchd (PPID=1) where it keeps holding the QQ
     WebSocket. The lifespan calls _reap_unsupervised_gateway_orphans() once at
-    startup under HERMES_DESKTOP=1 so the stale orphan is cleared first.
+    startup under JIMMY_DESKTOP=1 so the stale orphan is cleared first.
     """
-    import hermes_cli.web_server as ws
+    import jimmy_cli.web_server as ws
 
     called = []
 
@@ -1022,14 +1022,14 @@ def test_desktop_lifespan_reaps_orphan_gateways_on_startup(
         called.append(True)
         return True
 
-    monkeypatch.setenv("HERMES_DESKTOP", "1")
+    monkeypatch.setenv("JIMMY_DESKTOP", "1")
     # Keep the lifespan cheap: don't re-import the gateway module or spin up the
     # real cron scheduler thread.
     monkeypatch.setattr(ws, "_warm_gateway_module", lambda: None)
     monkeypatch.setattr(ws, "_start_desktop_cron_ticker", lambda *_args: None)
-    # web_server imports the reaper lazily from hermes_cli.gateway, so patch it
+    # web_server imports the reaper lazily from jimmy_cli.gateway, so patch it
     # on that module.
-    import hermes_cli.gateway as g
+    import jimmy_cli.gateway as g
 
     monkeypatch.setattr(g, "_reap_unsupervised_gateway_orphans", _fake_reap)
 
@@ -1042,7 +1042,7 @@ def test_desktop_lifespan_reaps_orphan_gateways_on_startup(
 
 def test_desktop_lifespan_terminates_managed_gateway_restart(monkeypatch):
     """A Desktop-owned gateway child must not survive its serve backend."""
-    import hermes_cli.web_server as ws
+    import jimmy_cli.web_server as ws
 
     calls = []
 
@@ -1053,7 +1053,7 @@ def test_desktop_lifespan_terminates_managed_gateway_restart(monkeypatch):
         def terminate(self):
             calls.append("terminate")
 
-    monkeypatch.setenv("HERMES_DESKTOP", "1")
+    monkeypatch.setenv("JIMMY_DESKTOP", "1")
     monkeypatch.setattr(ws, "_warm_gateway_module", lambda: None)
     monkeypatch.setattr(ws, "_start_desktop_cron_ticker", lambda *_args: None)
     monkeypatch.setitem(ws._ACTION_PROCS, "gateway-restart", _FakeRunningProc())

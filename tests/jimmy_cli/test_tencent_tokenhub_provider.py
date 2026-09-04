@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from hermes_cli.auth import (
+from jimmy_cli.auth import (
     PROVIDER_REGISTRY,
     resolve_provider,
     get_api_key_provider_status,
@@ -59,14 +59,14 @@ class TestTencentTokenhubAliases:
         assert resolve_provider(alias) == "tencent-tokenhub"
 
     def test_normalize_provider_models_py(self):
-        from hermes_cli.models import normalize_provider
+        from jimmy_cli.models import normalize_provider
         assert normalize_provider("tencent") == "tencent-tokenhub"
         assert normalize_provider("tokenhub") == "tencent-tokenhub"
         assert normalize_provider("tencent-cloud") == "tencent-tokenhub"
         assert normalize_provider("tencentmaas") == "tencent-tokenhub"
 
     def test_normalize_provider_providers_py(self):
-        from hermes_cli.providers import normalize_provider
+        from jimmy_cli.providers import normalize_provider
         assert normalize_provider("tencent") == "tencent-tokenhub"
         assert normalize_provider("tokenhub") == "tencent-tokenhub"
         assert normalize_provider("tencent-cloud") == "tencent-tokenhub"
@@ -115,18 +115,18 @@ class TestTencentTokenhubModelCatalog:
     """Tencent TokenHub static model list."""
 
     def test_static_model_list_exists(self):
-        from hermes_cli.models import _PROVIDER_MODELS
+        from jimmy_cli.models import _PROVIDER_MODELS
         assert "tencent-tokenhub" in _PROVIDER_MODELS
         assert len(_PROVIDER_MODELS["tencent-tokenhub"]) >= 1
 
 
     def test_default_model(self):
-        from hermes_cli.models import get_default_model_for_provider
+        from jimmy_cli.models import get_default_model_for_provider
         assert get_default_model_for_provider("tencent-tokenhub") == "hy3-preview"
 
 
 # =============================================================================
-# CANONICAL_PROVIDERS (hermes model picker)
+# CANONICAL_PROVIDERS (jimmy model picker)
 # =============================================================================
 
 
@@ -135,7 +135,7 @@ class TestTencentTokenhubCanonicalProvider:
 
 
     def test_description_contains_hy3(self):
-        from hermes_cli.models import CANONICAL_PROVIDERS
+        from jimmy_cli.models import CANONICAL_PROVIDERS
         entry = next(p for p in CANONICAL_PROVIDERS if p.slug == "tencent-tokenhub")
         assert "Hy3 Preview" in entry.tui_desc
 
@@ -161,18 +161,18 @@ class TestTencentTokenhubNormalization:
     def test_not_in_matching_prefix_strip_set(self):
         """tencent-tokenhub does NOT need prefix stripping — it only has
         one model (hy3-preview) and users won't copy vendor/ form."""
-        from hermes_cli.model_normalize import _MATCHING_PREFIX_STRIP_PROVIDERS
+        from jimmy_cli.model_normalize import _MATCHING_PREFIX_STRIP_PROVIDERS
         assert "tencent-tokenhub" not in _MATCHING_PREFIX_STRIP_PROVIDERS
 
     def test_not_in_lowercase_providers(self):
         """tencent-tokenhub does not require lowercase normalization."""
-        from hermes_cli.model_normalize import _LOWERCASE_MODEL_PROVIDERS
+        from jimmy_cli.model_normalize import _LOWERCASE_MODEL_PROVIDERS
         assert "tencent-tokenhub" not in _LOWERCASE_MODEL_PROVIDERS
 
     @pytest.mark.parametrize("empty_input", ["", None, "   "])
     def test_normalize_empty_and_none(self, empty_input):
         """None, empty, and whitespace-only inputs return empty string."""
-        from hermes_cli.model_normalize import normalize_model_for_provider
+        from jimmy_cli.model_normalize import normalize_model_for_provider
         result = normalize_model_for_provider(empty_input, "tencent-tokenhub")
         assert result == "" or result.strip() == ""
 
@@ -222,15 +222,15 @@ class TestTencentTokenhubProvidersModule:
     """Test Tencent TokenHub in the unified providers module."""
 
     def test_overlay_exists(self):
-        from hermes_cli.providers import HERMES_OVERLAYS
-        assert "tencent-tokenhub" in HERMES_OVERLAYS
-        overlay = HERMES_OVERLAYS["tencent-tokenhub"]
+        from jimmy_cli.providers import JIMMY_OVERLAYS
+        assert "tencent-tokenhub" in JIMMY_OVERLAYS
+        overlay = JIMMY_OVERLAYS["tencent-tokenhub"]
         assert overlay.transport == "openai_chat"
         assert overlay.base_url_env_var == "TOKENHUB_BASE_URL"
         assert not overlay.is_aggregator
 
     def test_alias_resolves(self):
-        from hermes_cli.providers import normalize_provider
+        from jimmy_cli.providers import normalize_provider
         assert normalize_provider("tencent") == "tencent-tokenhub"
         assert normalize_provider("tokenhub") == "tencent-tokenhub"
 
@@ -238,7 +238,7 @@ class TestTencentTokenhubProvidersModule:
     def test_get_provider(self):
         pdef = None
         try:
-            from hermes_cli.providers import get_provider
+            from jimmy_cli.providers import get_provider
             pdef = get_provider("tencent-tokenhub")
         except Exception:
             pass
@@ -275,8 +275,8 @@ class TestTencentTokenhubAgentInit:
         importlib.import_module("run_agent")
 
     def test_api_mode_is_chat_completions(self):
-        from hermes_cli.providers import HERMES_OVERLAYS, TRANSPORT_TO_API_MODE
-        overlay = HERMES_OVERLAYS["tencent-tokenhub"]
+        from jimmy_cli.providers import JIMMY_OVERLAYS, TRANSPORT_TO_API_MODE
+        overlay = JIMMY_OVERLAYS["tencent-tokenhub"]
         api_mode = TRANSPORT_TO_API_MODE[overlay.transport]
         assert api_mode == "chat_completions"
 
@@ -332,7 +332,7 @@ class TestTencentTokenhubApiMode:
 
 
     def test_determine_api_mode_via_alias(self):
-        from hermes_cli.providers import determine_api_mode
+        from jimmy_cli.providers import determine_api_mode
         mode = determine_api_mode("tencent")
         assert mode == "chat_completions"
 
@@ -352,6 +352,6 @@ class TestTencentTokenhubKnownProviderNames:
         "tencent", "tokenhub", "tencent-cloud", "tencentmaas",
     ])
     def test_alias_known(self, alias):
-        from hermes_cli.models import _KNOWN_PROVIDER_NAMES
+        from jimmy_cli.models import _KNOWN_PROVIDER_NAMES
         assert alias in _KNOWN_PROVIDER_NAMES
 

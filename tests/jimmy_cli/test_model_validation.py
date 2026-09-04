@@ -1,8 +1,8 @@
-"""Tests for provider-aware `/model` validation in hermes_cli.models."""
+"""Tests for provider-aware `/model` validation in jimmy_cli.models."""
 
 from unittest.mock import MagicMock, patch
 
-from hermes_cli.models import (
+from jimmy_cli.models import (
     azure_foundry_model_api_mode,
     copilot_model_api_mode,
     fetch_github_model_catalog,
@@ -42,8 +42,8 @@ def _validate(model, provider="openrouter", api_models=FAKE_API_MODELS, **kw):
         "suggested_base_url": None,
         "used_fallback": False,
     }
-    with patch("hermes_cli.models.fetch_api_models", return_value=api_models), \
-         patch("hermes_cli.models.probe_api_models", return_value=probe_payload):
+    with patch("jimmy_cli.models.fetch_api_models", return_value=api_models), \
+         patch("jimmy_cli.models.probe_api_models", return_value=probe_payload):
         return validate_requested_model(model, provider, **kw)
 
 
@@ -61,7 +61,7 @@ class TestParseModelInput:
 class TestCuratedModelsForProvider:
     def test_openrouter_returns_curated_list(self):
         with patch(
-            "hermes_cli.models.fetch_openrouter_models",
+            "jimmy_cli.models.fetch_openrouter_models",
             return_value=[
                 ("anthropic/claude-opus-4.6", "recommended"),
                 ("qwen/qwen3.6-plus", ""),
@@ -104,10 +104,10 @@ class TestProviderModelIds:
 
     def test_stepfun_prefers_live_catalog(self):
         with patch(
-            "hermes_cli.auth.resolve_api_key_provider_credentials",
+            "jimmy_cli.auth.resolve_api_key_provider_credentials",
             return_value={"api_key": "***", "base_url": "https://api.stepfun.com/step_plan/v1"},
         ), patch(
-            "hermes_cli.models.fetch_api_models",
+            "jimmy_cli.models.fetch_api_models",
             return_value=["step-3.5-flash", "step-3-agent-lite"],
         ):
             assert provider_model_ids("stepfun") == ["step-3.5-flash", "step-3-agent-lite"]
@@ -125,7 +125,7 @@ class TestProviderModelIds:
                 return b'{"data": [{"id": "enterprise-claude"}]}'
 
         with patch(
-            "hermes_cli.config.load_config",
+            "jimmy_cli.config.load_config",
             return_value={
                 "model": {
                     "provider": "anthropic",
@@ -134,7 +134,7 @@ class TestProviderModelIds:
                 }
             },
         ), patch(
-            "hermes_cli.models._urlopen_model_catalog_request",
+            "jimmy_cli.models._urlopen_model_catalog_request",
             return_value=_Resp(),
         ) as mock_urlopen:
             assert provider_model_ids("anthropic") == ["enterprise-claude"]
@@ -145,7 +145,7 @@ class TestProviderModelIds:
 
     def test_custom_provider_passes_anthropic_mode_for_versioned_proxy_catalog(self):
         with patch(
-            "hermes_cli.config.load_config",
+            "jimmy_cli.config.load_config",
             return_value={
                 "model": {
                     "provider": "custom",
@@ -154,7 +154,7 @@ class TestProviderModelIds:
                 }
             },
         ), patch(
-            "hermes_cli.models.fetch_api_models",
+            "jimmy_cli.models.fetch_api_models",
             return_value=["enterprise-claude"],
         ) as mock_fetch:
             assert provider_model_ids("custom") == ["enterprise-claude"]
@@ -192,7 +192,7 @@ class TestFetchApiModels:
                 return _Resp()
             raise Exception("404")
 
-        with patch("hermes_cli.models._urlopen_model_catalog_request", side_effect=_fake_urlopen):
+        with patch("jimmy_cli.models._urlopen_model_catalog_request", side_effect=_fake_urlopen):
             probe = probe_api_models("key", "http://localhost:8000")
 
         assert calls == ["http://localhost:8000/models", "http://localhost:8000/v1/models"]
@@ -211,7 +211,7 @@ class TestFetchApiModels:
             def read(self):
                 return b'{"data": [{"id": "gpt-5.4", "model_picker_enabled": true, "supported_endpoints": ["/responses"], "capabilities": {"type": "chat", "supports": {"reasoning_effort": ["low", "medium", "high"]}}}, {"id": "claude-sonnet-4.6", "model_picker_enabled": true, "supported_endpoints": ["/chat/completions"], "capabilities": {"type": "chat", "supports": {"reasoning_effort": ["low", "medium", "high"]}}}, {"id": "text-embedding-3-small", "model_picker_enabled": true, "capabilities": {"type": "embedding"}}]}'
 
-        with patch("hermes_cli.models._urlopen_model_catalog_request", return_value=_Resp()) as mock_urlopen:
+        with patch("jimmy_cli.models._urlopen_model_catalog_request", return_value=_Resp()) as mock_urlopen:
             probe = probe_api_models("gh-token", "https://api.githubcopilot.com")
 
         assert mock_urlopen.call_args[0][0].full_url == "https://api.githubcopilot.com/models"
@@ -285,7 +285,7 @@ class TestNormalizeOpencodeBaseUrl:
     """
 
     def test_strips_v1_for_anthropic_messages(self):
-        from hermes_cli.models import normalize_opencode_base_url
+        from jimmy_cli.models import normalize_opencode_base_url
         assert normalize_opencode_base_url(
             "opencode-go", "anthropic_messages", "https://opencode.ai/zen/go/v1"
         ) == "https://opencode.ai/zen/go"
@@ -295,7 +295,7 @@ class TestNormalizeOpencodeBaseUrl:
 
 
     def test_non_opencode_provider_untouched(self):
-        from hermes_cli.models import normalize_opencode_base_url
+        from jimmy_cli.models import normalize_opencode_base_url
         assert normalize_opencode_base_url(
             "openrouter", "chat_completions", "https://openrouter.ai/api"
         ) == "https://openrouter.ai/api"
@@ -405,7 +405,7 @@ class TestValidateApiFallback:
             b']}'
         )
 
-        with patch("hermes_cli.models._urlopen_model_catalog_request", return_value=mock_resp):
+        with patch("jimmy_cli.models._urlopen_model_catalog_request", return_value=mock_resp):
             models = fetch_lmstudio_models(base_url="http://localhost:1234/v1")
 
         assert models == ["publisher/chat-model"]
@@ -423,7 +423,7 @@ class TestValidateApiFallback:
             fp=None,
         )
 
-        with patch("hermes_cli.models._urlopen_model_catalog_request", side_effect=http_error):
+        with patch("jimmy_cli.models._urlopen_model_catalog_request", side_effect=http_error):
             result = validate_requested_model(
                 "publisher/chat-model",
                 "lmstudio",
@@ -445,7 +445,7 @@ class TestValidateCodexAutoCorrection:
         """gpt5.3-codex (missing dash) auto-corrects to gpt-5.3-codex."""
         codex_models = ["gpt-5.4-mini", "gpt-5.4", "gpt-5.3-codex",
                         "gpt-5.2-codex", "gpt-5.1-codex-max"]
-        with patch("hermes_cli.models.provider_model_ids", return_value=codex_models):
+        with patch("jimmy_cli.models.provider_model_ids", return_value=codex_models):
             result = validate_requested_model("gpt5.3-codex", "openai-codex")
         assert result["accepted"] is True
         assert result["recognized"] is True
@@ -455,7 +455,7 @@ class TestValidateCodexAutoCorrection:
     def test_exact_match_no_correction(self):
         """Exact model name does not trigger auto-correction."""
         codex_models = ["gpt-5.4-mini", "gpt-5.4", "gpt-5.3-codex"]
-        with patch("hermes_cli.models.provider_model_ids", return_value=codex_models):
+        with patch("jimmy_cli.models.provider_model_ids", return_value=codex_models):
             result = validate_requested_model("gpt-5.3-codex", "openai-codex")
         assert result["accepted"] is True
         assert result["recognized"] is True
@@ -466,7 +466,7 @@ class TestValidateCodexAutoCorrection:
 # -- probe_api_models — Cloudflare UA mitigation --------------------------------
 
 class TestProbeApiModelsUserAgent:
-    """Probing custom /v1/models must send a Hermes User-Agent.
+    """Probing custom /v1/models must send a Jimmy User-Agent.
 
     Some custom Claude proxies (e.g. ``packyapi.com``) sit behind Cloudflare with
     Browser Integrity Check enabled. The default ``Python-urllib/3.x`` signature
@@ -484,12 +484,12 @@ class TestProbeApiModelsUserAgent:
         mock_resp.read = MagicMock(return_value=body)
         return mock_resp
 
-    def test_probe_sends_hermes_user_agent(self):
+    def test_probe_sends_jimmy_user_agent(self):
         from unittest.mock import patch
 
         body = b'{"data":[{"id":"claude-opus-4.7"}]}'
         with patch(
-            "hermes_cli.models._urlopen_model_catalog_request",
+            "jimmy_cli.models._urlopen_model_catalog_request",
             return_value=self._make_mock_response(body),
         ) as mock_urlopen:
             result = probe_api_models("sk-test", "https://example.com/v1")
@@ -499,8 +499,8 @@ class TestProbeApiModelsUserAgent:
         req = mock_urlopen.call_args[0][0]
         ua = req.get_header("User-agent")  # urllib title-cases header names
         assert ua, "probe_api_models must send a User-Agent header"
-        assert ua.startswith("hermes-cli/"), (
-            f"User-Agent must advertise hermes-cli, got {ua!r}"
+        assert ua.startswith("jimmy-cli/"), (
+            f"User-Agent must advertise jimmy-cli, got {ua!r}"
         )
         # Must not fall back to urllib's default — that's what Cloudflare 1010 blocks.
         assert not ua.startswith("Python-urllib")
@@ -511,14 +511,14 @@ class TestProbeApiModelsUserAgent:
 
         body = b'{"data":[]}'
         with patch(
-            "hermes_cli.models._urlopen_model_catalog_request",
+            "jimmy_cli.models._urlopen_model_catalog_request",
             return_value=self._make_mock_response(body),
         ) as mock_urlopen:
             probe_api_models(None, "https://example.com/v1")
 
         req = mock_urlopen.call_args[0][0]
         ua = req.get_header("User-agent")
-        assert ua and ua.startswith("hermes-cli/")
+        assert ua and ua.startswith("jimmy-cli/")
         # No Authorization was set, but UA must still be present.
         assert req.get_header("Authorization") is None
 

@@ -16,7 +16,7 @@ import os
 
 import pytest
 
-import hermes_cli.auth as auth_mod
+import jimmy_cli.auth as auth_mod
 
 
 @pytest.fixture(autouse=True)
@@ -35,7 +35,7 @@ def _reset_cache(monkeypatch):
 
 def _make_global_store(tmp_path) -> "os.PathLike[str]":
     """Write a realistic global auth.json and return its path."""
-    path = tmp_path / "global-hermes" / "auth.json"
+    path = tmp_path / "global-jimmy" / "auth.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         json.dumps(

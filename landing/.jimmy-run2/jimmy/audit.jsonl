@@ -1,0 +1,2 @@
+{"ts": "2026-09-03T17:36:46.287856+00:00", "action": "task.created", "detail": {"task_id": "8140c63c6e1f", "agent": "munder"}}
+{"ts": "2026-09-03T17:36:46.481369+00:00", "action": "task.finished", "detail": {"task_id": "8140c63c6e1f", "success": true, "agent": "munder"}}

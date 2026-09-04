@@ -11,7 +11,7 @@ cli.py::_confirm_destructive_slash for the runtime gate.
 
 from __future__ import annotations
 
-from hermes_cli.config import DEFAULT_CONFIG
+from jimmy_cli.config import DEFAULT_CONFIG
 
 
 class TestDestructiveSlashConfirmDefault:
@@ -34,7 +34,7 @@ class TestUserConfigMerge:
     def test_existing_user_config_without_key_gets_default(self, tmp_path, monkeypatch):
         import yaml
 
-        home = tmp_path / ".hermes"
+        home = tmp_path / ".jimmy"
         home.mkdir()
         cfg_path = home / "config.yaml"
         legacy = {
@@ -42,9 +42,9 @@ class TestUserConfigMerge:
         }
         cfg_path.write_text(yaml.safe_dump(legacy))
 
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         import importlib
-        import hermes_cli.config as cfg_mod
+        import jimmy_cli.config as cfg_mod
         importlib.reload(cfg_mod)
 
         cfg = cfg_mod.load_config()

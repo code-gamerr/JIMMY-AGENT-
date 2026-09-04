@@ -1,7 +1,7 @@
 """Tests for interrupted-install self-heal (the ``.update-incomplete`` marker).
 
 Covers the breadcrumb lifecycle and the launch-time recovery guard added so a
-``hermes update`` killed mid-install (Ctrl-C, terminal close, WSL OOM) gets
+``jimmy update`` killed mid-install (Ctrl-C, terminal close, WSL OOM) gets
 finished automatically on the next launch instead of leaving a half-built venv.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import hermes_cli.main as m
+import jimmy_cli.main as m
 
 
 def test_marker_round_trip(tmp_path, monkeypatch):
@@ -40,11 +40,11 @@ def _stub_install_env(monkeypatch, m, seen):
 
     monkeypatch.setattr(m.subprocess, "run", lambda *a, **k: R())
     monkeypatch.setattr(m, "_is_termux_env", lambda *a, **k: False)
-    monkeypatch.setattr("hermes_cli.managed_uv.ensure_uv", lambda: None)
-    # The install executor moved to hermes_cli._install_repair (shared between
+    monkeypatch.setattr("jimmy_cli.managed_uv.ensure_uv", lambda: None)
+    # The install executor moved to jimmy_cli._install_repair (shared between
     # the pre-import early pass and this late recovery path) — stub WHERE it
     # is executed, not the legacy main.py wrapper it replaced.
-    import hermes_cli._install_repair as ir
+    import jimmy_cli._install_repair as ir
 
     monkeypatch.setattr(
         ir, "run_core_install", lambda _root: seen.__setitem__("install", True)
@@ -64,12 +64,12 @@ def test_recovery_self_lock_does_not_clear_core_marker_via_import_probes(
 
     scripts_dir = tmp_path / "venv" / "Scripts"
     scripts_dir.mkdir(parents=True)
-    shim = scripts_dir / "hermes.exe"
+    shim = scripts_dir / "jimmy.exe"
     shim.write_text("")
 
     monkeypatch.setattr(m, "_is_windows", lambda: True)
     monkeypatch.setattr(m, "_venv_scripts_dir", lambda: scripts_dir)
-    monkeypatch.setattr(m, "_hermes_exe_shims", lambda d: [shim])
+    monkeypatch.setattr(m, "_jimmy_exe_shims", lambda d: [shim])
     monkeypatch.setattr(
         m,
         "_default_venv_install_target",

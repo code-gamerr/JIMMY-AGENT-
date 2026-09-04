@@ -8,17 +8,17 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_cli.dashboard_auth.base import (
+from jimmy_cli.dashboard_auth.base import (
     InvalidCodeError, RefreshExpiredError, assert_protocol_compliance,
 )
-from tests.hermes_cli.conftest_dashboard_auth import StubAuthProvider
+from tests.jimmy_cli.conftest_dashboard_auth import StubAuthProvider
 
 
 def _pkce_payload(ls) -> dict:
     """Parse ``state=...;verifier=...`` out of the LoginStart cookie payload."""
     return dict(
         item.split("=", 1)
-        for item in ls.cookie_payload["hermes_session_pkce"].split(";")
+        for item in ls.cookie_payload["jimmy_session_pkce"].split(";")
     )
 
 

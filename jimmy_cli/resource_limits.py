@@ -11,7 +11,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from hermes_cli.config_defaults import DEFAULT_CONFIG
+from jimmy_cli.config_defaults import DEFAULT_CONFIG
 
 try:  # ``resource`` is POSIX-only (and unavailable on Windows).
     import resource as _resource
@@ -35,9 +35,9 @@ def _configured_nofile_soft_limit(
     """
     if config is None:
         try:
-            # Use Hermes's real, profile-aware loader rather than reading YAML
+            # Use Jimmy's real, profile-aware loader rather than reading YAML
             # here. This also applies managed-scope overlays and defaults.
-            from hermes_cli.config import load_config_readonly
+            from jimmy_cli.config import load_config_readonly
 
             config = load_config_readonly()
         except Exception:

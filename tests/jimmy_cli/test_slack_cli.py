@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.slack_cli import _build_full_manifest, slack_manifest_command
-from hermes_cli.subcommands.slack import build_slack_parser
+from jimmy_cli.slack_cli import _build_full_manifest, slack_manifest_command
+from jimmy_cli.subcommands.slack import build_slack_parser
 
 
 def _parse_slack_args(argv):
-    """Build the real `hermes slack` parser and parse argv against it."""
+    """Build the real `jimmy slack` parser and parse argv against it."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
     build_slack_parser(subparsers, cmd_slack=lambda _args: 0)
@@ -26,7 +26,7 @@ def _run_console_entrypoint(*argv: str) -> subprocess.CompletedProcess[str]:
         [
             sys.executable,
             "-c",
-            "from hermes_cli.main import main; raise SystemExit(main())",
+            "from jimmy_cli.main import main; raise SystemExit(main())",
             *argv,
         ],
         cwd=Path(__file__).resolve().parents[2],
@@ -38,8 +38,8 @@ def _run_console_entrypoint(*argv: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_slack_dispatcher_propagates_manifest_failure(monkeypatch):
-    from hermes_cli import main as main_module
-    from hermes_cli import slack_cli
+    from jimmy_cli import main as main_module
+    from jimmy_cli import slack_cli
 
     monkeypatch.setattr(slack_cli, "slack_manifest_command", lambda _args: 2)
 
@@ -95,7 +95,7 @@ class TestSlackManifestArgparse:
     def test_long_description_file_reports_tilde_expansion_errors(
         self, monkeypatch, capsys
     ):
-        source = "~hermes-user-that-does-not-exist-20260716/AGENTS.md"
+        source = "~jimmy-user-that-does-not-exist-20260716/AGENTS.md"
 
         def fail_expanduser(_path):
             raise RuntimeError("home directory unavailable")
@@ -114,7 +114,7 @@ class TestSlackManifestArgparse:
 
 
 class TestSlackFullManifest:
-    """Generated full Slack app manifest used by `hermes slack manifest`."""
+    """Generated full Slack app manifest used by `jimmy slack manifest`."""
 
 
 
@@ -122,7 +122,7 @@ class TestSlackFullManifest:
 
 
     def test_assistant_features_remain_enabled(self):
-        manifest = _build_full_manifest("Hermes", "Your Hermes agent on Slack")
+        manifest = _build_full_manifest("Jimmy", "Your Jimmy agent on Slack")
 
         assert "assistant_view" in manifest["features"]
         assert "agent_view" not in manifest["features"]
@@ -136,7 +136,7 @@ class TestSlackFullManifest:
     def test_no_assistant_preserves_core_surface(self):
         """Dropping assistant mode must NOT strip the regular messaging surface."""
         manifest = _build_full_manifest(
-            "Hermes", "Your Hermes agent on Slack", include_assistant=False
+            "Jimmy", "Your Jimmy agent on Slack", include_assistant=False
         )
 
         # Flat DM still needs the Messages tab writable.

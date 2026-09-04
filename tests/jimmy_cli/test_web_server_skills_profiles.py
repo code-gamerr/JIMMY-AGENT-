@@ -5,7 +5,7 @@ file (future CLI/gateway runs) — it never retargets the running dashboard
 process. Before the ``profile`` parameter existed, toggling a skill after
 "activating" a profile silently wrote into the dashboard's own config.
 These tests pin the new behavior: reads and writes land in the REQUESTED
-profile's HERMES_HOME, and the dashboard's own profile stays untouched.
+profile's JIMMY_HOME, and the dashboard's own profile stays untouched.
 """
 import pytest
 import yaml
@@ -21,12 +21,12 @@ def _write_skill(skills_dir, name, description="test skill"):
 
 
 @pytest.fixture
-def isolated_profiles(tmp_path, monkeypatch, _isolate_hermes_home):
+def isolated_profiles(tmp_path, monkeypatch, _isolate_jimmy_home):
     """Isolated default home + one named profile, each with its own skills."""
-    from hermes_constants import get_hermes_home
-    from hermes_cli import profiles
+    from jimmy_constants import get_jimmy_home
+    from jimmy_cli import profiles
 
-    default_home = get_hermes_home()
+    default_home = get_jimmy_home()
     profiles_root = default_home / "profiles"
     worker_home = profiles_root / "worker_alpha"
     for home in (default_home, worker_home):
@@ -36,7 +36,7 @@ def isolated_profiles(tmp_path, monkeypatch, _isolate_hermes_home):
     _write_skill(default_home / "skills", "dashboard-skill")
     _write_skill(worker_home / "skills", "worker-skill")
 
-    monkeypatch.setattr(profiles, "_get_default_hermes_home", lambda: default_home)
+    monkeypatch.setattr(profiles, "_get_default_jimmy_home", lambda: default_home)
     monkeypatch.setattr(profiles, "_get_profiles_root", lambda: profiles_root)
     return {"default": default_home, "worker_alpha": worker_home}
 
@@ -48,11 +48,11 @@ def client(monkeypatch, isolated_profiles):
     except ImportError:
         pytest.skip("fastapi/starlette not installed")
 
-    import hermes_state
-    from hermes_constants import get_hermes_home
-    from hermes_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
+    import jimmy_state
+    from jimmy_constants import get_jimmy_home
+    from jimmy_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
-    monkeypatch.setattr(hermes_state, "DEFAULT_DB_PATH", get_hermes_home() / "state.db")
+    monkeypatch.setattr(jimmy_state, "DEFAULT_DB_PATH", get_jimmy_home() / "state.db")
     c = TestClient(app)
     c.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
     return c
@@ -95,10 +95,10 @@ class TestProfileScopedHubActions:
     def test_hub_install_spawns_with_profile_flag(
         self, client, isolated_profiles, monkeypatch
     ):
-        """Hub installs must go through a fresh ``hermes -p <profile>``
+        """Hub installs must go through a fresh ``jimmy -p <profile>``
         subprocess — the in-process scope can't reach skills_hub's
         import-time SKILLS_DIR binding."""
-        import hermes_cli.web_server as web_server
+        import jimmy_cli.web_server as web_server
 
         calls = []
 
@@ -109,7 +109,7 @@ class TestProfileScopedHubActions:
             calls.append((list(subcommand), name))
             return _FakeProc()
 
-        monkeypatch.setattr(web_server, "_spawn_hermes_action", _fake_spawn)
+        monkeypatch.setattr(web_server, "_spawn_jimmy_action", _fake_spawn)
         resp = client.post(
             "/api/skills/hub/install",
             json={"identifier": "official/demo", "profile": "worker_alpha"},

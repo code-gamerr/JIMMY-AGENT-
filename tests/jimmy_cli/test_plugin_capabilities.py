@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from hermes_cli.plugin_capabilities import (
+from jimmy_cli.plugin_capabilities import (
     CAPABILITY_REGISTRY,
     VALID_CAPABILITY_IDS,
     capability_set_hash,
@@ -28,9 +28,9 @@ from hermes_cli.plugin_capabilities import (
 
 
 @pytest.fixture()
-def hermes_home(tmp_path, monkeypatch):
-    """Point HERMES_HOME at a tmp dir with an empty config.yaml."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+def jimmy_home(tmp_path, monkeypatch):
+    """Point JIMMY_HOME at a tmp dir with an empty config.yaml."""
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     (tmp_path / "config.yaml").write_text("{}\n", encoding="utf-8")
     return tmp_path
 
@@ -83,7 +83,7 @@ class TestDeclarationParsing:
 
     def test_manifest_field_lands_on_parsed_manifest(self, tmp_path):
         """PluginManifest picks up ``capabilities:`` from plugin.yaml."""
-        from hermes_cli.plugins import PluginManager
+        from jimmy_cli.plugins import PluginManager
 
         plugin_dir = tmp_path / "capplug"
         plugin_dir.mkdir()
@@ -100,7 +100,7 @@ class TestDeclarationParsing:
         assert manifest.capabilities == ["tools.override"]
 
     def test_manifest_without_capabilities_field(self, tmp_path):
-        from hermes_cli.plugins import PluginManager
+        from jimmy_cli.plugins import PluginManager
 
         plugin_dir = tmp_path / "plainplug"
         plugin_dir.mkdir()
@@ -118,14 +118,14 @@ class TestDeclarationParsing:
         self, monkeypatch
     ):
         """Installed plugins can declare consent metadata in dist entry points."""
-        from hermes_cli import plugins as plugins_mod
-        from hermes_cli.plugins import PluginManager
+        from jimmy_cli import plugins as plugins_mod
+        from jimmy_cli.plugins import PluginManager
 
         load = MagicMock(side_effect=AssertionError("plugin code must not be imported"))
         plugin_ep = SimpleNamespace(
             name="thread-namer",
             value="thread_namer.plugin:register",
-            group="hermes_agent.plugins",
+            group="jimmy_agent.plugins",
             dist=SimpleNamespace(
                 version="1.2.3",
                 metadata={"Summary": "Names gateway threads"},
@@ -135,7 +135,7 @@ class TestDeclarationParsing:
         capability_ep = SimpleNamespace(
             name="thread-namer.gateway.platform_actions",
             value="thread_namer.plugin:register",
-            group="hermes_agent.plugin_capabilities",
+            group="jimmy_agent.plugin_capabilities",
             load=load,
         )
         monkeypatch.setattr(
@@ -158,9 +158,9 @@ class TestDeclarationParsing:
 
 
 class TestConsentPersistence:
-    def test_record_consent_persists_grant(self, hermes_home):
+    def test_record_consent_persists_grant(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
-        cfg = _read_cfg(hermes_home)
+        cfg = _read_cfg(jimmy_home)
         entry = cfg["plugins"]["entries"]["capplug"]
         assert entry["granted_capabilities"] == ["tools.override"]
         assert entry["capabilities_consent"]["hash"] == capability_set_hash(
@@ -170,18 +170,18 @@ class TestConsentPersistence:
         # Bridge: legacy key mirrored so existing enforcement sites work.
         assert entry["allow_tool_override"] is True
 
-    def test_record_consent_mirrors_nested_legacy_key(self, hermes_home):
+    def test_record_consent_mirrors_nested_legacy_key(self, jimmy_home):
         record_consent(
             "capplug", ["llm.model_override"], ["llm.model_override"]
         )
-        entry = _read_cfg(hermes_home)["plugins"]["entries"]["capplug"]
+        entry = _read_cfg(jimmy_home)["plugins"]["entries"]["capplug"]
         assert entry["llm"]["allow_model_override"] is True
 
-    def test_granted_capabilities_roundtrip(self, hermes_home):
+    def test_granted_capabilities_roundtrip(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         assert granted_capabilities("capplug") == frozenset({"tools.override"})
 
-    def test_grant_is_union_with_previous(self, hermes_home):
+    def test_grant_is_union_with_previous(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         record_consent(
             "capplug",
@@ -192,11 +192,11 @@ class TestConsentPersistence:
             {"tools.override", "llm.model_override"}
         )
 
-    def test_capability_granted_after_consent(self, hermes_home):
+    def test_capability_granted_after_consent(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         assert plugin_capability_granted("capplug", "tools.override") is True
 
-    def test_declined_stays_off(self, hermes_home):
+    def test_declined_stays_off(self, jimmy_home):
         # No record_consent call — nothing granted.
         assert plugin_capability_granted("capplug", "tools.override") is False
         assert pending_capabilities("capplug", ["tools.override"]) == [
@@ -208,7 +208,7 @@ class TestConsentPersistence:
 
 
 class TestUpdateReconsent:
-    def test_added_capability_is_pending(self, hermes_home):
+    def test_added_capability_is_pending(self, jimmy_home):
         # v1 declared + granted tools.override.
         record_consent("capplug", ["tools.override"], ["tools.override"])
         # v2 adds llm.model_override.
@@ -222,7 +222,7 @@ class TestUpdateReconsent:
         # The previously granted one keeps working.
         assert plugin_capability_granted("capplug", "tools.override") is True
 
-    def test_unchanged_set_needs_no_reconsent(self, hermes_home):
+    def test_unchanged_set_needs_no_reconsent(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         assert pending_capabilities("capplug", ["tools.override"]) == []
         assert declared_set_changed("capplug", ["tools.override"]) is False
@@ -232,10 +232,10 @@ class TestUpdateReconsent:
         b = capability_set_hash(["llm.model_override", "tools.override"])
         assert a == b
 
-    def test_no_consent_record_counts_as_changed(self, hermes_home):
+    def test_no_consent_record_counts_as_changed(self, jimmy_home):
         assert declared_set_changed("capplug", ["tools.override"]) is True
 
-    def test_reconsent_grants_addition(self, hermes_home):
+    def test_reconsent_grants_addition(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         declared_v2 = ["tools.override", "llm.model_override"]
         record_consent(
@@ -250,30 +250,30 @@ class TestUpdateReconsent:
 
 class TestFailClosed:
     def test_missing_config_not_granted(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "nonexistent"))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / "nonexistent"))
         assert plugin_capability_granted("capplug", "tools.override") is False
         assert granted_capabilities("capplug") == frozenset()
 
-    def test_corrupt_granted_list_not_granted(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_corrupt_granted_list_not_granted(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    capplug:\n"
             "      granted_capabilities: not-a-list\n",
             encoding="utf-8",
         )
         assert plugin_capability_granted("capplug", "tools.override") is False
 
-    def test_corrupt_entry_types_not_granted(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_corrupt_entry_types_not_granted(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    capplug: 42\n", encoding="utf-8"
         )
         assert plugin_capability_granted("capplug", "tools.override") is False
 
-    def test_unknown_capability_denied(self, hermes_home):
+    def test_unknown_capability_denied(self, jimmy_home):
         record_consent("capplug", ["tools.override"], ["tools.override"])
         assert plugin_capability_granted("capplug", "root.everything") is False
 
-    def test_unknown_ids_in_granted_list_ignored(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_unknown_ids_in_granted_list_ignored(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    capplug:\n"
             "      granted_capabilities: [root.everything, 42]\n",
             encoding="utf-8",
@@ -281,8 +281,8 @@ class TestFailClosed:
         assert granted_capabilities("capplug") == frozenset()
         assert plugin_capability_granted("capplug", "tools.override") is False
 
-    def test_corrupt_consent_hash_counts_as_changed(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_corrupt_consent_hash_counts_as_changed(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    capplug:\n"
             "      capabilities_consent: broken\n",
             encoding="utf-8",
@@ -295,50 +295,50 @@ class TestFailClosed:
 
 
 class TestLegacyGateCompat:
-    def test_legacy_allow_tool_override_still_works(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_legacy_allow_tool_override_still_works(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    oldplug:\n"
             "      allow_tool_override: true\n",
             encoding="utf-8",
         )
         assert plugin_capability_granted("oldplug", "tools.override") is True
 
-    def test_legacy_nested_llm_key_still_works(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_legacy_nested_llm_key_still_works(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    oldplug:\n"
             "      llm:\n        allow_model_override: true\n",
             encoding="utf-8",
         )
         assert plugin_capability_granted("oldplug", "llm.model_override") is True
 
-    def test_legacy_false_stays_denied(self, hermes_home):
-        (hermes_home / "config.yaml").write_text(
+    def test_legacy_false_stays_denied(self, jimmy_home):
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    oldplug:\n"
             "      allow_tool_override: false\n",
             encoding="utf-8",
         )
         assert plugin_capability_granted("oldplug", "tools.override") is False
 
-    def test_tool_override_gate_uses_canonical_path(self, hermes_home):
+    def test_tool_override_gate_uses_canonical_path(self, jimmy_home):
         """PluginContext._tool_override_allowed honors capability grant."""
-        from hermes_cli.plugins import PluginContext, PluginManifest, PluginManager
+        from jimmy_cli.plugins import PluginContext, PluginManifest, PluginManager
 
         record_consent("capplug", ["tools.override"], ["tools.override"])
         manifest = PluginManifest(name="capplug", source="user", key="capplug")
         ctx = PluginContext(manifest, PluginManager())
         assert ctx._tool_override_allowed("write_file") is True
 
-    def test_tool_override_gate_denies_without_grant(self, hermes_home):
-        from hermes_cli.plugins import PluginContext, PluginManifest, PluginManager
+    def test_tool_override_gate_denies_without_grant(self, jimmy_home):
+        from jimmy_cli.plugins import PluginContext, PluginManifest, PluginManager
 
         manifest = PluginManifest(name="capplug", source="user", key="capplug")
         ctx = PluginContext(manifest, PluginManager())
         assert ctx._tool_override_allowed("write_file") is False
 
-    def test_tool_override_gate_legacy_key(self, hermes_home):
-        from hermes_cli.plugins import PluginContext, PluginManifest, PluginManager
+    def test_tool_override_gate_legacy_key(self, jimmy_home):
+        from jimmy_cli.plugins import PluginContext, PluginManifest, PluginManager
 
-        (hermes_home / "config.yaml").write_text(
+        (jimmy_home / "config.yaml").write_text(
             "plugins:\n  entries:\n    oldplug:\n"
             "      allow_tool_override: true\n",
             encoding="utf-8",
@@ -347,8 +347,8 @@ class TestLegacyGateCompat:
         ctx = PluginContext(manifest, PluginManager())
         assert ctx._tool_override_allowed("write_file") is True
 
-    def test_bundled_plugin_trusted(self, hermes_home):
-        from hermes_cli.plugins import PluginContext, PluginManifest, PluginManager
+    def test_bundled_plugin_trusted(self, jimmy_home):
+        from jimmy_cli.plugins import PluginContext, PluginManifest, PluginManager
 
         manifest = PluginManifest(name="bplug", source="bundled", key="bplug")
         ctx = PluginContext(manifest, PluginManager())
@@ -360,8 +360,8 @@ class TestLegacyGateCompat:
 
 
 class TestHasCapability:
-    def test_probe_granted(self, hermes_home):
-        from hermes_cli.plugins import PluginContext, PluginManifest, PluginManager
+    def test_probe_granted(self, jimmy_home):
+        from jimmy_cli.plugins import PluginContext, PluginManifest, PluginManager
 
         record_consent("capplug", ["llm.model_override"], ["llm.model_override"])
         manifest = PluginManifest(name="capplug", source="user", key="capplug")
@@ -381,8 +381,8 @@ class TestConsentFlow:
         console.input.side_effect = lambda *a, **k: next(it, "")
         return console
 
-    def test_consent_yes_records_grant(self, hermes_home, monkeypatch):
-        from hermes_cli.plugins_cmd import _run_capability_consent
+    def test_consent_yes_records_grant(self, jimmy_home, monkeypatch):
+        from jimmy_cli.plugins_cmd import _run_capability_consent
 
         console = self._console(["y"])
         with patch("sys.stdin") as stdin, patch("sys.stdout") as stdout:
@@ -394,8 +394,8 @@ class TestConsentFlow:
         assert granted is True
         assert plugin_capability_granted("capplug", "tools.override") is True
 
-    def test_consent_decline_leaves_ungranted(self, hermes_home):
-        from hermes_cli.plugins_cmd import _run_capability_consent
+    def test_consent_decline_leaves_ungranted(self, jimmy_home):
+        from jimmy_cli.plugins_cmd import _run_capability_consent
 
         console = self._console(["n"])
         with patch("sys.stdin") as stdin, patch("sys.stdout") as stdout:
@@ -407,8 +407,8 @@ class TestConsentFlow:
         assert granted is False
         assert plugin_capability_granted("capplug", "tools.override") is False
 
-    def test_non_interactive_fails_closed(self, hermes_home):
-        from hermes_cli.plugins_cmd import _run_capability_consent
+    def test_non_interactive_fails_closed(self, jimmy_home):
+        from jimmy_cli.plugins_cmd import _run_capability_consent
 
         console = self._console()
         with patch("sys.stdin") as stdin, patch("sys.stdout") as stdout:
@@ -422,8 +422,8 @@ class TestConsentFlow:
         # No prompt was shown.
         console.input.assert_not_called()
 
-    def test_already_granted_skips_prompt(self, hermes_home):
-        from hermes_cli.plugins_cmd import _run_capability_consent
+    def test_already_granted_skips_prompt(self, jimmy_home):
+        from jimmy_cli.plugins_cmd import _run_capability_consent
 
         record_consent("capplug", ["tools.override"], ["tools.override"])
         console = self._console()

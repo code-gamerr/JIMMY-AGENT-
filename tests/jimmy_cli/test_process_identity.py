@@ -1,11 +1,11 @@
-"""Tests for hermes_cli.process_identity — spawn tags, the machine spawn
+"""Tests for jimmy_cli.process_identity — spawn tags, the machine spawn
 ledger, and the updater's ledger-identified reap rung.
 
 Layer context (Aug 2026, after the 12-minute Windows update hang): reapers
 previously inferred process lineage from PPIDs and cmdline shape. These
 primitives make identity positive instead: spawners stamp children
-(HERMES_SPAWN), long-lived processes self-register (pid, create_time,
-purpose, spawner) in spawn-ledger.json, and `hermes update` reaps holders the
+(JIMMY_SPAWN), long-lived processes self-register (pid, create_time,
+purpose, spawner) in spawn-ledger.json, and `jimmy update` reaps holders the
 ledger PROVES are orphaned backends — in any update context, no hand-off
 contract needed.
 
@@ -22,7 +22,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hermes_cli import process_identity as pi
+from jimmy_cli import process_identity as pi
 
 
 class _FakeNoSuchProcess(Exception):
@@ -91,8 +91,8 @@ def test_desktop_style_tag_parses():
 
 
 def test_install_id_stable_and_path_scoped():
-    a = pi.install_id(Path("/opt/hermes"))
-    assert a == pi.install_id(Path("/opt/hermes"))
+    a = pi.install_id(Path("/opt/jimmy"))
+    assert a == pi.install_id(Path("/opt/jimmy"))
     assert a != pi.install_id(Path("/opt/other"))
     assert len(a) == 12
 
@@ -146,12 +146,12 @@ def test_register_self_inherits_spawn_tag_lineage(tmp_path):
 
 
 def test_register_self_falls_back_to_desktop_parent_env(tmp_path):
-    # Legacy Desktop: no HERMES_SPAWN, but HERMES_PARENT_PID + winms marker.
+    # Legacy Desktop: no JIMMY_SPAWN, but JIMMY_PARENT_PID + winms marker.
     ledger = tmp_path / "spawn-ledger.json"
     fake = _fake_psutil({999: 50.0})
     env = {
-        "HERMES_PARENT_PID": "888",
-        "HERMES_PARENT_START_MARKER": "winms:1755689000123",
+        "JIMMY_PARENT_PID": "888",
+        "JIMMY_PARENT_START_MARKER": "winms:1755689000123",
     }
     with patch.dict(sys.modules, {"psutil": fake}), \
          patch.dict(pi.os.environ, env, clear=False), \
@@ -212,11 +212,11 @@ def test_spawner_is_dead_tristate():
 # ---------------------------------------------------------------------------
 
 def _holders(*pids):
-    return [(p, "python.exe", f"python.exe -m hermes_cli.main --profile p{p} serve") for p in pids]
+    return [(p, "python.exe", f"python.exe -m jimmy_cli.main --profile p{p} serve") for p in pids]
 
 
 def test_updater_reaps_ledger_proven_orphans():
-    from hermes_cli import main as cli_main
+    from jimmy_cli import main as cli_main
 
     entries = [
         _entry(200, 2.0, spawner_pid=700, spawner_create=7.0),   # spawner dead → reap
@@ -231,14 +231,14 @@ def test_updater_reaps_ledger_proven_orphans():
 
 
 def test_updater_ledger_rung_empty_without_ledger():
-    from hermes_cli import main as cli_main
+    from jimmy_cli import main as cli_main
 
     with patch.object(pi, "ledger_entries", return_value=[]):
         assert cli_main._ledger_reapable_backend_pids(_holders(200)) == []
 
 
 def test_updater_ledger_rung_never_raises():
-    from hermes_cli import main as cli_main
+    from jimmy_cli import main as cli_main
 
     with patch.object(pi, "ledger_entries", side_effect=RuntimeError("boom")):
         assert cli_main._ledger_reapable_backend_pids(_holders(200)) == []

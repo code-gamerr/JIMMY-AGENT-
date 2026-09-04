@@ -8,7 +8,7 @@ would still match literals first here, but we preserve the original global
 registration order exactly rather than rely on that.
 
 Handler bodies are byte-identical; web_server-owned helpers are reached via the
-late-binding seam in :mod:`hermes_cli.web_deps` so tests that
+late-binding seam in :mod:`jimmy_cli.web_deps` so tests that
 ``monkeypatch.setattr(web_server, "_helper", ...)`` keep working.
 """
 
@@ -29,8 +29,8 @@ from typing import Any, Dict, List, Optional, Tuple  # noqa: F401
 
 from fastapi import APIRouter, HTTPException, Query  # noqa: F401
 
-from hermes_cli.web_deps import late
-from hermes_cli.web_models import (
+from jimmy_cli.web_deps import late
+from jimmy_cli.web_models import (
     ProfileCreate,
     ProfileActiveUpdate,
     ProfileExport,
@@ -44,7 +44,7 @@ from hermes_cli.web_models import (
 )
 
 # Same logger the handlers used before extraction (identical logger object).
-_log = logging.getLogger("hermes_cli.web_server")
+_log = logging.getLogger("jimmy_cli.web_server")
 
 # Per-profile session reads report failures in the response's ``errors``
 # array, which the desktop sidebar does not currently surface — during the
@@ -78,7 +78,7 @@ _open_session_db_at_path = late("_open_session_db_at_path")
 _profile_setup_command = late("_profile_setup_command")
 _profile_to_dict = late("_profile_to_dict")
 _resolve_profile_dir = late("_resolve_profile_dir")
-_spawn_hermes_action = late("_spawn_hermes_action")
+_spawn_jimmy_action = late("_spawn_jimmy_action")
 _strip_session_list_rows = late("_strip_session_list_rows")
 _write_profile_mcp_servers = late("_write_profile_mcp_servers")
 _write_profile_model = late("_write_profile_model")
@@ -252,7 +252,7 @@ def get_profiles_sessions(
     if order not in ("created", "recent"):
         raise HTTPException(status_code=400, detail="order must be one of: created, recent")
 
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
 
     targets: List[Tuple[str, Path]] = []
     if profile and profile != "all":
@@ -399,7 +399,7 @@ def get_profiles_sessions_sidebar(
     ``min_messages=1`` / ``archived=exclude`` / recency order, matching the
     desktop's per-slice calls.
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
 
     try:
         # Session aggregation only needs name/path; the lightweight enumerator
@@ -625,7 +625,7 @@ def get_profiles_projects_tree(preview_limit: int = 3, session_limit: int = 2000
     the grouped sidebar had nothing to draw once the user asked for all of
     them. This runs the same authoritative builder once per profile against
     that profile's ``state.db``, scoping the rest of its inputs — projects.db,
-    the repo-scan policy, the HERMES_HOME junk filters — through the
+    the repo-scan policy, the JIMMY_HOME junk filters — through the
     context-local home override the profile-scoped writers already use.
 
     Projects merge by id across profiles, so a group stands for a checkout
@@ -638,8 +638,8 @@ def get_profiles_projects_tree(preview_limit: int = 3, session_limit: int = 2000
     (policy reconciliation), which this read-only fan-out should not do to a
     profile the user is not driving.
     """
-    from hermes_cli import profiles as profiles_mod
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from jimmy_cli import profiles as profiles_mod
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
     from tui_gateway import server as gateway_server
 
     try:
@@ -667,7 +667,7 @@ def get_profiles_projects_tree(preview_limit: int = 3, session_limit: int = 2000
             errors.append({"profile": name, "error": str(exc)})
             continue
 
-        token = set_hermes_home_override(str(home))
+        token = set_jimmy_home_override(str(home))
         try:
             tree, _active_id = gateway_server._build_project_tree(
                 db,
@@ -682,7 +682,7 @@ def get_profiles_projects_tree(preview_limit: int = 3, session_limit: int = 2000
             _warn_profile_read_error(name, exc)
             errors.append({"profile": name, "error": str(exc)})
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
             db.close()
 
     projects = sorted(merged.values(), key=lambda p: p.get("lastActive") or 0, reverse=True)
@@ -730,7 +730,7 @@ def post_profiles_sessions_pull_requests(body: SessionPrScanBody):
     session and remember the answer — a session's transcript does not grow a
     second PR.
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
 
     wanted = list(dict.fromkeys(s for s in (body.ids or []) if s))[:2000]
     if not wanted:
@@ -775,7 +775,7 @@ def post_profiles_sessions_pull_requests(body: SessionPrScanBody):
 
 @router.get("/api/profiles")
 async def list_profiles_endpoint():
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         loop = asyncio.get_running_loop()
         profiles = await loop.run_in_executor(None, profiles_mod.list_profiles)
@@ -787,7 +787,7 @@ async def list_profiles_endpoint():
 
 @router.post("/api/profiles")
 async def create_profile_endpoint(body: ProfileCreate):
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     explicit_source = (body.clone_from or "").strip()
     if explicit_source:
         # Duplicating a specific profile: clone its config/skills/SOUL (or full
@@ -867,14 +867,14 @@ async def create_profile_endpoint(body: ProfileCreate):
 
     # Optional skills-hub installs. Spawned async, scoped to the new profile
     # via `-p <name>` (a fresh subprocess re-binds skills_hub.SKILLS_DIR to the
-    # profile's HERMES_HOME at import). Returns PIDs for the UI to poll.
+    # profile's JIMMY_HOME at import). Returns PIDs for the UI to poll.
     hub_installs: List[Dict[str, Any]] = []
     for identifier in body.hub_skills:
         ident = (identifier or "").strip()
         if not ident:
             continue
         try:
-            proc = _spawn_hermes_action(
+            proc = _spawn_jimmy_action(
                 ["-p", body.name, "skills", "install", ident, "--yes"],
                 _hub_action_name("install", ident),
             )
@@ -903,11 +903,11 @@ async def get_active_profile_endpoint():
     """Return the sticky active profile and the profile this dashboard
     process is currently running as.
 
-    ``active`` is the sticky default written by ``hermes profile use`` —
+    ``active`` is the sticky default written by ``jimmy profile use`` —
     the profile new CLI invocations pick up. ``current`` is the profile
-    the running dashboard/gateway is scoped to (derived from HERMES_HOME).
+    the running dashboard/gateway is scoped to (derived from JIMMY_HOME).
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         active = profiles_mod.get_active_profile() or "default"
     except Exception:
@@ -921,12 +921,12 @@ async def get_active_profile_endpoint():
 
 @router.post("/api/profiles/active")
 async def set_active_profile_endpoint(body: ProfileActiveUpdate):
-    """Set the sticky active profile (mirrors ``hermes profile use``).
+    """Set the sticky active profile (mirrors ``jimmy profile use``).
 
     Note: this does not retarget the already-running dashboard process —
     it changes which profile subsequent CLI commands and gateways use.
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         profiles_mod.set_active_profile(body.name)
     except FileNotFoundError as e:
@@ -1000,7 +1000,7 @@ async def open_profile_terminal_endpoint(name: str):
 
 @router.patch("/api/profiles/{name}")
 async def rename_profile_endpoint(name: str, body: ProfileRename):
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         path = profiles_mod.rename_profile(name, body.new_name)
     except FileNotFoundError as e:
@@ -1036,7 +1036,7 @@ async def delete_profile_endpoint(name: str):
     """Delete a profile. The dashboard collects the user's confirmation in
     its own dialog before this request, so we always pass ``yes=True`` to
     skip the CLI's interactive prompt."""
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         path = profiles_mod.delete_profile(name, yes=True)
     except FileNotFoundError as e:
@@ -1075,7 +1075,7 @@ async def update_profile_soul(name: str, body: ProfileSoulUpdate):
         #
         # preserve_mode carries an existing file's permission bits and owner
         # across the replace. create_mode=0o644 covers the first save: named
-        # profiles seed SOUL.md at the umask default (hermes_cli.profiles
+        # profiles seed SOUL.md at the umask default (jimmy_cli.profiles
         # chmods only .env to 0600), and SOUL.md is not a secret. (The default
         # profile's runtime seeder does run it through _secure_file, but that
         # seeder fires on every load_config, so the file already exists there
@@ -1097,7 +1097,7 @@ async def update_profile_description_endpoint(name: str, body: ProfileDescriptio
     user-authored description (``description_auto: false``) so the
     auto-describer won't overwrite it on a sweep.
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     profile_dir = _resolve_profile_dir(name)
     text = (body.description or "").strip()
     try:
@@ -1117,7 +1117,7 @@ async def update_profile_model_endpoint(name: str, body: ProfileModelUpdate):
     """Set the main model (``model.default`` + ``model.provider``) for a
     specific profile's config.yaml, without touching the dashboard's own
     active profile. Mirrors ``POST /api/model/set`` (main scope) but scoped
-    to the named profile via the HERMES_HOME override.
+    to the named profile via the JIMMY_HOME override.
     """
     profile_dir = _resolve_profile_dir(name)
     provider = (body.provider or "").strip()
@@ -1135,7 +1135,7 @@ async def update_profile_model_endpoint(name: str, body: ProfileModelUpdate):
 @router.post("/api/profiles/{name}/describe-auto")
 async def describe_profile_auto_endpoint(name: str, body: ProfileDescribeAuto):
     """Auto-generate a profile's description via the auxiliary LLM
-    (``auxiliary.profile_describer``). Mirrors ``hermes profile describe
+    (``auxiliary.profile_describer``). Mirrors ``jimmy profile describe
     <name> --auto``.
 
     A failed generation (no aux client, LLM error, …) is returned as
@@ -1144,7 +1144,7 @@ async def describe_profile_auto_endpoint(name: str, body: ProfileDescribeAuto):
     """
     _resolve_profile_dir(name)
     try:
-        from hermes_cli import profile_describer
+        from jimmy_cli import profile_describer
         outcome = profile_describer.describe_profile(name, overwrite=bool(body.overwrite))
     except Exception as e:
         _log.exception("POST /api/profiles/%s/describe-auto failed", name)
@@ -1161,20 +1161,20 @@ async def describe_profile_auto_endpoint(name: str, body: ProfileDescribeAuto):
 
 
 # ── Export / Import ──────────────────────────────────────────────────────────
-# Profile sharing for the desktop: wraps hermes_cli.profiles.export_profile /
-# import_profile (the same machinery behind `hermes profile export|import`).
+# Profile sharing for the desktop: wraps jimmy_cli.profiles.export_profile /
+# import_profile (the same machinery behind `jimmy profile export|import`).
 # Paths are exchanged, not bytes — the desktop's local and pooled backends
 # share the filesystem with the native save/open dialogs that produce them.
 
 
 @router.post("/api/profiles/{name}/export")
 async def export_profile_endpoint(name: str, body: ProfileExport):
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
 
     output = (body.output or "").strip()
     if not output:
-        from hermes_constants import get_hermes_home
-        staging = get_hermes_home() / "profile-exports"
+        from jimmy_constants import get_jimmy_home
+        staging = get_jimmy_home() / "profile-exports"
         try:
             staging.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -1200,7 +1200,7 @@ async def export_profile_endpoint(name: str, body: ProfileExport):
 
 @router.post("/api/profiles/import")
 async def import_profile_endpoint(body: ProfileImport):
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
 
     archive = (body.archive or "").strip()
     if not archive:

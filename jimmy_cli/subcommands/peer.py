@@ -1,25 +1,25 @@
-"""``hermes peer`` — bot-to-bot DMs across machines/gateways.
+"""``jimmy peer`` — bot-to-bot DMs across machines/gateways.
 
-A *peer* is another Hermes gateway (any machine: homelab, Spark, Hermes
+A *peer* is another Jimmy gateway (any machine: homelab, Spark, Jimmy
 Cloud) running the ``api_server`` platform. Registering it here gives every
 bot on THIS machine a transport to message bots on THAT machine:
 
-    hermes peer add spark --url http://spark.lan:8377 --key <API_SERVER_KEY>
-    hermes peer dm spark "Message from 🤖 dixie (@dixie): disk status?"
-    hermes peer dm spark/researcher "..."      # named profile (multiplexed peer)
+    jimmy peer add spark --url http://spark.lan:8377 --key <API_SERVER_KEY>
+    jimmy peer dm spark "Message from 🤖 dixie (@dixie): disk status?"
+    jimmy peer dm spark/researcher "..."      # named profile (multiplexed peer)
 
 ``dm`` resolves the remote agent's canonical "Bot Chat" session (by title,
 creating it when missing), runs ONE synchronous agent turn over the peer's
 existing ``POST /api/sessions/{id}/chat`` endpoint, and prints the reply on
 stdout — the exact cross-machine twin of the local
-``hermes -p <bot> chat --in ~ -c "Bot Chat" ...`` bot-messaging command, so
+``jimmy -p <bot> chat --in ~ -c "Bot Chat" ...`` bot-messaging command, so
 the Bot Mode protocol composes over it unchanged.
 
 Design notes:
 - No new server surface: the peer's stock api_server is the transport.
 - Peer labels/URLs live in config.yaml (``bot_peers``); the peer's
-  API_SERVER_KEY is a credential and lives in ``~/.hermes/.env`` as
-  ``HERMES_PEER_<NAME>_KEY``.
+  API_SERVER_KEY is a credential and lives in ``~/.jimmy/.env`` as
+  ``JIMMY_PEER_<NAME>_KEY``.
 - Named-profile targets use the peer's ``/p/<profile>/`` multiplex mirror;
   the bare target is the peer gateway's own (launch) profile.
 """
@@ -44,11 +44,11 @@ LIST_TIMEOUT_S = 30
 
 
 def _peer_key_env(name: str) -> str:
-    return f"HERMES_PEER_{name.upper().replace('-', '_')}_KEY"
+    return f"JIMMY_PEER_{name.upper().replace('-', '_')}_KEY"
 
 
 def _load_peers() -> dict:
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     cfg = load_config() or {}
     peers = cfg.get("bot_peers")
@@ -56,7 +56,7 @@ def _load_peers() -> dict:
 
 
 def _save_peers(peers: dict) -> None:
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config() or {}
     cfg["bot_peers"] = peers
@@ -85,7 +85,7 @@ def _request(url: str, key: str, *, method: str = "GET", body: dict | None = Non
         headers={
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
-            "User-Agent": "hermes-peer-dm",
+            "User-Agent": "jimmy-peer-dm",
         },
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 — user-registered peer URL
@@ -126,7 +126,7 @@ def _ensure_bot_chat(base: str, key: str) -> str:
         method="POST",
         body={"title": BOT_CHAT_TITLE, "source": "bot_peer_dm"},
     )
-    # Real api_server wraps the row: {"object": "hermes.session", "session": {...}}.
+    # Real api_server wraps the row: {"object": "jimmy.session", "session": {...}}.
     session = created.get("session") if isinstance(created.get("session"), dict) else created
     session_id = str(session.get("id") or session.get("session_id") or "")
     if not session_id:
@@ -141,7 +141,7 @@ def _parse_target(target: str) -> tuple[str, str | None]:
     peer = peer.strip()
     profile = profile.strip() or None
     if not peer:
-        raise ValueError("Peer name required (hermes peer dm <peer>[/<agent>] ...)")
+        raise ValueError("Peer name required (jimmy peer dm <peer>[/<agent>] ...)")
     if profile and not _PROFILE_RE.match(profile):
         raise ValueError(f"Invalid agent/profile name: {profile!r}")
     return peer, profile
@@ -174,15 +174,15 @@ def cmd_peer(args) -> int:
         _save_peers(peers)
         key = (getattr(args, "key", "") or "").strip()
         if key:
-            from hermes_cli.config import save_env_value
+            from jimmy_cli.config import save_env_value
 
             save_env_value(_peer_key_env(name), key)
-            print(f"Peer '{name}' saved ({url}) — key stored as {_peer_key_env(name)} in ~/.hermes/.env")
+            print(f"Peer '{name}' saved ({url}) — key stored as {_peer_key_env(name)} in ~/.jimmy/.env")
         else:
             print(
                 f"Peer '{name}' saved ({url}). No key given — set the peer's API_SERVER_KEY with:\n"
-                f"  hermes peer add {name} --url {url} --key <key>\n"
-                f"  (or add {_peer_key_env(name)}=<key> to ~/.hermes/.env)"
+                f"  jimmy peer add {name} --url {url} --key <key>\n"
+                f"  (or add {_peer_key_env(name)}=<key> to ~/.jimmy/.env)"
             )
         return 0
 
@@ -200,7 +200,7 @@ def cmd_peer(args) -> int:
     if action in ("list", "ls", None):
         peers = _load_peers()
         if not peers:
-            print("No peers registered. Add one: hermes peer add <name> --url http://host:port --key <API_SERVER_KEY>")
+            print("No peers registered. Add one: jimmy peer add <name> --url http://host:port --key <API_SERVER_KEY>")
             return 0
         for name in sorted(peers):
             entry = peers[name] if isinstance(peers[name], dict) else {}
@@ -218,13 +218,13 @@ def cmd_peer(args) -> int:
         peers = _load_peers()
         peer = peers.get(peer_name)
         if not isinstance(peer, dict) or not peer.get("url"):
-            print(f"No peer named '{peer_name}'. Run: hermes peer list", file=sys.stderr)
+            print(f"No peer named '{peer_name}'. Run: jimmy peer list", file=sys.stderr)
             return 1
         key = _peer_secret(peer_name)
         if not key:
             print(
-                f"No API key for peer '{peer_name}'. Set it: hermes peer add {peer_name} "
-                f"--url <url> --key <key> (or add {_peer_key_env(peer_name)}=<key> to ~/.hermes/.env)",
+                f"No API key for peer '{peer_name}'. Set it: jimmy peer add {peer_name} "
+                f"--url <url> --key <key> (or add {_peer_key_env(peer_name)}=<key> to ~/.jimmy/.env)",
                 file=sys.stderr,
             )
             return 1
@@ -262,7 +262,7 @@ def cmd_peer(args) -> int:
             print(reply or "(no reply)")
         return 0
 
-    print("Unknown peer action. See: hermes peer --help", file=sys.stderr)
+    print("Unknown peer action. See: jimmy peer --help", file=sys.stderr)
     return 2
 
 
@@ -270,22 +270,22 @@ def build_peer_parser(subparsers) -> None:
     """Attach the ``peer`` subcommand to ``subparsers``."""
     parser = subparsers.add_parser(
         "peer",
-        help="Bot-to-bot DMs across machines (peer Hermes gateways)",
+        help="Bot-to-bot DMs across machines (peer Jimmy gateways)",
         description=(
-            "Register other Hermes gateways as peers and message their agents. "
-            "'hermes peer dm <peer>[/<agent>] \"...\"' delivers into the remote "
+            "Register other Jimmy gateways as peers and message their agents. "
+            "'jimmy peer dm <peer>[/<agent>] \"...\"' delivers into the remote "
             "agent's canonical Bot Chat over the peer's API server and prints "
-            "the reply — the cross-machine twin of 'hermes -p <bot> chat'. "
+            "the reply — the cross-machine twin of 'jimmy -p <bot> chat'. "
             "The peer must run the api_server platform; its API_SERVER_KEY is "
-            "stored locally as a credential in ~/.hermes/.env."
+            "stored locally as a credential in ~/.jimmy/.env."
         ),
         epilog=(
             "Examples:\n"
-            "  hermes peer add spark --url http://spark.lan:8377 --key <API_SERVER_KEY>\n"
-            "  hermes peer list\n"
-            '  hermes peer dm spark "Message from 🤖 dixie (@dixie): disk status?"\n'
-            '  hermes peer dm spark/researcher "..."   # named profile on a multiplexed peer\n'
-            "  hermes peer remove spark\n"
+            "  jimmy peer add spark --url http://spark.lan:8377 --key <API_SERVER_KEY>\n"
+            "  jimmy peer list\n"
+            '  jimmy peer dm spark "Message from 🤖 dixie (@dixie): disk status?"\n'
+            '  jimmy peer dm spark/researcher "..."   # named profile on a multiplexed peer\n'
+            "  jimmy peer remove spark\n"
             "\n"
             "Exit codes: 0 ok, 1 delivery/peer error, 2 usage error."
         ),
@@ -296,7 +296,7 @@ def build_peer_parser(subparsers) -> None:
     add_p = peer_sub.add_parser("add", aliases=["set"], help="Register (or update) a peer gateway")
     add_p.add_argument("name", help="Peer name (lowercase slug, e.g. spark, homelab)")
     add_p.add_argument("--url", required=True, help="Peer gateway base URL, e.g. http://spark.lan:8377")
-    add_p.add_argument("--key", default="", help="The peer's API_SERVER_KEY (stored in ~/.hermes/.env)")
+    add_p.add_argument("--key", default="", help="The peer's API_SERVER_KEY (stored in ~/.jimmy/.env)")
     add_p.add_argument("--note", default="", help="Optional description")
 
     peer_sub.add_parser("list", aliases=["ls"], help="List registered peers")

@@ -1,7 +1,7 @@
 """Billing and subscription handlers for the interactive CLI.
 
 Nous Portal billing / subscription was removed from this build. The mixin
-keeps the method names so ``HermesCLI`` MRO call sites do not crash; every
+keeps the method names so ``JimmyCLI`` MRO call sites do not crash; every
 handler reports that Portal billing is unavailable.
 """
 

@@ -75,14 +75,14 @@ class _TinyImageHandler(http.server.BaseHTTPRequestHandler):
 
 @pytest.fixture
 def http_server(tmp_path, monkeypatch):
-    """Spin up a localhost HTTP server and isolate HERMES_HOME under tmp_path."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-    (tmp_path / ".hermes").mkdir()
+    """Spin up a localhost HTTP server and isolate JIMMY_HOME under tmp_path."""
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+    (tmp_path / ".jimmy").mkdir()
 
-    # Force the constants/image cache helpers to re-read HERMES_HOME.
+    # Force the constants/image cache helpers to re-read JIMMY_HOME.
     import sys
     for mod in list(sys.modules):
-        if mod.startswith("hermes_constants") or mod.startswith("agent.image_gen_provider"):
+        if mod.startswith("jimmy_constants") or mod.startswith("agent.image_gen_provider"):
             sys.modules.pop(mod, None)
 
     httpd = socketserver.TCPServer(("127.0.0.1", 0), _TinyImageHandler)
@@ -94,7 +94,7 @@ def http_server(tmp_path, monkeypatch):
 
 
 class TestSaveUrlImage:
-    def test_writes_real_bytes_to_hermes_home_cache(self, http_server):
+    def test_writes_real_bytes_to_jimmy_home_cache(self, http_server):
         base, _ = http_server
         from agent.image_gen_provider import save_url_image
 
@@ -102,7 +102,7 @@ class TestSaveUrlImage:
 
         assert path.exists()
         assert path.read_bytes() == PNG_1PX
-        # The cache directory must be under HERMES_HOME — gateway cleanup
+        # The cache directory must be under JIMMY_HOME — gateway cleanup
         # relies on this being the canonical location.
         assert "cache/images" in str(path)
         assert path.suffix == ".png"

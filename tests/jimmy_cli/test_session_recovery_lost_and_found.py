@@ -14,28 +14,28 @@ from pathlib import Path
 
 import pytest
 
-from hermes_state import SessionDB
-from hermes_cli import session_recovery
-from hermes_cli.session_lost_and_found import (
+from jimmy_state import SessionDB
+from jimmy_cli import session_recovery
+from jimmy_cli.session_lost_and_found import (
     classify_lost_and_found_row,
     map_lost_and_found_rows,
     rebuild_fts_indexes,
     stub_missing_parent_sessions,
 )
-from hermes_cli.session_recovery import (
+from jimmy_cli.session_recovery import (
     SessionRecoverySafetyError,
     SessionRecoverySourceError,
     _probe_populated_edge,
     recover_session_database,
 )
 
-from tests.hermes_cli.test_session_recovery import (
+from tests.jimmy_cli.test_session_recovery import (
     _btree_leaf_pages,
     _make_page_spanning_source,
 )
 
 
-from hermes_cli.session_lost_and_found import find_sqlite3_cli
+from jimmy_cli.session_lost_and_found import find_sqlite3_cli
 
 # .recover needs a sqlite3 shell built with sqlite_dbpage — PATH presence
 # alone is not enough (Ubuntu CI ships a build without it).
@@ -216,7 +216,7 @@ def test_unreadable_schema_without_cli_names_the_sqlite3_requirement(
     output = tmp_path / "schemaless-recovered.db"
     _make_schema_unreadable_source(source)
 
-    import hermes_cli.session_lost_and_found as laf
+    import jimmy_cli.session_lost_and_found as laf
 
     monkeypatch.setattr(laf, "find_sqlite3_cli", lambda: None)
     with pytest.raises(SessionRecoverySourceError) as excinfo:
@@ -564,7 +564,7 @@ def test_fingerprint_error_enumerates_parent_cli_session(
     with pytest.raises(SessionRecoverySafetyError) as excinfo:
         session_recovery.inspect_session_database(source, work_dir=tmp_path)
     message = str(excinfo.value)
-    assert "Stop every Hermes process" in message
+    assert "Stop every Jimmy process" in message
     # The gap from #72291: the parent CLI session itself must be enumerated.
     assert "CLI session" in message
     assert "fresh shell" in message

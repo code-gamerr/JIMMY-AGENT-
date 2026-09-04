@@ -1,0 +1,617 @@
+{
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\annotate_preview_tool.py": [
+1787252873000000000,
+5847,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\ansi_strip.py": [
+1787252873000000000,
+5238,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\apply_layout_tool.py": [
+1787252873000000000,
+2890,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\approval.py": [
+1787252873000000000,
+246970,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\async_delegation.py": [
+1787252873000000000,
+66744,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\audio_container.py": [
+1787252873000000000,
+3910,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\binary_extensions.py": [
+1787252873000000000,
+2782,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\blueprints.py": [
+1787252873000000000,
+12056,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\bot_mode_probe.py": [
+1787252873000000000,
+14450,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_camofox.py": [
+1787252873000000000,
+36106,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_camofox_state.py": [
+1787252873000000000,
+1588,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_cdp_tool.py": [
+1787252873000000000,
+27199,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_dialog_tool.py": [
+1787252873000000000,
+5534,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_supervisor.py": [
+1787252873000000000,
+63781,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_tool.py": [
+1787252873000000000,
+236376,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\browser_use_cli.py": [
+1787252873000000000,
+34174,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\budget_config.py": [
+1787252873000000000,
+7810,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\checkpoint_manager.py": [
+1787252873000000000,
+86108,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\clarify_gateway.py": [
+1787252873000000000,
+23594,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\clarify_tool.py": [
+1787252873000000000,
+24558,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\close_preview_tool.py": [
+1787252873000000000,
+2291,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\close_terminal_tool.py": [
+1787252873000000000,
+2463,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\code_execution_tool.py": [
+1787252873000000000,
+91567,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\computer_use_tool.py": [
+1787252873000000000,
+1318,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\credential_files.py": [
+1787252873000000000,
+23688,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\cronjob_tools.py": [
+1787252873000000000,
+88698,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\daemon_pool.py": [
+1787252873000000000,
+2469,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\debug_helpers.py": [
+1787252873000000000,
+3677,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\delegate_tool.py": [
+1787252873000000000,
+219025,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\delegation_live_log.py": [
+1787252873000000000,
+18191,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\delegation_output_schema.py": [
+1787252873000000000,
+5925,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\desktop_ui.py": [
+1787252873000000000,
+1426,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\discord_tool.py": [
+1787252873000000000,
+40175,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\drive_preview_tool.py": [
+1787252873000000000,
+9730,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\env_passthrough.py": [
+1787252873000000000,
+9266,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\env_probe.py": [
+1787252873000000000,
+14652,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\fal_common.py": [
+1787252873000000000,
+7021,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\feishu_doc_tool.py": [
+1787252873000000000,
+4507,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\feishu_drive_tool.py": [
+1787252873000000000,
+13336,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\file_operations.py": [
+1787252873000000000,
+156997,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\file_state.py": [
+1787252873000000000,
+12353,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\file_tools.py": [
+1787252873000000000,
+129755,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\flux3_video_tool.py": [
+1787260390590570500,
+52607,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\focus_pane_tool.py": [
+1787252873000000000,
+2232,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\fuzzy_match.py": [
+1787252873000000000,
+49571,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\homeassistant_tool.py": [
+1787252873000000000,
+18037,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\hook_output_spill.py": [
+1787252873000000000,
+8122,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\image_generation_tool.py": [
+1787260311981513600,
+76741,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\image_source.py": [
+1787252873000000000,
+20679,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\interrupt.py": [
+1787252873000000000,
+4365,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\kanban_tools.py": [
+1787252873000000000,
+98560,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\lazy_deps.py": [
+1787252873000000000,
+54603,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\mcp_dashboard_oauth.py": [
+1787252873000000000,
+5368,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\mcp_oauth.py": [
+1787252873000000000,
+84400,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\mcp_oauth_manager.py": [
+1787252873000000000,
+40566,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\mcp_schema_cache.py": [
+1787252873000000000,
+5275,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\mcp_stdio_watchdog.py": [
+1787252873000000000,
+5923,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\memory_tool.py": [
+1787252873000000000,
+57796,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\microsoft_graph_auth.py": [
+1787252873000000000,
+7932,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\microsoft_graph_client.py": [
+1787252873000000000,
+14182,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\neutts_synth.py": [
+1787252873000000000,
+3885,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\open_preview_tool.py": [
+1787252873000000000,
+3556,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\openrouter_client.py": [
+1787252873000000000,
+1529,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\osv_check.py": [
+1787252873000000000,
+7404,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\patch_parser.py": [
+1787252873000000000,
+30052,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\path_security.py": [
+1787252873000000000,
+1311,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\plugin_guard.py": [
+1787252873000000000,
+12281,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\process_registry.py": [
+1787252873000000000,
+140359,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\project_tools.py": [
+1787252873000000000,
+7143,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\react_to_message_tool.py": [
+1787252873000000000,
+7136,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\read_extract.py": [
+1787252873000000000,
+26155,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\read_preview_tool.py": [
+1787252873000000000,
+3472,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\read_terminal_tool.py": [
+1787252873000000000,
+3063,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\read_window_tool.py": [
+1787252873000000000,
+2710,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\schema_sanitizer.py": [
+1787252873000000000,
+29310,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\self_repo_guard.py": [
+1787252873000000000,
+23495,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\send_message_tool.py": [
+1787252873000000000,
+102191,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\session_search_tool.py": [
+1787252873000000000,
+55430,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\setup_mcp_tool.py": [
+1787252873000000000,
+5126,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\shell_heredoc.py": [
+1787252873000000000,
+13628,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skill_ledger.py": [
+1787252873000000000,
+14168,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skill_linter.py": [
+1787252873000000000,
+16440,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skill_manager_tool.py": [
+1787252873000000000,
+73203,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skill_provenance.py": [
+1787252873000000000,
+2602,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skill_usage.py": [
+1787252873000000000,
+52676,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skillevaluator_scan.py": [
+1787252873000000000,
+9622,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_ast_audit.py": [
+1787252873000000000,
+5196,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_guard.py": [
+1787252873000000000,
+47668,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_hub.py": [
+1787252873000000000,
+183704,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_sync.py": [
+1787252873000000000,
+59832,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_sync_client.py": [
+1787252873000000000,
+88981,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\skills_tool.py": [
+1787252873000000000,
+85042,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\slash_confirm.py": [
+1787252873000000000,
+5751,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\spill_safety.py": [
+1787252873000000000,
+4206,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\subagent_worktree.py": [
+1787252873000000000,
+13363,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\terminal_hints.py": [
+1787252873000000000,
+11827,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\terminal_tool.py": [
+1787260390588570400,
+177861,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\thread_context.py": [
+1787252873000000000,
+4694,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\threat_patterns.py": [
+1787252873000000000,
+13986,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tirith_security.py": [
+1787252873000000000,
+34045,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\todo_tool.py": [
+1787252873000000000,
+14005,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tool_backend_helpers.py": [
+1787260959969262700,
+13992,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tool_output_limits.py": [
+1787252873000000000,
+3991,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tool_result_storage.py": [
+1787252873000000000,
+17196,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tool_search.py": [
+1787252873000000000,
+43129,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tour_tool.py": [
+1787252873000000000,
+8035,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\transcription_tools.py": [
+1787260390585571100,
+139624,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tts_streaming.py": [
+1787252873000000000,
+18544,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tts_text_normalize.py": [
+1787252873000000000,
+12022,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\tts_tool.py": [
+1787260390584571300,
+182307,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\url_safety.py": [
+1787252873000000000,
+34381,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\video_generation_tool.py": [
+1787252873000000000,
+23308,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\vision_tools.py": [
+1787252873000000000,
+91455,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\voice_mode.py": [
+1787252873000000000,
+99377,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\wake_word.py": [
+1787252873000000000,
+58662,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\web_tools.py": [
+1787260418622040500,
+70382,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\website_policy.py": [
+1787252873000000000,
+9844,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\working_diff.py": [
+1787252873000000000,
+4719,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\write_approval.py": [
+1787252873000000000,
+19412,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\x_search_tool.py": [
+1787252873000000000,
+21292,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\xai_http.py": [
+1787252873000000000,
+14993,
+false
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\xai_video_tools.py": [
+1787252873000000000,
+6330,
+true
+],
+"C:\\Users\\Arnav Singh\\Documents\\Codes\\jimmy-agent-main\\tools\\yuanbao_tools.py": [
+1787252873000000000,
+27415,
+true
+]
+}

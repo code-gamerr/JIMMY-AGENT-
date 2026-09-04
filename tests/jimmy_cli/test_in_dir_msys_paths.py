@@ -1,6 +1,6 @@
 """``--in`` accepts Git Bash / MSYS-style paths on Windows.
 
-Under Git Bash, ``hermes chat --in ~`` reaches the native CLI as
+Under Git Bash, ``jimmy chat --in ~`` reaches the native CLI as
 ``/c/Users/<user>`` — the shell expands ``~`` to an MSYS POSIX path and
 MSYS2's automatic argument conversion is disabled for native executables.
 The resolver must translate the MSYS/Cygwin/WSL drive-root spellings to
@@ -41,13 +41,13 @@ class TestInDirMsysResolution:
             assert _msys_to_windows_path("/c/Users/alice") == "/c/Users/alice"
 
     def test_main_call_site_uses_translation(self):
-        """Guard: the --in resolution in hermes_cli.main must route through
+        """Guard: the --in resolution in jimmy_cli.main must route through
         _msys_to_windows_path (a plain expanduser/abspath does not survive
         Git Bash). Source-level check keeps this honest without spawning
         the full CLI."""
         import inspect
 
-        import hermes_cli.main as main_mod
+        import jimmy_cli.main as main_mod
 
         src = inspect.getsource(main_mod)
         idx = src.find('in_dir = getattr(args, "in_dir", None)')

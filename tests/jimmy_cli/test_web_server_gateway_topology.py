@@ -7,8 +7,8 @@ gateway detection, and per-platform port resolution.
 
 import pytest
 
-from hermes_cli import web_server
-from hermes_cli.web_server import (
+from jimmy_cli import web_server
+from jimmy_cli.web_server import (
     _collect_profile_gateway_topology,
     _profile_platform_ports,
 )
@@ -55,7 +55,7 @@ def _patch_topology(monkeypatch, homes, running, runtimes):
     ``homes``: list of (name, Path); ``running``: set of profile names with a
     live gateway; ``runtimes``: {name: runtime dict}.
     """
-    import hermes_cli.profiles as profiles_mod
+    import jimmy_cli.profiles as profiles_mod
     import gateway.status as status_mod
 
     monkeypatch.setattr(profiles_mod, "profiles_to_serve", lambda multiplex: homes)
@@ -214,7 +214,7 @@ class TestCollectProfileGatewayTopology:
 
 
     def test_enumeration_failure_degrades_gracefully(self, monkeypatch):
-        import hermes_cli.profiles as profiles_mod
+        import jimmy_cli.profiles as profiles_mod
 
         def _boom(multiplex):
             raise RuntimeError("no profiles root")
@@ -235,18 +235,18 @@ class TestCollectProfileGatewayTopology:
 
 class TestStatusEndpointTopology:
     @pytest.fixture(autouse=True)
-    def _setup_client(self, monkeypatch, _isolate_hermes_home):
+    def _setup_client(self, monkeypatch, _isolate_jimmy_home):
         try:
             from starlette.testclient import TestClient
         except ImportError:
             pytest.skip("fastapi/starlette not installed")
 
-        import hermes_state
-        from hermes_constants import get_hermes_home
-        from hermes_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
+        import jimmy_state
+        from jimmy_constants import get_jimmy_home
+        from jimmy_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
         monkeypatch.setattr(
-            hermes_state, "DEFAULT_DB_PATH", get_hermes_home() / "state.db"
+            jimmy_state, "DEFAULT_DB_PATH", get_jimmy_home() / "state.db"
         )
         self.client = TestClient(app)
         self.client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
@@ -394,7 +394,7 @@ class TestStatusEndpointTopology:
         # (gateway_mode == "multiple"). Each profile's failures live in its
         # own gateway_state.json; the machine-level /api/status must fold
         # them in as <profile>:<platform> so NAS health monitoring sees them.
-        import hermes_cli.profiles as profiles_mod
+        import jimmy_cli.profiles as profiles_mod
 
         monkeypatch.setattr(web_server, "get_running_pid_cached", lambda: 123)
         monkeypatch.setattr(
@@ -470,7 +470,7 @@ class TestStatusEndpointTopology:
     def test_profile_scoped_status_does_not_merge_other_profiles(self, monkeypatch):
         # ?profile=<name> targets one profile's view — merging every other
         # profile's failures into it would misattribute state.
-        import hermes_cli.profiles as profiles_mod
+        import jimmy_cli.profiles as profiles_mod
 
         monkeypatch.setattr(web_server, "get_running_pid_cached", lambda: 123)
         monkeypatch.setattr(
@@ -509,7 +509,7 @@ class TestStatusEndpointTopology:
 
     def test_profile_names_and_mode_public_when_auth_gated(self, monkeypatch):
         # Profile NAMES + gateway_mode are low-sensitivity product surface: the
-        # Hermes Cloud Portal reads /api/status over the network (a gated bind)
+        # Jimmy Cloud Portal reads /api/status over the network (a gated bind)
         # to render the profile list, so they must survive the auth gate.
         monkeypatch.setattr(
             web_server, "_collect_profile_gateway_topology",
@@ -527,9 +527,9 @@ class TestStatusEndpointTopology:
             assert data["profiles"] == ["default", "coder"]
             assert data["gateway_mode"] == "multiplex"
             # But the per-gateway detail (host ports = recon) stays gated,
-            # alongside hermes_home / gateway_pid.
+            # alongside jimmy_home / gateway_pid.
             assert "gateways" not in data
-            assert "hermes_home" not in data
+            assert "jimmy_home" not in data
             assert "gateway_pid" not in data
         finally:
             monkeypatch.setattr(

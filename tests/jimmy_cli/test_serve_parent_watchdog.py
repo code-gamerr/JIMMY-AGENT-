@@ -1,6 +1,6 @@
-"""Regression tests for Desktop-owned ``hermes serve`` lifecycle tracking."""
+"""Regression tests for Desktop-owned ``jimmy serve`` lifecycle tracking."""
 
-from hermes_cli.web_server import _is_serve_orphaned, _valid_parent_start_marker
+from jimmy_cli.web_server import _is_serve_orphaned, _valid_parent_start_marker
 
 
 def test_parent_watchdog_tracks_recorded_desktop_pid_not_immediate_ppid():

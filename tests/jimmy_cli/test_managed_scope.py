@@ -1,4 +1,4 @@
-"""Unit tests for hermes_cli.managed_scope (resolver + loaders + key helpers)."""
+"""Unit tests for jimmy_cli.managed_scope (resolver + loaders + key helpers)."""
 import textwrap
 
 import pytest
@@ -15,7 +15,7 @@ import pytest
 
 
 def _write_managed(tmp_path, monkeypatch, *, config=None, env=None):
-    from hermes_cli import managed_scope
+    from jimmy_cli import managed_scope
 
     managed = tmp_path / "managed"
     managed.mkdir(exist_ok=True)
@@ -23,7 +23,7 @@ def _write_managed(tmp_path, monkeypatch, *, config=None, env=None):
         (managed / "config.yaml").write_text(textwrap.dedent(config), encoding="utf-8")
     if env is not None:
         (managed / ".env").write_text(textwrap.dedent(env), encoding="utf-8")
-    monkeypatch.setenv("HERMES_MANAGED_DIR", str(managed))
+    monkeypatch.setenv("JIMMY_MANAGED_DIR", str(managed))
     managed_scope.invalidate_managed_cache()
     return managed
 
@@ -35,7 +35,7 @@ def _write_managed(tmp_path, monkeypatch, *, config=None, env=None):
 
 
 def test_load_managed_env_and_is_env_managed(tmp_path, monkeypatch):
-    from hermes_cli import managed_scope
+    from jimmy_cli import managed_scope
 
     _write_managed(
         tmp_path, monkeypatch, env="OPENAI_API_BASE=https://org.example/v1\n"
@@ -50,7 +50,7 @@ def test_load_managed_env_and_is_env_managed(tmp_path, monkeypatch):
 
 
 def test_managed_dir_env_scrubbed_by_default():
-    """conftest must scrub HERMES_MANAGED_DIR so a dev-shell value can't leak in."""
+    """conftest must scrub JIMMY_MANAGED_DIR so a dev-shell value can't leak in."""
     import os
 
-    assert "HERMES_MANAGED_DIR" not in os.environ
+    assert "JIMMY_MANAGED_DIR" not in os.environ

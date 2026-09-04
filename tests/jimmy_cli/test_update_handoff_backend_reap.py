@@ -1,7 +1,7 @@
 """Tests for the GUI-updater hand-off backend reap (_handoff_reapable_backend_pids).
 
 Field incident (2026-08-20, Teknium's Windows box): a Desktop update hand-off
-(`hermes update --yes --gateway --force`) left a *swarm* of per-profile `serve`
+(`jimmy update --yes --gateway --force`) left a *swarm* of per-profile `serve`
 backends (mr-tester, probe-inherit, turqoise, clippy, maroon, …) holding
 `cryptography\\_rust.pyd`. Some still had a live parent (the tearing-down
 Electron process, or the venv launcher→worker two-hop chain mid-exit), so the
@@ -11,7 +11,7 @@ stranded bot sessions.
 
 _handoff_reapable_backend_pids is the additional rung that ONLY runs in the
 hand-off context (caller gates on args.gateway + the update-incomplete marker +
-no live hermes.exe shim). There, any surviving Hermes `serve`/`dashboard`
+no live jimmy.exe shim). There, any surviving Jimmy `serve`/`dashboard`
 backend from this venv is a leak — live parent or not — and safe to reap.
 A non-backend holder still disqualifies the whole set.
 
@@ -25,7 +25,7 @@ import sys
 import types
 from unittest.mock import MagicMock, patch
 
-from hermes_cli import main as cli_main
+from jimmy_cli import main as cli_main
 
 
 class _FakeNoSuchProcess(Exception):
@@ -50,9 +50,9 @@ def _proc(pid: int, cmdline: list[str]):
 
 def _serve_argv(profile: str = "mr-tester") -> list[str]:
     return [
-        "C:\\hermes\\venv\\Scripts\\python.exe",
+        "C:\\jimmy\\venv\\Scripts\\python.exe",
         "-m",
-        "hermes_cli.main",
+        "jimmy_cli.main",
         "--profile",
         profile,
         "serve",
@@ -73,7 +73,7 @@ def test_live_parent_backend_reaped_in_handoff():
     backend = _proc(200, _serve_argv("mr-tester"))
     fake = _fake_psutil({200: backend})
     with patch.dict(sys.modules, {"psutil": fake}):
-        holders = [_holder(200, "python.exe -m hermes_cli.main --profile mr-tester serve")]
+        holders = [_holder(200, "python.exe -m jimmy_cli.main --profile mr-tester serve")]
         assert cli_main._handoff_reapable_backend_pids(holders) == [200]
 
 
@@ -83,17 +83,17 @@ def test_swarm_of_profile_backends_all_reaped():
     fake = _fake_psutil(procs)
     with patch.dict(sys.modules, {"psutil": fake}):
         holders = [
-            _holder(200 + i, f"python.exe -m hermes_cli.main --profile {p} serve")
+            _holder(200 + i, f"python.exe -m jimmy_cli.main --profile {p} serve")
             for i, p in enumerate(profiles)
         ]
         assert sorted(cli_main._handoff_reapable_backend_pids(holders)) == sorted(procs)
 
 
 def test_dashboard_backend_reaped():
-    backend = _proc(200, ["python.exe", "-m", "hermes_cli.main", "dashboard"])
+    backend = _proc(200, ["python.exe", "-m", "jimmy_cli.main", "dashboard"])
     fake = _fake_psutil({200: backend})
     with patch.dict(sys.modules, {"psutil": fake}):
-        holders = [_holder(200, "python.exe -m hermes_cli.main dashboard")]
+        holders = [_holder(200, "python.exe -m jimmy_cli.main dashboard")]
         assert cli_main._handoff_reapable_backend_pids(holders) == [200]
 
 
@@ -101,12 +101,12 @@ def test_non_backend_holder_disqualifies_whole_set():
     # An operator REPL / stray script during a hand-off is unexpected — refuse
     # the whole set rather than reap something we can't justify.
     backend = _proc(200, _serve_argv("mr-tester"))
-    repl = _proc(300, ["python.exe", "-m", "hermes_cli.main", "chat"])
+    repl = _proc(300, ["python.exe", "-m", "jimmy_cli.main", "chat"])
     fake = _fake_psutil({200: backend, 300: repl})
     with patch.dict(sys.modules, {"psutil": fake}):
         holders = [
-            _holder(200, "python.exe -m hermes_cli.main --profile mr-tester serve"),
-            _holder(300, "python.exe -m hermes_cli.main chat"),
+            _holder(200, "python.exe -m jimmy_cli.main --profile mr-tester serve"),
+            _holder(300, "python.exe -m jimmy_cli.main chat"),
         ]
         assert cli_main._handoff_reapable_backend_pids(holders) is None
 
@@ -118,8 +118,8 @@ def test_exited_holder_skipped_not_fatal():
     fake = _fake_psutil({200: backend})  # 300 absent → NoSuchProcess
     with patch.dict(sys.modules, {"psutil": fake}):
         holders = [
-            _holder(300, "python.exe -m hermes_cli.main --profile gone serve"),
-            _holder(200, "python.exe -m hermes_cli.main --profile mr-tester serve"),
+            _holder(300, "python.exe -m jimmy_cli.main --profile gone serve"),
+            _holder(200, "python.exe -m jimmy_cli.main --profile mr-tester serve"),
         ]
         assert cli_main._handoff_reapable_backend_pids(holders) == [200]
 
@@ -145,5 +145,5 @@ def test_psutil_unavailable_returns_none():
     with patch.dict(sys.modules, {}, clear=False):
         sys.modules.pop("psutil", None)
         with patch("builtins.__import__", _no_psutil):
-            holders = [_holder(200, "python.exe -m hermes_cli.main --profile x serve")]
+            holders = [_holder(200, "python.exe -m jimmy_cli.main --profile x serve")]
             assert cli_main._handoff_reapable_backend_pids(holders) is None

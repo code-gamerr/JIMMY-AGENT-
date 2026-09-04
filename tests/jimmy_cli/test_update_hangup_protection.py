@@ -1,8 +1,8 @@
-"""Tests for SIGHUP protection and stdout mirroring in ``hermes update``.
+"""Tests for SIGHUP protection and stdout mirroring in ``jimmy update``.
 
 Covers ``_UpdateOutputStream``, ``_install_hangup_protection``, and
-``_finalize_update_output`` in ``hermes_cli/main.py``.  These exist so
-that ``hermes update`` survives a terminal disconnect mid-install
+``_finalize_update_output`` in ``jimmy_cli/main.py``.  These exist so
+that ``jimmy update`` survives a terminal disconnect mid-install
 (SSH drop, shell close) without leaving the venv half-installed.
 """
 
@@ -14,7 +14,7 @@ import sys
 
 import pytest
 
-from hermes_cli.main import (
+from jimmy_cli.main import (
     _UpdateOutputStream,
     _finalize_update_output,
     _install_hangup_protection,
@@ -25,23 +25,23 @@ from hermes_cli.main import (
 
 
 def test_update_completion_includes_bounded_action_identity(monkeypatch, capsys):
-    monkeypatch.setenv("HERMES_ACTION_ID", "a" * 32)
+    monkeypatch.setenv("JIMMY_ACTION_ID", "a" * 32)
     # These tests pin the action-identity receipt contract, not the branch
     # display — neutralize the branch+HEAD suffix added for the 2026-08-17
     # parked-branch incident (covered by test_update_parked_branch_guard.py).
-    monkeypatch.setattr("hermes_cli.update_cmd._branch_head_suffix", lambda: "")
+    monkeypatch.setattr("jimmy_cli.update_cmd._branch_head_suffix", lambda: "")
 
     _print_update_completion("✓ Update complete!")
 
     assert capsys.readouterr().out.splitlines() == [
         "✓ Update complete!",
-        f"=== hermes-update completed {'a' * 32} ===",
+        f"=== jimmy-update completed {'a' * 32} ===",
     ]
 
 
 def test_update_completion_rejects_untrusted_action_identity(monkeypatch, capsys):
-    monkeypatch.setenv("HERMES_ACTION_ID", "not-safe\nforged")
-    monkeypatch.setattr("hermes_cli.update_cmd._branch_head_suffix", lambda: "")
+    monkeypatch.setenv("JIMMY_ACTION_ID", "not-safe\nforged")
+    monkeypatch.setattr("jimmy_cli.update_cmd._branch_head_suffix", lambda: "")
 
     _print_update_completion("✓ Update complete!")
 
@@ -107,11 +107,11 @@ class TestInstallHangupProtection:
 
 
     def test_wraps_stdout_and_stderr_with_mirror(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
         # Nuke any cached home path
-        import hermes_cli.config as _cfg
-        if hasattr(_cfg, "_HERMES_HOME_CACHE"):
-            _cfg._HERMES_HOME_CACHE = None  # type: ignore[attr-defined]
+        import jimmy_cli.config as _cfg
+        if hasattr(_cfg, "_JIMMY_HOME_CACHE"):
+            _cfg._JIMMY_HOME_CACHE = None  # type: ignore[attr-defined]
 
         prev_out, prev_err = sys.stdout, sys.stderr
         state = _install_hangup_protection(gateway_mode=False)
@@ -130,7 +130,7 @@ class TestInstallHangupProtection:
             assert log_path.exists()
             contents = log_path.read_text(encoding="utf-8")
             assert "checking mirror" in contents
-            assert "hermes update started" in contents
+            assert "jimmy update started" in contents
         finally:
             _finalize_update_output(state)
             # Sanity-check restoration
@@ -139,7 +139,7 @@ class TestInstallHangupProtection:
 
 
     def test_non_fatal_if_log_setup_fails(self, monkeypatch):
-        """If get_hermes_home() raises, stdio must be left untouched but SIGHUP still handled."""
+        """If get_jimmy_home() raises, stdio must be left untouched but SIGHUP still handled."""
         prev_out, prev_err = sys.stdout, sys.stderr
 
         def _boom():
@@ -147,7 +147,7 @@ class TestInstallHangupProtection:
 
         # Patch the import inside _install_hangup_protection.
         monkeypatch.setattr(
-            "hermes_cli.config.get_hermes_home", _boom, raising=True
+            "jimmy_cli.config.get_jimmy_home", _boom, raising=True
         )
 
         original_handler = (

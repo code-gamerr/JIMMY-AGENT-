@@ -1,63 +1,63 @@
 #!/usr/bin/env python3
 """
-Hermes CLI - Main entry point.
+Jimmy CLI - Main entry point.
 
 Usage:
-    hermes                     # Interactive chat (default)
-    hermes chat                # Interactive chat
-    hermes gateway             # Run gateway in foreground
-    hermes gateway start       # Start gateway as service
-    hermes gateway stop        # Stop gateway service
-    hermes gateway status      # Show gateway status
-    hermes gateway install     # Install gateway service
-    hermes gateway uninstall   # Uninstall gateway service
-    hermes setup               # Interactive setup wizard
-    hermes logout              # Clear stored authentication
-    hermes status              # Show status of all components
-    hermes cron                # Manage cron jobs
-    hermes cron list           # List cron jobs
-    hermes cron status         # Check if cron scheduler is running
-    hermes doctor              # Check configuration and dependencies
-    hermes honcho setup                    # Configure Honcho AI memory integration
-    hermes honcho status                   # Show Honcho config and connection status
-    hermes honcho sessions                 # List directory → session name mappings
-    hermes honcho map <name>               # Map current directory to a session name
-    hermes honcho peer                     # Show peer names and dialectic settings
-    hermes honcho peer --user NAME         # Set user peer name
-    hermes honcho peer --ai NAME           # Set AI peer name
-    hermes honcho peer --reasoning LEVEL   # Set dialectic reasoning level
-    hermes honcho mode                     # Show current memory mode
-    hermes honcho mode [hybrid|honcho|local]  # Set memory mode
-    hermes honcho tokens                   # Show token budget settings
-    hermes honcho tokens --context N       # Set session.context() token cap
-    hermes honcho tokens --dialectic N     # Set dialectic result char cap
-    hermes honcho identity                 # Show AI peer identity representation
-    hermes honcho identity <file>          # Seed AI peer identity from a file (SOUL.md etc.)
-    hermes honcho migrate                  # Step-by-step migration guide: OpenClaw native → Hermes + Honcho
-    hermes --version           Show version and update status
-    hermes update              Update to latest version
-    hermes uninstall           Uninstall Hermes Agent
-    hermes acp                 Run as an ACP server for editor integration
-    hermes sessions browse     Interactive session picker with search
+    jimmy                     # Interactive chat (default)
+    jimmy chat                # Interactive chat
+    jimmy gateway             # Run gateway in foreground
+    jimmy gateway start       # Start gateway as service
+    jimmy gateway stop        # Stop gateway service
+    jimmy gateway status      # Show gateway status
+    jimmy gateway install     # Install gateway service
+    jimmy gateway uninstall   # Uninstall gateway service
+    jimmy setup               # Interactive setup wizard
+    jimmy logout              # Clear stored authentication
+    jimmy status              # Show status of all components
+    jimmy cron                # Manage cron jobs
+    jimmy cron list           # List cron jobs
+    jimmy cron status         # Check if cron scheduler is running
+    jimmy doctor              # Check configuration and dependencies
+    jimmy honcho setup                    # Configure Honcho AI memory integration
+    jimmy honcho status                   # Show Honcho config and connection status
+    jimmy honcho sessions                 # List directory → session name mappings
+    jimmy honcho map <name>               # Map current directory to a session name
+    jimmy honcho peer                     # Show peer names and dialectic settings
+    jimmy honcho peer --user NAME         # Set user peer name
+    jimmy honcho peer --ai NAME           # Set AI peer name
+    jimmy honcho peer --reasoning LEVEL   # Set dialectic reasoning level
+    jimmy honcho mode                     # Show current memory mode
+    jimmy honcho mode [hybrid|honcho|local]  # Set memory mode
+    jimmy honcho tokens                   # Show token budget settings
+    jimmy honcho tokens --context N       # Set session.context() token cap
+    jimmy honcho tokens --dialectic N     # Set dialectic result char cap
+    jimmy honcho identity                 # Show AI peer identity representation
+    jimmy honcho identity <file>          # Seed AI peer identity from a file (SOUL.md etc.)
+    jimmy honcho migrate                  # Step-by-step migration guide: OpenClaw native → Jimmy + Honcho
+    jimmy --version           Show version and update status
+    jimmy update              Update to latest version
+    jimmy uninstall           Uninstall Jimmy
+    jimmy acp                 Run as an ACP server for editor integration
+    jimmy sessions browse     Interactive session picker with search
 
-    hermes claw migrate --dry-run  # Preview migration without changes
+    jimmy claw migrate --dry-run  # Preview migration without changes
 """
 
-# IMPORTANT: hermes_bootstrap must be the very first import — it sets up
+# IMPORTANT: jimmy_bootstrap must be the very first import — it sets up
 # UTF-8 stdio on Windows so print()/subprocess children don't hit
 # UnicodeEncodeError with non-ASCII characters.  No-op on POSIX.
 #
-# Guarded against ModuleNotFoundError because ``hermes_bootstrap`` is a
+# Guarded against ModuleNotFoundError because ``jimmy_bootstrap`` is a
 # top-level module registered via pyproject.toml's ``py-modules`` list.
-# When the user upgrades code via ``git pull`` (or ``hermes update``
+# When the user upgrades code via ``git pull`` (or ``jimmy update``
 # crashes between ``git reset --hard`` and ``uv pip install -e .``), the
-# new code references ``hermes_bootstrap`` but the editable install's
+# new code references ``jimmy_bootstrap`` but the editable install's
 # ``.pth`` file still points at the old set of top-level modules.  Without
-# this guard, hermes crashes on import and the user can't run
-# ``hermes update`` to recover.  Missing the bootstrap means UTF-8 stdio
+# this guard, jimmy crashes on import and the user can't run
+# ``jimmy update`` to recover.  Missing the bootstrap means UTF-8 stdio
 # setup is skipped on Windows — degraded, not broken.  POSIX is unaffected.
 try:
-    import hermes_bootstrap  # noqa: F401
+    import jimmy_bootstrap  # noqa: F401
 except ModuleNotFoundError:
     pass
 
@@ -66,8 +66,8 @@ except ModuleNotFoundError:
 # any dependency touching ``platform.uname()`` at import time flashes a
 # visible console when this process is windowless (pythonw gateway + every
 # kanban worker).  No-op on POSIX; never raises.
-from hermes_cli._subprocess_compat import suppress_platform_ver_console
-from hermes_cli.cli_output import line_input
+from jimmy_cli._subprocess_compat import suppress_platform_ver_console
+from jimmy_cli.cli_output import line_input
 
 suppress_platform_ver_console()
 
@@ -75,27 +75,27 @@ import os
 import sys
 
 # ── Startup fast-path bootstrap ─────────────────────────────────────────
-# Two lines of inline path math so ``python hermes_cli/main.py`` (script
-# mode — sys.path[0] is hermes_cli/, not the repo root) can import the
-# canonical helpers; everything else lives in hermes_cli._startup_fast.
+# Two lines of inline path math so ``python jimmy_cli/main.py`` (script
+# mode — sys.path[0] is jimmy_cli/, not the repo root) can import the
+# canonical helpers; everything else lives in jimmy_cli._startup_fast.
 _bootstrap_root = os.path.realpath(os.path.join(os.path.dirname(__file__), os.pardir))
 if _bootstrap_root not in sys.path:
     sys.path.insert(0, _bootstrap_root)
-from hermes_cli import _startup_fast  # noqa: E402
+from jimmy_cli import _startup_fast  # noqa: E402
 
 # Early venv self-heal — MUST run before any third-party import below.  When
-# a prior ``hermes update`` left a recovery marker and a core package's import
+# a prior ``jimmy update`` left a recovery marker and a core package's import
 # files were wiped (#57828 — failed lazy backend refresh), the module-level
-# ``from hermes_cli.env_loader import ...`` / ``from hermes_cli.config import
+# ``from jimmy_cli.env_loader import ...`` / ``from jimmy_cli.config import
 # ...`` imports further down would crash before ``main()`` ever reaches
 # ``_recover_from_interrupted_install()``.  ``_early_recovery`` is stdlib-only
 # (safe to import on a corrupted venv), repairs just enough for this module to
 # finish importing, and leaves the marker lifecycle to the full recovery path.
 # The module import itself is unguarded on purpose: it lives in this same
-# package directory, so if IT can't import, nothing else in hermes_cli can
+# package directory, so if IT can't import, nothing else in jimmy_cli can
 # either. It is also the canonical home of the probe/repair tables reused by
 # the full recovery path below.
-from hermes_cli import _early_recovery as _early_recovery_mod
+from jimmy_cli import _early_recovery as _early_recovery_mod
 
 try:
     _early_recovery_mod.recover_if_needed()
@@ -184,7 +184,7 @@ def _run_and_exit_oneshot(
     usage_file: object = None,
 ) -> None:
     try:
-        from hermes_cli.oneshot import run_oneshot
+        from jimmy_cli.oneshot import run_oneshot
 
         rc = run_oneshot(
             prompt,
@@ -233,24 +233,24 @@ def _ensure_project_root_on_path_fast() -> None:
 
 
 def _set_process_title() -> None:
-    """Set the process title to 'hermes' so tools like 'ps', 'top', and
+    """Set the process title to 'jimmy' so tools like 'ps', 'top', and
     'htop' show the app name instead of 'python3.xx'.
 
     Purely cosmetic — non-fatal on any platform.
 
     Strategy (try in order):
-      1. ``setproctitle`` (opt-in dep — installed via ``hermes tools`` or
+      1. ``setproctitle`` (opt-in dep — installed via ``jimmy tools`` or
          ``pip install setproctitle``, or bundled in a future release).
       2. ctypes ``prctl(PR_SET_NAME)`` (Linux only, 15-char limit).
       3. ctypes ``pthread_setname_np`` (macOS only, kernel thread name —
          changes lldb/top but not ``ps aux``).
-      4. No-op on Windows (the .exe name is already ``hermes.exe``).
+      4. No-op on Windows (the .exe name is already ``jimmy.exe``).
     """
     # Strategy 1: setproctitle (best — works on macOS, Linux, BSD)
     try:
         import setproctitle  # type: ignore[import-untyped]
 
-        setproctitle.setproctitle("hermes")
+        setproctitle.setproctitle("jimmy")
         return
     except ImportError:
         pass
@@ -263,18 +263,18 @@ def _set_process_title() -> None:
         system = platform.system()
         if system == "Linux":
             libc = ctypes.CDLL("libc.so.6", use_errno=True)
-            libc.prctl(15, b"hermes", 0, 0, 0)  # PR_SET_NAME = 15
+            libc.prctl(15, b"jimmy", 0, 0, 0)  # PR_SET_NAME = 15
         elif system == "Darwin":
             libc = ctypes.CDLL("libc.dylib", use_errno=True)
-            libc.pthread_setname_np(b"hermes")
-        # Windows: the .exe name is already ``hermes.exe`` — nothing to do.
+            libc.pthread_setname_np(b"jimmy")
+        # Windows: the .exe name is already ``jimmy.exe`` — nothing to do.
     except Exception:
         pass
 
 
 # Cheap, dependency-free read of `display.interface` from config.yaml for the
 # earliest hot-path decisions (mouse-residue suppression, Termux fast launch)
-# that run *before* hermes_cli.config is importable. Mirrors the explicit
+# that run *before* jimmy_cli.config is importable. Mirrors the explicit
 # precedence used everywhere else: `--cli` always wins, then `--tui`/env, then
 # this config value. Cached so the multiple early callers don't re-parse YAML.
 _EARLY_INTERFACE_CACHE: "list | None" = None
@@ -288,11 +288,11 @@ def _config_default_interface_early() -> str:
         return _EARLY_INTERFACE_CACHE[0]
     value = "cli"
     try:
-        home = os.environ.get("HERMES_HOME")
+        home = os.environ.get("JIMMY_HOME")
         if home:
             cfg_path = os.path.join(home, "config.yaml")
         else:
-            cfg_path = os.path.join(os.path.expanduser("~"), ".hermes", "config.yaml")
+            cfg_path = os.path.join(os.path.expanduser("~"), ".jimmy", "config.yaml")
         if os.path.exists(cfg_path):
             import yaml as _yaml_iface
 
@@ -315,12 +315,12 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     """Earliest TUI decision, usable before argparse/config imports.
 
     Precedence: explicit ``--cli`` wins (forces classic REPL), then
-    explicit ``--tui``/``HERMES_TUI=1``, then a real-TTY gate (a
+    explicit ``--tui``/``JIMMY_TUI=1``, then a real-TTY gate (a
     non-interactive stdio can't host the Ink UI, so ambient config never
     boots it there), then ``display.interface`` in config.
 
     The TTY gate is load-bearing for headless spawners — kanban workers,
-    cron jobs, pipes run ``hermes … chat -q`` with stdio on a pipe. This
+    cron jobs, pipes run ``jimmy … chat -q`` with stdio on a pipe. This
     is the earliest launch decision (it runs before ``cmd_chat`` /
     ``_resolve_use_tui``), so a ``display.interface: tui`` default used to
     boot the TUI here — whose no-TTY bail-out exits 0 without doing the
@@ -331,7 +331,7 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
         argv = sys.argv[1:]
     if "--cli" in argv:
         return False
-    if os.environ.get("HERMES_TUI") == "1" or "--tui" in argv:
+    if os.environ.get("JIMMY_TUI") == "1" or "--tui" in argv:
         return True
     try:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
@@ -347,15 +347,15 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
 # before the Node TUI takes stdin into raw mode). During that window any
 # incoming bytes are echoed straight back to the user's shell scrollback as
 # ``^[[<…M`` text. The TUI itself runs `resetTerminalModes()` again in
-# `entry.tsx`; this is just the earlier cousin. ``HERMES_TUI_NO_EARLY_DISABLE``
+# `entry.tsx`; this is just the earlier cousin. ``JIMMY_TUI_NO_EARLY_DISABLE``
 # escapes the behaviour for diagnostics.
 def _suppress_mouse_residue_early() -> None:
-    if os.environ.get("HERMES_TUI_NO_EARLY_DISABLE") == "1":
+    if os.environ.get("JIMMY_TUI_NO_EARLY_DISABLE") == "1":
         return
     if not _wants_tui_early():
         return
     try:
-        # Skip when stdout is redirected (`hermes --tui … >log`, CI capture):
+        # Skip when stdout is redirected (`jimmy --tui … >log`, CI capture):
         # the bytes can't reach the terminal anyway and would just pollute
         # the log with raw CSI.
         if not os.isatty(1):
@@ -391,8 +391,8 @@ def _is_container_startup_environment_fast() -> bool:
     return _startup_fast.is_container_startup_environment()
 
 
-def _active_profile_may_override_home_fast(hermes_root: str) -> bool:
-    return _startup_fast.active_profile_may_override_home(hermes_root)
+def _active_profile_may_override_home_fast(jimmy_root: str) -> bool:
+    return _startup_fast.active_profile_may_override_home(jimmy_root)
 
 
 def _container_mode_may_be_active_fast() -> bool:
@@ -409,7 +409,7 @@ def _print_fast_version_info() -> None:
 
 
 def _try_ultrafast_version() -> bool:
-    """Handle ``hermes --version`` before config/logging imports."""
+    """Handle ``jimmy --version`` before config/logging imports."""
     return _startup_fast.try_fast_version()
 
 
@@ -439,63 +439,65 @@ from typing import Optional
 
 import functools as _functools
 
-from hermes_cli.subcommands._shared import add_accept_hooks_flag as _add_accept_hooks_flag
-from hermes_cli.subcommands.cron import build_cron_parser
-from hermes_cli.subcommands.sync import build_sync_parser
-from hermes_cli.subcommands.gateway import build_gateway_parser
-from hermes_cli.subcommands.profile import build_profile_parser
-from hermes_cli.subcommands.model import build_model_parser
-from hermes_cli.subcommands.setup import build_setup_parser
+from jimmy_cli.subcommands._shared import add_accept_hooks_flag as _add_accept_hooks_flag
+from jimmy_cli.subcommands.cron import build_cron_parser
+from jimmy_cli.subcommands.sync import build_sync_parser
+from jimmy_cli.subcommands.gateway import build_gateway_parser
+from jimmy_cli.subcommands.profile import build_profile_parser
+from jimmy_cli.subcommands.model import build_model_parser
+from jimmy_cli.subcommands.setup import build_setup_parser
 
-from hermes_cli.subcommands.whatsapp import build_whatsapp_parser
-from hermes_cli.subcommands.slack import build_slack_parser
-from hermes_cli.subcommands.login import build_login_parser
-from hermes_cli.subcommands.logout import build_logout_parser
-from hermes_cli.subcommands.auth import build_auth_parser
-from hermes_cli.subcommands.status import build_status_parser
-from hermes_cli.subcommands.pause import build_pause_parser
-from hermes_cli.subcommands.webhook import build_webhook_parser
-from hermes_cli.subcommands.hooks import build_hooks_parser
-from hermes_cli.subcommands.doctor import build_doctor_parser
-from hermes_cli.subcommands.verify import build_verify_parser
-from hermes_cli.subcommands.security import build_security_parser
-from hermes_cli.subcommands.approvals import build_approvals_parser
-from hermes_cli.subcommands.dump import build_dump_parser
-from hermes_cli.subcommands.debug import build_debug_parser
-from hermes_cli.subcommands.backup import build_backup_parser
-from hermes_cli.subcommands.import_cmd import build_import_cmd_parser
-from hermes_cli.subcommands.import_agent import build_import_agent_parser
-from hermes_cli.subcommands.config import build_config_parser
-from hermes_cli.subcommands.skin import build_skin_parser
-from hermes_cli.subcommands.console import build_console_parser
-from hermes_cli.subcommands.update import build_update_parser
-from hermes_cli.subcommands.uninstall import build_uninstall_parser
-from hermes_cli.subcommands.dashboard import build_dashboard_parser
-from hermes_cli.subcommands.gui import build_gui_parser
-from hermes_cli.subcommands.logs import build_logs_parser
-from hermes_cli.subcommands.prompt_size import build_prompt_size_parser
-from hermes_cli.subcommands.memory import build_memory_parser
-from hermes_cli.subcommands.acp import build_acp_parser
-from hermes_cli.subcommands.tools import build_tools_parser
-from hermes_cli.subcommands.insights import build_insights_parser
-from hermes_cli.subcommands.monitoring import build_monitoring_parser
-from hermes_cli.subcommands.skills import build_skills_parser
-from hermes_cli.subcommands.pairing import build_pairing_parser
-from hermes_cli.subcommands.plugins import build_plugins_parser
-from hermes_cli.subcommands.mcp import build_mcp_parser
-from hermes_cli.subcommands.claw import build_claw_parser
+from jimmy_cli.subcommands.whatsapp import build_whatsapp_parser
+from jimmy_cli.subcommands.slack import build_slack_parser
+from jimmy_cli.subcommands.login import build_login_parser
+from jimmy_cli.subcommands.logout import build_logout_parser
+from jimmy_cli.subcommands.auth import build_auth_parser
+from jimmy_cli.subcommands.status import build_status_parser
+from jimmy_cli.subcommands.pause import build_pause_parser
+from jimmy_cli.subcommands.webhook import build_webhook_parser
+from jimmy_cli.subcommands.hooks import build_hooks_parser
+from jimmy_cli.subcommands.doctor import build_doctor_parser
+from jimmy_cli.subcommands.verify import build_verify_parser
+from jimmy_cli.subcommands.security import build_security_parser
+from jimmy_cli.subcommands.approvals import build_approvals_parser
+from jimmy_cli.subcommands.dump import build_dump_parser
+from jimmy_cli.subcommands.debug import build_debug_parser
+from jimmy_cli.subcommands.backup import build_backup_parser
+from jimmy_cli.subcommands.import_cmd import build_import_cmd_parser
+from jimmy_cli.subcommands.import_agent import build_import_agent_parser
+from jimmy_cli.subcommands.config import build_config_parser
+from jimmy_cli.subcommands.skin import build_skin_parser
+from jimmy_cli.subcommands.console import build_console_parser
+from jimmy_cli.subcommands.update import build_update_parser
+from jimmy_cli.subcommands.uninstall import build_uninstall_parser
+from jimmy_cli.subcommands.dashboard import build_dashboard_parser
+from jimmy_cli.subcommands.gui import build_gui_parser
+from jimmy_cli.subcommands.logs import build_logs_parser
+from jimmy_cli.subcommands.prompt_size import build_prompt_size_parser
+from jimmy_cli.subcommands.optimize import build_optimize_parser
+from jimmy_cli.subcommands.command_center import build_command_center_parser
+from jimmy_cli.subcommands.memory import build_memory_parser
+from jimmy_cli.subcommands.acp import build_acp_parser
+from jimmy_cli.subcommands.tools import build_tools_parser
+from jimmy_cli.subcommands.insights import build_insights_parser
+from jimmy_cli.subcommands.monitoring import build_monitoring_parser
+from jimmy_cli.subcommands.skills import build_skills_parser
+from jimmy_cli.subcommands.pairing import build_pairing_parser
+from jimmy_cli.subcommands.plugins import build_plugins_parser
+from jimmy_cli.subcommands.mcp import build_mcp_parser
+from jimmy_cli.subcommands.claw import build_claw_parser
 
 
 def _require_tty(command_name: str) -> None:
     """Exit with a clear error if stdin is not a terminal.
 
-    Interactive TUI commands (hermes tools, hermes setup, hermes model) use
+    Interactive TUI commands (jimmy tools, jimmy setup, jimmy model) use
     curses or input() prompts that spin at 100% CPU when stdin is a pipe.
     This guard prevents accidental non-interactive invocation.
     """
     if not sys.stdin.isatty():
         print(
-            f"Error: 'hermes {command_name}' requires an interactive terminal.\n"
+            f"Error: 'jimmy {command_name}' requires an interactive terminal.\n"
             f"It cannot be run through a pipe or non-interactive subprocess.\n"
             f"Run it directly in your terminal instead.",
             file=sys.stderr,
@@ -509,27 +511,27 @@ _ensure_project_root_on_path_fast()
 
 
 # ---------------------------------------------------------------------------
-# Profile override — MUST happen before any hermes module import.
+# Profile override — MUST happen before any jimmy module import.
 #
-# Many modules cache HERMES_HOME at import time (module-level constants).
+# Many modules cache JIMMY_HOME at import time (module-level constants).
 # We intercept --profile/-p from sys.argv here and set the env var so that
-# every subsequent ``os.getenv("HERMES_HOME", ...)`` resolves correctly.
+# every subsequent ``os.getenv("JIMMY_HOME", ...)`` resolves correctly.
 # The flag is stripped from sys.argv so argparse never sees it.
-# Falls back to ~/.hermes/active_profile for sticky default.
+# Falls back to ~/.jimmy/active_profile for sticky default.
 # ---------------------------------------------------------------------------
 def _apply_profile_override() -> None:
-    """Pre-parse --profile/-p and set HERMES_HOME before imports."""
+    """Pre-parse --profile/-p and set JIMMY_HOME before imports."""
     argv = sys.argv[1:]
     profile_name = None
     consume = 0
     profile_index = None
 
     def _inside_mcp_add_args(index: int) -> bool:
-        """True once argv reaches `hermes mcp add ... --args <command argv>`.
+        """True once argv reaches `jimmy mcp add ... --args <command argv>`.
 
         ``mcp add --args`` is command-argv passthrough. Flags after that point
         belong to the child MCP command (for example Docker MCP Toolkit's
-        ``--profile``), not to Hermes' own profile selector.
+        ``--profile``), not to Jimmy' own profile selector.
         """
         try:
             mcp_index = argv.index("mcp", 0, index)
@@ -539,7 +541,7 @@ def _apply_profile_override() -> None:
         return True
 
     def _resolve_sudo_user_profile_env(name: str) -> str | None:
-        """Resolve `sudo hermes -p <name>` against the invoking user's home.
+        """Resolve `sudo jimmy -p <name>` against the invoking user's home.
 
         `_apply_profile_override()` runs before argparse, so `--run-as-user`
         is not available yet. For sudo invocations, the best available signal
@@ -561,7 +563,7 @@ def _apply_profile_override() -> None:
         except Exception:
             return None
 
-        candidate = home / ".hermes" / "profiles" / name
+        candidate = home / ".jimmy" / "profiles" / name
         try:
             if candidate.is_dir():
                 return str(candidate)
@@ -570,7 +572,7 @@ def _apply_profile_override() -> None:
         return None
 
     # 1. Check for explicit -p / --profile flag. Historically this worked even
-    # after the subcommand (`hermes chat -p coder`), so keep scanning broadly.
+    # after the subcommand (`jimmy chat -p coder`), so keep scanning broadly.
     # The exception is command-argv passthrough regions such as `mcp add --args`.
     value_flags = {
         "-z", "--oneshot",
@@ -614,7 +616,7 @@ def _apply_profile_override() -> None:
 
     # 1b. Reject values that can't be valid profile names (e.g. pytest's
     # "-p no:xdist" would be misread as profile "no:xdist" otherwise).
-    # Mirrors hermes_cli.profiles._PROFILE_ID_RE so we never call
+    # Mirrors jimmy_cli.profiles._PROFILE_ID_RE so we never call
     # resolve_profile_env() with a value it must reject + sys.exit on.
     if profile_name is not None and consume == 2:
         import re as _re
@@ -624,37 +626,37 @@ def _apply_profile_override() -> None:
             consume = 0
             profile_index = None
 
-    # 1.5 If HERMES_HOME is already set and no explicit flag was given, trust it
+    # 1.5 If JIMMY_HOME is already set and no explicit flag was given, trust it
     # only when it already points to a specific profile directory.  The
     # distinguishing heuristic: a profile path has "profiles" as its immediate
-    # parent directory name (e.g. ~/.hermes/profiles/coder or
-    # /opt/data/profiles/coder).  If HERMES_HOME points to the hermes root
-    # instead (e.g. systemd hardcodes HERMES_HOME=/root/.hermes), we must
+    # parent directory name (e.g. ~/.jimmy/profiles/coder or
+    # /opt/data/profiles/coder).  If JIMMY_HOME points to the jimmy root
+    # instead (e.g. systemd hardcodes JIMMY_HOME=/root/.jimmy), we must
     # still read active_profile — the user may have switched profiles via
-    # `hermes profile use` and the gateway should honour that choice.
+    # `jimmy profile use` and the gateway should honour that choice.
     # See issue #22502.
-    hermes_home_env = os.environ.get("HERMES_HOME", "")
-    if profile_name is None and hermes_home_env:
-        if Path(hermes_home_env).parent.name == "profiles":
+    jimmy_home_env = os.environ.get("JIMMY_HOME", "")
+    if profile_name is None and jimmy_home_env:
+        if Path(jimmy_home_env).parent.name == "profiles":
             return
 
-    # 2. If no flag, check active_profile in the hermes root.
+    # 2. If no flag, check active_profile in the jimmy root.
     #
     # EXCEPTION: a supervised s6 gateway child (exported by the container
-    # run-script as HERMES_S6_SUPERVISED_CHILD=1) must NOT follow the sticky
+    # run-script as JIMMY_S6_SUPERVISED_CHILD=1) must NOT follow the sticky
     # active_profile. Each supervised slot has a fixed profile identity: named
     # slots pass ``-p <name>`` explicitly (handled in step 1 above), and the
-    # reserved ``gateway-default`` slot runs bare ``hermes gateway run`` to mean
-    # "the root HERMES_HOME profile". If the reserved default child read
+    # reserved ``gateway-default`` slot runs bare ``jimmy gateway run`` to mean
+    # "the root JIMMY_HOME profile". If the reserved default child read
     # active_profile here, switching the active profile (e.g. via the dashboard)
     # would silently redirect the default gateway into that profile — yielding a
     # duplicate gateway for the active profile and no real default gateway. See
     # the "Docker & Profiles & Dashboard" report.
-    if profile_name is None and not os.environ.get("HERMES_S6_SUPERVISED_CHILD"):
+    if profile_name is None and not os.environ.get("JIMMY_S6_SUPERVISED_CHILD"):
         try:
-            from hermes_constants import get_default_hermes_root
+            from jimmy_constants import get_default_jimmy_root
 
-            active_path = get_default_hermes_root() / "active_profile"
+            active_path = get_default_jimmy_root() / "active_profile"
             if active_path.exists():
                 name = active_path.read_text(encoding="utf-8").strip()
                 if name and name != "default":
@@ -663,28 +665,28 @@ def _apply_profile_override() -> None:
         except (UnicodeDecodeError, OSError):
             pass  # corrupted file, skip
 
-    # 3. If we found a profile, resolve and set HERMES_HOME
+    # 3. If we found a profile, resolve and set JIMMY_HOME
     if profile_name is not None:
         try:
-            from hermes_cli.profiles import resolve_profile_env
+            from jimmy_cli.profiles import resolve_profile_env
 
-            hermes_home = resolve_profile_env(profile_name)
+            jimmy_home = resolve_profile_env(profile_name)
         except FileNotFoundError as exc:
-            hermes_home = _resolve_sudo_user_profile_env(profile_name)
-            if not hermes_home:
+            jimmy_home = _resolve_sudo_user_profile_env(profile_name)
+            if not jimmy_home:
                 print(f"Error: {exc}", file=sys.stderr)
                 sys.exit(1)
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
         except Exception as exc:
-            # A bug in profiles.py must NEVER prevent hermes from starting
+            # A bug in profiles.py must NEVER prevent jimmy from starting
             print(
                 f"Warning: profile override failed ({exc}), using default",
                 file=sys.stderr,
             )
             return
-        os.environ["HERMES_HOME"] = hermes_home
+        os.environ["JIMMY_HOME"] = jimmy_home
         # Strip the flag from argv so argparse doesn't choke
         if consume > 0 and profile_index is not None:
             start = profile_index + 1  # +1 because argv is sys.argv[1:]
@@ -693,10 +695,10 @@ def _apply_profile_override() -> None:
 
 _apply_profile_override()
 
-# Load .env from ~/.hermes/.env first, then project root as dev fallback.
+# Load .env from ~/.jimmy/.env first, then project root as dev fallback.
 # User-managed env files should override stale shell exports on restart.
-from hermes_cli.config import get_hermes_home
-from hermes_cli.env_loader import load_hermes_dotenv
+from jimmy_cli.config import get_jimmy_home
+from jimmy_cli.env_loader import load_jimmy_dotenv
 
 # Updating dependencies must not import optional secret-manager libraries into
 # the updater process before ``uv`` replaces the environment.  On Windows,
@@ -705,13 +707,13 @@ from hermes_cli.env_loader import load_hermes_dotenv
 # flags have already been stripped above, so the first remaining argument is
 # the authoritative argparse subcommand.  Dotenv/managed config still loads;
 # only external secret fetches are unnecessary for installation maintenance.
-load_hermes_dotenv(
+load_jimmy_dotenv(
     project_env=PROJECT_ROOT / ".env",
     load_external_secrets=sys.argv[1:2] != ["update"],
 )
 
-# Bridge security.redact_secrets from config.yaml → HERMES_REDACT_SECRETS env
-# var BEFORE hermes_logging imports agent.redact (which snapshots the flag at
+# Bridge security.redact_secrets from config.yaml → JIMMY_REDACT_SECRETS env
+# var BEFORE jimmy_logging imports agent.redact (which snapshots the flag at
 # module-import time). Without this, config.yaml's toggle is ignored because
 # the setup_logging() call below imports agent.redact, which reads the env var
 # exactly once. Env var in .env still wins — this is config.yaml fallback only.
@@ -722,12 +724,12 @@ load_hermes_dotenv(
 _FORCE_IPV4_EARLY = False
 try:
     # Reuse read_raw_config()'s (mtime, size)-keyed cache instead of a bespoke
-    # yaml.load — the SAME parse then serves hermes_logging's
+    # yaml.load — the SAME parse then serves jimmy_logging's
     # _read_logging_config and any later raw reads in this process, collapsing
     # 3-4 config.yaml parses per invocation into one.
-    from hermes_cli.config import read_raw_config as _read_raw_early
+    from jimmy_cli.config import read_raw_config as _read_raw_early
 
-    _cfg_path = get_hermes_home() / "config.yaml"
+    _cfg_path = get_jimmy_home() / "config.yaml"
     if _cfg_path.exists():
         _early_cfg_raw = _read_raw_early() or {}
         # Managed scope: overlay administrator-pinned values so a managed
@@ -736,16 +738,16 @@ try:
         # without the overlay a managed redact_secrets toggle would be ignored.
         # Fail-open via the shared helper.
         try:
-            from hermes_cli import managed_scope
+            from jimmy_cli import managed_scope
             _early_cfg_raw = managed_scope.apply_managed_overlay(_early_cfg_raw)
         except Exception:
             pass
-        if "HERMES_REDACT_SECRETS" not in os.environ:
+        if "JIMMY_REDACT_SECRETS" not in os.environ:
             _early_sec_cfg = _early_cfg_raw.get("security", {})
             if isinstance(_early_sec_cfg, dict):
                 _early_redact = _early_sec_cfg.get("redact_secrets")
                 if _early_redact is not None:
-                    os.environ["HERMES_REDACT_SECRETS"] = str(_early_redact).lower()
+                    os.environ["JIMMY_REDACT_SECRETS"] = str(_early_redact).lower()
         _early_net_cfg = _early_cfg_raw.get("network", {})
         if isinstance(_early_net_cfg, dict) and _early_net_cfg.get("force_ipv4"):
             _FORCE_IPV4_EARLY = True
@@ -754,12 +756,12 @@ try:
 except Exception:
     pass  # best-effort — redaction stays at default (enabled) on config errors
 
-# Initialize centralized file logging early — all `hermes` subcommands
+# Initialize centralized file logging early — all `jimmy` subcommands
 # (chat, setup, gateway, config, etc.) write to agent.log + errors.log.
 # Dashboard entrypoints bootstrap with GUI mode so gui.log is always present
 # during GUI testing, including pre-dispatch startup failures.
 try:
-    from hermes_logging import setup_logging as _setup_logging
+    from jimmy_logging import setup_logging as _setup_logging
 
     _setup_logging(
         mode=(
@@ -777,23 +779,23 @@ except Exception:
 # this just calls the toggle without a redundant load_config() round trip.
 if _FORCE_IPV4_EARLY:
     try:
-        from hermes_constants import apply_ipv4_preference as _apply_ipv4
+        from jimmy_constants import apply_ipv4_preference as _apply_ipv4
 
         _apply_ipv4(force=True)
     except Exception:
-        pass  # best-effort — don't crash if hermes_constants not importable yet
+        pass  # best-effort — don't crash if jimmy_constants not importable yet
 
 import logging
 import threading
 import time as _time
 from datetime import datetime
 
-from hermes_cli import __version__, __release_date__
+from jimmy_cli import __version__, __release_date__
 
-# Provider model-selection wizard flows extracted to hermes_cli/model_setup_flows.py
+# Provider model-selection wizard flows extracted to jimmy_cli/model_setup_flows.py
 # (god-file decomposition Phase 2). Re-imported here so select_provider_and_model and
-# existing test monkeypatches (hermes_cli.main._model_flow_*) keep resolving unchanged.
-from hermes_cli.model_setup_flows import (
+# existing test monkeypatches (jimmy_cli.main._model_flow_*) keep resolving unchanged.
+from jimmy_cli.model_setup_flows import (
     _prompt_auth_credentials_choice,
     _model_flow_openrouter,
     _model_flow_nous,
@@ -887,7 +889,7 @@ def _read_git_revision_fingerprint(repo_root: Path) -> str | None:
                 return f"git:{ref}:{packed_sha}"
             # Ref name is known but unresolved — still stable across launches,
             # and the version/release fallback in the caller will invalidate
-            # after `hermes update`.
+            # after `jimmy update`.
             return f"git:{ref}:unresolved"
         return f"git:HEAD:{head}"
     except OSError:
@@ -908,13 +910,13 @@ def _termux_bundled_skills_fingerprint() -> str:
 
 
 def _termux_bundled_skills_stamp_path() -> Path:
-    return get_hermes_home() / "skills" / ".termux_bundled_sync_stamp"
+    return get_jimmy_home() / "skills" / ".termux_bundled_sync_stamp"
 
 
 def _termux_bundled_skills_sync_needed() -> bool:
     if not _is_termux_startup_environment():
         return True
-    if os.environ.get("HERMES_TERMUX_FORCE_SKILLS_SYNC") == "1":
+    if os.environ.get("JIMMY_TERMUX_FORCE_SKILLS_SYNC") == "1":
         return True
     try:
         stamp = _termux_bundled_skills_stamp_path()
@@ -954,31 +956,31 @@ def _sync_bundled_skills_for_startup() -> bool:
 def _termux_should_prefetch_update_check() -> bool:
     if not _is_termux_startup_environment():
         return True
-    return os.environ.get("HERMES_TERMUX_PREFETCH_UPDATES") == "1"
+    return os.environ.get("JIMMY_TERMUX_PREFETCH_UPDATES") == "1"
 
 
 def _relative_time(ts) -> str:
     """Format a timestamp as relative time (e.g., '2h ago', 'yesterday').
 
     Thin wrapper kept for backward compatibility; the implementation lives
-    in :mod:`hermes_cli.timefmt` so lightweight consumers don't have to
+    in :mod:`jimmy_cli.timefmt` so lightweight consumers don't have to
     import the whole CLI surface.
     """
-    from hermes_cli.timefmt import relative_time
+    from jimmy_cli.timefmt import relative_time
 
     return relative_time(ts)
 
 
 def _has_any_provider_configured() -> bool:
     """Check if at least one inference provider is usable."""
-    from hermes_cli.config import get_env_path, get_hermes_home, load_config
-    from hermes_cli.auth import get_auth_status
+    from jimmy_cli.config import get_env_path, get_jimmy_home, load_config
+    from jimmy_cli.auth import get_auth_status
 
-    # Determine whether Hermes itself has been explicitly configured (model
+    # Determine whether Jimmy itself has been explicitly configured (model
     # in config that isn't the hardcoded default). Used below to gate external
     # tool credentials (Claude Code, Codex CLI) that shouldn't silently skip
     # the setup wizard on a fresh install.
-    from hermes_cli.config import DEFAULT_CONFIG
+    from jimmy_cli.config import DEFAULT_CONFIG
 
     _DEFAULT_MODEL = DEFAULT_CONFIG.get("model", "")
     cfg = load_config()
@@ -986,7 +988,7 @@ def _has_any_provider_configured() -> bool:
     if isinstance(model_cfg, dict):
         _default = model_cfg.get("default")
         if isinstance(_default, dict):
-            from hermes_cli.config import split_model_config_default
+            from jimmy_cli.config import split_model_config_default
             _model_name, _ = split_model_config_default(_default)
         else:
             _model_name = (_default or "")
@@ -995,12 +997,12 @@ def _has_any_provider_configured() -> bool:
         _model_name = model_cfg.strip()
     else:
         _model_name = ""
-    _has_hermes_config = _model_name and _model_name != _DEFAULT_MODEL
+    _has_jimmy_config = _model_name and _model_name != _DEFAULT_MODEL
 
     # Check env vars (may be set by .env or shell).
     # OPENAI_BASE_URL alone counts — local models (vLLM, llama.cpp, etc.)
     # often don't require an API key.
-    from hermes_cli.auth import PROVIDER_REGISTRY
+    from jimmy_cli.auth import PROVIDER_REGISTRY
 
     # Collect all provider env vars
     provider_env_vars = {
@@ -1038,7 +1040,7 @@ def _has_any_provider_configured() -> bool:
     # take 15-20s — long enough that desktop setup.status calls time out.
 
     # Check for Nous Portal OAuth credentials
-    auth_file = get_hermes_home() / "auth.json"
+    auth_file = get_jimmy_home() / "auth.json"
     if auth_file.exists():
         try:
             import json
@@ -1075,9 +1077,9 @@ def _has_any_provider_configured() -> bool:
         pass
 
     # Check for Claude Code OAuth credentials (~/.claude/.credentials.json)
-    # Only count these if Hermes has been explicitly configured — Claude Code
-    # being installed doesn't mean the user wants Hermes to use their tokens.
-    if _has_hermes_config:
+    # Only count these if Jimmy has been explicitly configured — Claude Code
+    # being installed doesn't mean the user wants Jimmy to use their tokens.
+    if _has_jimmy_config:
         try:
             from agent.anthropic_adapter import (
                 read_claude_code_credentials,
@@ -1103,8 +1105,8 @@ def _confirm_startup_expensive_model_override(args) -> None:
         return
 
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.model_selection_guards import (
+        from jimmy_cli.config import load_config
+        from jimmy_cli.model_selection_guards import (
             combined_message,
             selection_warnings,
         )
@@ -1242,7 +1244,7 @@ def _session_browse_picker(sessions: list, session_db=None) -> Optional[str]:
         if session_db is None:
             return False
         try:
-            sessions_dir = get_hermes_home() / "sessions"
+            sessions_dir = get_jimmy_home() / "sessions"
         except Exception:
             sessions_dir = None
         try:
@@ -1596,13 +1598,13 @@ def _resolve_last_session(source: str = "cli") -> Optional[str]:
     """Look up the most recently-used session ID for a source.
 
     Scoped to the current workspace first (git repo root, else cwd) so
-    ``hermes -c`` from repo A continues repo A's last session rather than the
+    ``jimmy -c`` from repo A continues repo A's last session rather than the
     global MRU. Falls back to the unscoped MRU when no session matches the
     current workspace, preserving the old behaviour for fresh directories.
     """
     db = None
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         ws_key = _resolve_workspace_key()
@@ -1651,14 +1653,14 @@ def _exec_in_container(container_info: dict, cli_args: list):
     On failure, OSError propagates naturally.
 
     Args:
-        container_info: dict with backend, container_name, exec_user, hermes_bin
-        cli_args: the original CLI arguments (everything after 'hermes')
+        container_info: dict with backend, container_name, exec_user, jimmy_bin
+        cli_args: the original CLI arguments (everything after 'jimmy')
     """
 
     backend = container_info["backend"]
     container_name = container_info["container_name"]
     exec_user = container_info["exec_user"]
-    hermes_bin = container_info["hermes_bin"]
+    jimmy_bin = container_info["jimmy_bin"]
 
     runtime = shutil.which(backend)
     if not runtime:
@@ -1700,14 +1702,14 @@ def _exec_in_container(container_info: dict, cli_args: list):
                     f'    commands = [{{ command = "{runtime}"; options = [ "NOPASSWD" ]; }}];\n'
                     f"  }}];\n"
                     f"\n"
-                    f"Or run: sudo hermes {' '.join(cli_args)}",
+                    f"Or run: sudo jimmy {' '.join(cli_args)}",
                     file=sys.stderr,
                 )
                 sys.exit(1)
         else:
             print(
                 f"Error: container '{container_name}' not found via {backend}.\n"
-                f"The container may be running under root. Try: sudo hermes {' '.join(cli_args)}",
+                f"The container may be running under root. Try: sudo jimmy {' '.join(cli_args)}",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -1728,7 +1730,7 @@ def _exec_in_container(container_info: dict, cli_args: list):
         + tty_flags
         + ["-u", exec_user]
         + env_flags
-        + [container_name, hermes_bin]
+        + [container_name, jimmy_bin]
         + cli_args
     )
 
@@ -1748,7 +1750,7 @@ def _resolve_session_by_name_or_id(name_or_id: str) -> Optional[str]:
     """
     db = None
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
 
@@ -1796,7 +1798,7 @@ def _create_titled_session(title: str) -> Optional[str]:
     try:
         import uuid as _uuid
 
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         now = datetime.now()
         timestamp_str = now.strftime("%Y%m%d_%H%M%S")
@@ -1860,7 +1862,7 @@ def _resolve_continue_arg(args, *, use_tui: bool) -> None:
             else:
                 print(f"No session found matching '{continue_val}'.", file=sys.stderr)
                 print(
-                    "Use 'hermes sessions list' to see available sessions, or "
+                    "Use 'jimmy sessions list' to see available sessions, or "
                     "pass --create-if-missing to start a new session with that title.",
                     file=sys.stderr,
                 )
@@ -1881,7 +1883,7 @@ def _resolve_continue_arg(args, *, use_tui: bool) -> None:
                     file=sys.stderr,
                 )
             try:
-                from hermes_cli.terminal_breadcrumbs import resolve_breadcrumb_session
+                from jimmy_cli.terminal_breadcrumbs import resolve_breadcrumb_session
 
                 _crumb_id = resolve_breadcrumb_session()
             except Exception:
@@ -1927,7 +1929,7 @@ def _print_tui_exit_summary(
 
     db = None
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         session = db.get_session(target)
@@ -1958,9 +1960,9 @@ def _print_tui_exit_summary(
 
     print()
     print("Resume this session with:")
-    print(f"  hermes --tui --resume {target}")
+    print(f"  jimmy --tui --resume {target}")
     if title:
-        print(f'  hermes --tui -c "{title}"')
+        print(f'  jimmy --tui -c "{title}"')
     print()
     print(f"Session:        {target}")
     if title:
@@ -2040,7 +2042,7 @@ def _termux_workspace_install_context(
 
 
 def _tui_need_npm_install(root: Path) -> bool:
-    """True when @hermes/ink is missing or node_modules is behind package-lock.json.
+    """True when @jimmy/ink is missing or node_modules is behind package-lock.json.
 
     Prebuilt bundle mode: when ``dist/entry.js`` exists and there is no
     ``package-lock.json`` (nix install layout only ships ``dist/`` +
@@ -2079,7 +2081,7 @@ def _tui_need_npm_install(root: Path) -> bool:
     if entry.is_file() and not lock.is_file():
         return False
 
-    ink = ws_root / "node_modules" / "@hermes" / "ink" / "package.json"
+    ink = ws_root / "node_modules" / "@jimmy" / "ink" / "package.json"
     if not ink.is_file():
         return True
     if not lock.is_file():
@@ -2122,7 +2124,7 @@ def _tui_need_npm_install(root: Path) -> bool:
 
 _TUI_BUILD_INPUT_DIRS = (
     "src",
-    "packages/hermes-ink/src",
+    "packages/jimmy-ink/src",
 )
 
 _TUI_BUILD_INPUT_FILES = (
@@ -2132,9 +2134,9 @@ _TUI_BUILD_INPUT_FILES = (
     "tsconfig.build.json",
     "babel.compiler.config.cjs",
     "scripts/build.mjs",
-    "packages/hermes-ink/package.json",
-    "packages/hermes-ink/index.js",
-    "packages/hermes-ink/text-input.js",
+    "packages/jimmy-ink/package.json",
+    "packages/jimmy-ink/index.js",
+    "packages/jimmy-ink/text-input.js",
 )
 
 _TUI_BUILD_INPUT_SUFFIXES = frozenset(
@@ -2164,9 +2166,9 @@ def _tui_need_rebuild(root: Path) -> bool:
     The TUI bundle is self-contained. Rebuilding it on every launch adds a
     visible cold-start tax on slow Termux CPUs, while a simple mtime freshness
     check still rebuilds immediately after source updates, dependency updates,
-    or local edits. Set ``HERMES_TUI_FORCE_BUILD=1`` to force the old behaviour.
+    or local edits. Set ``JIMMY_TUI_FORCE_BUILD=1`` to force the old behaviour.
     """
-    force = (os.environ.get("HERMES_TUI_FORCE_BUILD") or "").strip().lower()
+    force = (os.environ.get("JIMMY_TUI_FORCE_BUILD") or "").strip().lower()
     if force in {"1", "true", "yes", "on"}:
         return True
 
@@ -2196,20 +2198,20 @@ def _ensure_tui_node() -> None:
     was used (nvm, fnm, proto, brew, or the bundled fallback).
 
     Idempotent no-op when node+npm are already discoverable. Set
-    ``HERMES_SKIP_NODE_BOOTSTRAP=1`` to disable auto-install.
+    ``JIMMY_SKIP_NODE_BOOTSTRAP=1`` to disable auto-install.
     """
     if shutil.which("node") and shutil.which("npm"):
         return
-    if os.environ.get("HERMES_SKIP_NODE_BOOTSTRAP"):
+    if os.environ.get("JIMMY_SKIP_NODE_BOOTSTRAP"):
         return
 
     helper = PROJECT_ROOT / "scripts" / "lib" / "node-bootstrap.sh"
     if not helper.is_file():
         return
 
-    from hermes_constants import get_hermes_home
+    from jimmy_constants import get_jimmy_home
 
-    hermes_home = str(get_hermes_home())
+    jimmy_home = str(get_jimmy_home())
     try:
         # Helper writes logs to stderr; we ask bash to print `command -v node`
         # on stdout once ensure_node succeeds. Subshell PATH edits don't leak
@@ -2220,7 +2222,7 @@ def _ensure_tui_node() -> None:
                 "-c",
                 f'source "{helper}" >&2 && ensure_node >&2 && command -v node',
             ],
-            env={**os.environ, "HERMES_HOME": hermes_home},
+            env={**os.environ, "JIMMY_HOME": jimmy_home},
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -2237,7 +2239,7 @@ def _ensure_tui_node() -> None:
     if resolved:
         extras.append(Path(resolved).resolve().parent)
 
-    extras.extend([Path(hermes_home) / "node" / "bin", Path.home() / ".local" / "bin"])
+    extras.extend([Path(jimmy_home) / "node" / "bin", Path.home() / ".local" / "bin"])
 
     for extra in extras:
         s = str(extra)
@@ -2246,11 +2248,11 @@ def _ensure_tui_node() -> None:
     os.environ["PATH"] = os.pathsep.join(parts)
 
 
-def _find_bundled_tui(hermes_cli_dir: Path | None = None) -> Path | None:
+def _find_bundled_tui(jimmy_cli_dir: Path | None = None) -> Path | None:
     """Find a pre-built TUI entry.js bundled in the wheel."""
-    if hermes_cli_dir is None:
-        hermes_cli_dir = Path(__file__).parent
-    bundled = hermes_cli_dir / "tui_dist" / "entry.js"
+    if jimmy_cli_dir is None:
+        jimmy_cli_dir = Path(__file__).parent
+    bundled = jimmy_cli_dir / "tui_dist" / "entry.js"
     return bundled if bundled.is_file() else None
 
 
@@ -2258,7 +2260,7 @@ def _restore_tui_workspace(tui_dir: Path) -> bool:
     """Try to restore a missing ``ui-tui/`` from git, returning True on success.
 
     On Windows an antivirus / NTFS filter driver can leave tracked ``ui-tui/``
-    files deleted in the working tree after ``hermes update`` (HEAD stays
+    files deleted in the working tree after ``jimmy update`` (HEAD stays
     intact; the files just vanish — see issue #49145). Those files are tracked,
     so ``git restore`` puts them back deterministically. Best-effort: returns
     False (rather than raising) when git is unavailable, this isn't a checkout,
@@ -2294,19 +2296,19 @@ def _ensure_tui_workspace(tui_dir: Path) -> None:
         return
 
     if _restore_tui_workspace(tui_dir):
-        if not os.environ.get("HERMES_QUIET"):
+        if not os.environ.get("JIMMY_QUIET"):
             print(f"Restored missing TUI workspace: {tui_dir}")
         return
 
     print(
-        "Error: the TUI workspace is missing from this Hermes checkout.\n"
+        "Error: the TUI workspace is missing from this Jimmy checkout.\n"
         f"Expected directory: {tui_dir}\n"
-        "This usually means `hermes update` left tracked ui-tui files deleted.\n"
+        "This usually means `jimmy update` left tracked ui-tui files deleted.\n"
         "Recovery:\n"
-        "  1. From the Hermes checkout, run `git restore -- ui-tui`\n"
+        "  1. From the Jimmy checkout, run `git restore -- ui-tui`\n"
         "  2. Run `npm install --silent --no-fund --no-audit --progress=false`\n"
-        "  3. Retry `hermes --tui`\n"
-        "If the checkout is still inconsistent, run `hermes update --force`.",
+        "  3. Retry `jimmy --tui`\n"
+        "If the checkout is still inconsistent, run `jimmy update --force`.",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -2322,24 +2324,24 @@ def _npm_lifecycle_env(env: dict[str, str] | None = None) -> dict[str, str]:
 
 
 def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
-    """TUI: --dev → tsx src; else node dist (HERMES_TUI_DIR prebuilt or esbuild)."""
+    """TUI: --dev → tsx src; else node dist (JIMMY_TUI_DIR prebuilt or esbuild)."""
     _ensure_tui_node()
 
     def _node_bin(bin: str) -> str:
         if bin == "node":
-            env_node = os.environ.get("HERMES_NODE")
+            env_node = os.environ.get("JIMMY_NODE")
             if env_node and os.path.isfile(env_node) and os.access(env_node, os.X_OK):
                 return env_node
-        # find_node_executable() prefers the managed $HERMES_HOME/node tree,
+        # find_node_executable() prefers the managed $JIMMY_HOME/node tree,
         # which is not on PATH — a bare which() would declare "node not found"
-        # and exit on an install whose only Node is the one Hermes installed,
+        # and exit on an install whose only Node is the one Jimmy installed,
         # and would pick a system Node over the managed one when both exist.
-        from hermes_constants import find_node_executable
+        from jimmy_constants import find_node_executable
 
         path = find_node_executable(bin)
         if not path and bin == "node":
             try:
-                from hermes_cli.dep_ensure import ensure_dependency
+                from jimmy_cli.dep_ensure import ensure_dependency
                 if ensure_dependency("node"):
                     path = find_node_executable("node")
             except Exception:
@@ -2350,12 +2352,12 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         return path
 
     # Footgun: --dev against a prebuilt bundle that has no source/node_modules.
-    ext_dir = os.environ.get("HERMES_TUI_DIR")
+    ext_dir = os.environ.get("JIMMY_TUI_DIR")
     if tui_dev and ext_dir:
         print(
-            f"Error: --dev is incompatible with HERMES_TUI_DIR={ext_dir}\n"
+            f"Error: --dev is incompatible with JIMMY_TUI_DIR={ext_dir}\n"
             f"The prebuilt TUI has no source code to hot-reload.\n"
-            f"Unset HERMES_TUI_DIR (e.g. `unset HERMES_TUI_DIR`) to use --dev from a checkout.",
+            f"Unset JIMMY_TUI_DIR (e.g. `unset JIMMY_TUI_DIR`) to use --dev from a checkout.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -2364,7 +2366,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
     #
     # This must run BEFORE _ensure_tui_workspace() below. A prebuilt install
     # (Docker image, Nix build, or prior `npm run build`) ships
-    # hermes_cli/tui_dist/entry.js but never ships ui-tui/ at all (that
+    # jimmy_cli/tui_dist/entry.js but never ships ui-tui/ at all (that
     # directory only exists in a git checkout) — so requiring the workspace
     # to exist first made every prebuilt dashboard Chat tab connection
     # hard-exit before it ever got a chance to try the bundled entry.js it
@@ -2406,7 +2408,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         and _tui_need_npm_install(tui_dir)
     ):
         npm = _node_bin("npm")
-        if not os.environ.get("HERMES_QUIET"):
+        if not os.environ.get("JIMMY_QUIET"):
             print("Installing TUI dependencies…")
         npm_cwd = _workspace_root(tui_dir)
         # --workspace ui-tui avoids resolving apps/desktop (Electron + node-pty).
@@ -2438,7 +2440,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         ]
 
         def _run_tui_install() -> subprocess.CompletedProcess:
-            from hermes_constants import with_hermes_node_path
+            from jimmy_constants import with_jimmy_node_path
 
             # Managed tree first on PATH: if the EBADENGINE repair below
             # provisioned a managed Node, npm's shebang/lifecycle scripts must
@@ -2451,16 +2453,16 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                env=_npm_lifecycle_env(with_hermes_node_path()),
+                env=_npm_lifecycle_env(with_jimmy_node_path()),
             )
 
         result = _run_tui_install()
         if result.returncode != 0:
             # An npm outside the root package.json's `engines.npm` range fails
-            # here before doing any work; repair once (upgrade a Hermes-managed
+            # here before doing any work; repair once (upgrade a Jimmy-managed
             # npm in place, or provision a managed runtime when the npm belongs
             # to the user) and retry rather than dumping EBADENGINE at the user.
-            from hermes_cli.npm_engine import maybe_repair_npm_engine
+            from jimmy_cli.npm_engine import maybe_repair_npm_engine
 
             combined_output = f"{result.stdout or ''}\n{result.stderr or ''}"
             repaired_npm = maybe_repair_npm_engine(npm, combined_output)
@@ -2478,13 +2480,13 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         did_install = True
 
     if tui_dev:
-        # Keep the local @hermes/ink package exports in sync with source.
-        # --dev runs src/entry.tsx directly, but @hermes/ink resolves through
-        # packages/hermes-ink/dist/entry-exports.js. If that dist bundle is
+        # Keep the local @jimmy/ink package exports in sync with source.
+        # --dev runs src/entry.tsx directly, but @jimmy/ink resolves through
+        # packages/jimmy-ink/dist/entry-exports.js. If that dist bundle is
         # stale after a pull, newer hooks/components can exist in src while
         # being missing at runtime (e.g. useCursorAdvance). Prebuild it here.
         npm = _node_bin("npm")
-        ink_dir = tui_dir / "packages" / "hermes-ink"
+        ink_dir = tui_dir / "packages" / "jimmy-ink"
         result = subprocess.run(
             [npm, "run", "build"],
             cwd=str(ink_dir),
@@ -2540,7 +2542,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
 def _normalize_tui_toolsets(toolsets: object) -> list[str]:
     """Normalize argparse/Fire-style toolset input for the TUI subprocess."""
     try:
-        from hermes_cli.oneshot import _normalize_toolsets
+        from jimmy_cli.oneshot import _normalize_toolsets
 
         return _normalize_toolsets(toolsets) or []
     except (AttributeError, ImportError):
@@ -2645,24 +2647,24 @@ def _safe_tui_cwd(env: Optional[dict] = None) -> str:
 
 def _apply_tui_python_env(env: dict) -> None:
     """Seed/repair Python-related env vars shared by CLI and dashboard TUI launches."""
-    src_root = str(env.get("HERMES_PYTHON_SRC_ROOT") or "").strip()
+    src_root = str(env.get("JIMMY_PYTHON_SRC_ROOT") or "").strip()
     if not src_root or not Path(src_root).is_dir():
-        env["HERMES_PYTHON_SRC_ROOT"] = str(PROJECT_ROOT)
+        env["JIMMY_PYTHON_SRC_ROOT"] = str(PROJECT_ROOT)
 
-    cwd = str(env.get("HERMES_CWD") or "").strip()
+    cwd = str(env.get("JIMMY_CWD") or "").strip()
     if not cwd or not Path(cwd).is_dir():
-        env["HERMES_CWD"] = _safe_tui_cwd(env)
+        env["JIMMY_CWD"] = _safe_tui_cwd(env)
 
-    python = str(env.get("HERMES_PYTHON") or "").strip()
+    python = str(env.get("JIMMY_PYTHON") or "").strip()
     if os.path.dirname(python):
         python_path = Path(python)
         if not python_path.is_absolute():
-            python_path = Path(env["HERMES_CWD"]) / python_path
+            python_path = Path(env["JIMMY_CWD"]) / python_path
         python_is_executable = python_path.is_file() and os.access(python_path, os.X_OK)
     else:
         python_is_executable = bool(shutil.which(python, path=env.get("PATH")))
     if not python_is_executable:
-        env["HERMES_PYTHON"] = sys.executable
+        env["JIMMY_PYTHON"] = sys.executable
 
 
 def _launch_tui(
@@ -2687,20 +2689,20 @@ def _launch_tui(
 
     import tempfile
 
-    # TUI child is a hermes process: propagate the profile-home contract via
+    # TUI child is a jimmy process: propagate the profile-home contract via
     # the single factory; keep secrets (the TUI/agent needs provider creds).
     from tools.environments.local import build_subprocess_env
     env = build_subprocess_env(scrub_secrets=False, inherit_profile_home=True)
     try:
-        from hermes_cli.config import apply_terminal_config_to_env
+        from jimmy_cli.config import apply_terminal_config_to_env
         apply_terminal_config_to_env(env=env)
     except Exception:
         logger.debug("Failed to apply terminal config bridge for TUI launch", exc_info=True)
     active_session_fd, active_session_file = tempfile.mkstemp(
-        prefix="hermes-tui-active-session-", suffix=".json"
+        prefix="jimmy-tui-active-session-", suffix=".json"
     )
     os.close(active_session_fd)
-    env["HERMES_TUI_ACTIVE_SESSION_FILE"] = active_session_file
+    env["JIMMY_TUI_ACTIVE_SESSION_FILE"] = active_session_file
     env.setdefault("NODE_ENV", "development" if tui_dev else "production")
 
     wt_info = None
@@ -2736,20 +2738,20 @@ def _launch_tui(
             wt_info = None
         if not wt_info:
             sys.exit(1)
-        env["HERMES_CWD"] = wt_info["path"]
+        env["JIMMY_CWD"] = wt_info["path"]
         env["TERMINAL_CWD"] = wt_info["path"]
 
     _apply_tui_python_env(env)
 
     if model:
-        env["HERMES_MODEL"] = model
-        env["HERMES_INFERENCE_MODEL"] = model
+        env["JIMMY_MODEL"] = model
+        env["JIMMY_INFERENCE_MODEL"] = model
     if provider:
-        env["HERMES_TUI_PROVIDER"] = provider
-        env["HERMES_INFERENCE_PROVIDER"] = provider
+        env["JIMMY_TUI_PROVIDER"] = provider
+        env["JIMMY_INFERENCE_PROVIDER"] = provider
     tui_toolsets = _normalize_tui_toolsets(toolsets)
     if tui_toolsets:
-        env["HERMES_TUI_TOOLSETS"] = ",".join(tui_toolsets)
+        env["JIMMY_TUI_TOOLSETS"] = ",".join(tui_toolsets)
     if skills:
         if isinstance(skills, (list, tuple)):
             flattened = []
@@ -2758,27 +2760,27 @@ def _launch_tui(
                     part.strip() for part in str(item).split(",") if part.strip()
                 )
             if flattened:
-                env["HERMES_TUI_SKILLS"] = ",".join(flattened)
+                env["JIMMY_TUI_SKILLS"] = ",".join(flattened)
         else:
             value = str(skills).strip()
             if value:
-                env["HERMES_TUI_SKILLS"] = value
+                env["JIMMY_TUI_SKILLS"] = value
     if query:
-        env["HERMES_TUI_QUERY"] = query
+        env["JIMMY_TUI_QUERY"] = query
     if image:
-        env["HERMES_TUI_IMAGE"] = image
+        env["JIMMY_TUI_IMAGE"] = image
     if checkpoints:
-        env["HERMES_TUI_CHECKPOINTS"] = "1"
+        env["JIMMY_TUI_CHECKPOINTS"] = "1"
     if pass_session_id:
-        env["HERMES_TUI_PASS_SESSION_ID"] = "1"
+        env["JIMMY_TUI_PASS_SESSION_ID"] = "1"
     if max_turns is not None:
-        env["HERMES_TUI_MAX_TURNS"] = str(max_turns)
+        env["JIMMY_TUI_MAX_TURNS"] = str(max_turns)
     if verbose:
-        env["HERMES_TUI_TOOL_PROGRESS"] = "verbose"
+        env["JIMMY_TUI_TOOL_PROGRESS"] = "verbose"
     elif quiet:
-        env["HERMES_TUI_TOOL_PROGRESS"] = "off"
+        env["JIMMY_TUI_TOOL_PROGRESS"] = "off"
     if accept_hooks:
-        env["HERMES_ACCEPT_HOOKS"] = "1"
+        env["JIMMY_ACCEPT_HOOKS"] = "1"
     # Guarantee a generous V8 heap for the TUI. Default node cap is ~1.5–4GB
     # depending on version and can fatal-OOM on long sessions with large
     # transcripts / reasoning blobs. We target 8GB on an unconstrained host,
@@ -2797,17 +2799,17 @@ def _launch_tui(
     if not any(t.startswith("--max-old-space-size=") for t in _tokens):
         _tokens.append(f"--max-old-space-size={_resolve_tui_heap_mb()}")
     env["NODE_OPTIONS"] = " ".join(_tokens)
-    # HERMES_TUI_RESUME is an internal hand-off from the Python wrapper to the
+    # JIMMY_TUI_RESUME is an internal hand-off from the Python wrapper to the
     # Ink app.  Because we start from a full os.environ snapshot (via
     # build_subprocess_env), an exported/stale value
-    # in the user's shell would otherwise make a plain `hermes --tui` try to
+    # in the user's shell would otherwise make a plain `jimmy --tui` try to
     # resume a non-existent session and leave the UI at "error: session not
     # found" with no live session.  Only forward a resume id that argparse
     # resolved for this invocation; direct `node ui-tui/dist/entry.js` users can
-    # still set HERMES_TUI_RESUME themselves.
-    env.pop("HERMES_TUI_RESUME", None)
+    # still set JIMMY_TUI_RESUME themselves.
+    env.pop("JIMMY_TUI_RESUME", None)
     if resume_session_id:
-        env["HERMES_TUI_RESUME"] = resume_session_id
+        env["JIMMY_TUI_RESUME"] = resume_session_id
 
     argv, cwd = _make_tui_argv(tui_dir, tui_dev)
     code: Optional[int] = None
@@ -2830,12 +2832,12 @@ def _launch_tui(
             except Exception:
                 pass
 
-    # Exit code 42 = TUI requested an update. Relaunch as `hermes update` so
+    # Exit code 42 = TUI requested an update. Relaunch as `jimmy update` so
     # the user sees update output directly and gets the new version.
     # preserve_inherited=False ensures --tui and other flags are NOT carried
     # into the update subcommand.
     if code == 42:
-        from hermes_cli.relaunch import relaunch
+        from jimmy_cli.relaunch import relaunch
 
         print()
         print("⚕ Launching update...")
@@ -2846,36 +2848,36 @@ def _launch_tui(
 
 
 def _pin_kanban_board_env() -> None:
-    """Pin the active kanban board into ``HERMES_KANBAN_BOARD`` for the chat session.
+    """Pin the active kanban board into ``JIMMY_KANBAN_BOARD`` for the chat session.
 
     Without this, in-process tools (``kanban_*``) and shelled-out CLI calls
-    (``hermes kanban …``) resolve the board on different paths: the env-pin if
+    (``jimmy kanban …``) resolve the board on different paths: the env-pin if
     set, otherwise the global ``<root>/kanban/current`` file. A concurrent
-    ``hermes kanban boards switch`` from another session can flip the file
+    ``jimmy kanban boards switch`` from another session can flip the file
     mid-turn, so the same chat sees its tool calls hit board A while its shell
     calls hit board B (#20074). Pinning at chat boot mirrors what the
     dispatcher already does for spawned workers.
     """
-    if os.environ.get("HERMES_KANBAN_BOARD"):
+    if os.environ.get("JIMMY_KANBAN_BOARD"):
         return
     try:
-        from hermes_cli.kanban_db import get_current_board
+        from jimmy_cli.kanban_db import get_current_board
 
-        os.environ["HERMES_KANBAN_BOARD"] = get_current_board()
+        os.environ["JIMMY_KANBAN_BOARD"] = get_current_board()
     except Exception:
         pass
 
 
 def _sync_bundled_skills_quietly() -> None:
-    """Seed ``~/.hermes/skills/`` with the bundled skill library on first launch.
+    """Seed ``~/.jimmy/skills/`` with the bundled skill library on first launch.
 
     Called from any CLI entrypoint that the user might use as their first
-    interaction with Hermes — chat, dashboard (the desktop GUI's backend),
+    interaction with Jimmy — chat, dashboard (the desktop GUI's backend),
     and gateway. The skills_sync module is manifest-based and idempotent:
     skipped skills cost ~milliseconds, so calling this repeatedly is fine.
 
     Failures are swallowed because skills are an enhancement, not a hard
-    dependency. Hermes still functions without them; the user just sees an
+    dependency. Jimmy still functions without them; the user just sees an
     empty skills library.
     """
     try:
@@ -2893,7 +2895,7 @@ def _resolve_use_tui(args) -> bool:
       1. ``--cli`` flag         → always classic REPL
       2. ``--tui`` flag         → always TUI (explicit ask)
       3. no TTY                 → always classic (ambient prefs don't apply)
-      4. ``HERMES_TUI=1`` env   → TUI
+      4. ``JIMMY_TUI=1`` env   → TUI
       5. ``display.interface`` config value ("cli" | "tui")
       6. default → classic REPL
 
@@ -2902,7 +2904,7 @@ def _resolve_use_tui(args) -> bool:
 
     The TTY gate (3) is load-bearing: ambient TUI preferences (env var or
     config default) must never hijack a NON-interactive invocation. Kanban
-    workers, cron jobs, and pipelines run ``hermes … chat -q`` with stdout
+    workers, cron jobs, and pipelines run ``jimmy … chat -q`` with stdout
     on a pipe; booting the Ink TUI there hits its no-TTY bail-out, which
     prints a resume hint and exits 0 — a kanban worker then dies with
     "exited cleanly without calling kanban_complete — protocol violation"
@@ -2918,10 +2920,10 @@ def _resolve_use_tui(args) -> bool:
             return False
     except Exception:
         return False
-    if os.environ.get("HERMES_TUI") == "1":
+    if os.environ.get("JIMMY_TUI") == "1":
         return True
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
 
         iface = (load_config().get("display", {}) or {}).get("interface", "cli")
         return isinstance(iface, str) and iface.strip().lower() == "tui"
@@ -2975,20 +2977,20 @@ def cmd_chat(args):
         else:
             kind = "TUI" if use_tui else "CLI"
             print(f"No previous {kind} session found to resume.")
-            print("Use 'hermes sessions list' to see available sessions.")
+            print("Use 'jimmy sessions list' to see available sessions.")
             sys.exit(1)
 
     # Resolve --continue into --resume with the latest session or by name
     _resolve_continue_arg(args, use_tui=use_tui)
 
     # --resume @claude / --resume @codex: import a foreign session (Claude
-    # Code / Codex CLI) and resume the newly created Hermes session.
+    # Code / Codex CLI) and resume the newly created Jimmy session.
     _resume_foreign = getattr(args, "resume", None)
     if isinstance(_resume_foreign, str) and _resume_foreign.strip().lower() in (
         "@claude",
         "@codex",
     ):
-        from hermes_cli.foreign_sessions import (
+        from jimmy_cli.foreign_sessions import (
             import_foreign_session,
             pick_foreign_session,
         )
@@ -3003,7 +3005,7 @@ def cmd_chat(args):
             print(f"Error: {e}")
             sys.exit(1)
         print(f"✓ Imported as {_imported_id} — resuming it now.")
-        print(f"  (later: hermes --resume {_imported_id})")
+        print(f"  (later: jimmy --resume {_imported_id})")
         args.resume = _imported_id
 
     # Resolve --resume by title if it's not a direct session ID
@@ -3026,7 +3028,7 @@ def cmd_chat(args):
     ):
         _resume_db = None
         try:
-            from hermes_state import SessionDB
+            from jimmy_state import SessionDB
 
             _resume_db = SessionDB()
             _saved_cwd = ((_resume_db.get_session(args.resume) or {}).get("cwd") or "").strip()
@@ -3046,13 +3048,13 @@ def cmd_chat(args):
 
     # xAI retirement warning — one-shot, non-blocking, never fails startup
     try:
-        from hermes_cli.xai_retirement import (
+        from jimmy_cli.xai_retirement import (
             MIGRATION_GUIDE_URL,
             RETIREMENT_DATE,
             find_retired_xai_refs,
             format_issue,
         )
-        from hermes_cli.config import load_config as _load_config_for_xai_check
+        from jimmy_cli.config import load_config as _load_config_for_xai_check
 
         _retired_xai_refs = find_retired_xai_refs(_load_config_for_xai_check())
         if _retired_xai_refs:
@@ -3063,7 +3065,7 @@ def cmd_chat(args):
             for _ref in _retired_xai_refs:
                 sys.stderr.write(f"  \033[33m⚠\033[0m {format_issue(_ref)}\n")
             sys.stderr.write(f"  \033[2mMigration guide: {MIGRATION_GUIDE_URL}\033[0m\n")
-            sys.stderr.write("  \033[2mRun 'hermes doctor' for details.\033[0m\n\n")
+            sys.stderr.write("  \033[2mRun 'jimmy doctor' for details.\033[0m\n\n")
     except Exception:
         pass
 
@@ -3071,13 +3073,13 @@ def cmd_chat(args):
     if not _has_any_provider_configured():
         print()
         print(
-            "It looks like Hermes isn't configured yet -- no API keys or providers found."
+            "It looks like Jimmy isn't configured yet -- no API keys or providers found."
         )
         print()
-        print("  Run:  hermes setup")
+        print("  Run:  jimmy setup")
         print()
 
-        from hermes_cli.setup import (
+        from jimmy_cli.setup import (
             is_interactive_stdin,
             print_noninteractive_setup_guidance,
         )
@@ -3096,7 +3098,7 @@ def cmd_chat(args):
             cmd_setup(args)
             return
         print()
-        print("You can run 'hermes setup' at any time to configure.")
+        print("You can run 'jimmy setup' at any time to configure.")
         sys.exit(1)
 
     # Start update check in background (runs while other init happens).
@@ -3104,7 +3106,7 @@ def cmd_chat(args):
     # competes for CPU on single-core devices, so keep it opt-in there.
     if _termux_should_prefetch_update_check():
         try:
-            from hermes_cli.banner import prefetch_banner_data, prefetch_update_check
+            from jimmy_cli.banner import prefetch_banner_data, prefetch_update_check
 
             prefetch_update_check()
             # Warm git banner state + skills index off-thread too — their
@@ -3120,7 +3122,7 @@ def cmd_chat(args):
     # loading happens at agent init (first message), by which point the
     # sync has long finished.
     #
-    # FIRST RUN is the exception: with an empty ~/.hermes/skills the banner
+    # FIRST RUN is the exception: with an empty ~/.jimmy/skills the banner
     # prefetch races the background sync, caches an empty skills index, and
     # the very first launch greets the user with "No skills installed ·
     # 0 skills" while 69 bundled skills land milliseconds later (full-surface
@@ -3129,8 +3131,8 @@ def cmd_chat(args):
     # matches reality; every later launch keeps the background path.
     def _skills_dir_is_unseeded() -> bool:
         try:
-            from hermes_cli.config import get_hermes_home
-            skills_dir = Path(get_hermes_home()) / "skills"
+            from jimmy_cli.config import get_jimmy_home
+            skills_dir = Path(get_jimmy_home()) / "skills"
             if not skills_dir.is_dir():
                 return True
             return next(skills_dir.rglob("SKILL.md"), None) is None
@@ -3149,7 +3151,7 @@ def cmd_chat(args):
         # still-empty dir and cached an empty skills index — drop it so the
         # banner recomputes against the freshly seeded tree.
         try:
-            import hermes_cli.banner as _banner_mod
+            import jimmy_cli.banner as _banner_mod
             _banner_mod._available_skills_cache = None
         except Exception:
             pass
@@ -3164,25 +3166,25 @@ def cmd_chat(args):
     # _YOLO_MODE_FROZEN.  This redundant set is a safety net for callers
     # that invoke cmd_chat directly (e.g. subcommand dispatch).
     if getattr(args, "yolo", False):
-        os.environ["HERMES_YOLO_MODE"] = "1"
+        os.environ["JIMMY_YOLO_MODE"] = "1"
 
     # --ignore-user-config: make load_cli_config() / load_config() skip the
-    # user's ~/.hermes/config.yaml and return built-in defaults. Set BEFORE
+    # user's ~/.jimmy/config.yaml and return built-in defaults. Set BEFORE
     # importing cli (which runs `CLI_CONFIG = load_cli_config()` at module
     # import time). Credentials in .env are still loaded — this flag only
     # ignores behavioral/config settings.
     if getattr(args, "ignore_user_config", False):
-        os.environ["HERMES_IGNORE_USER_CONFIG"] = "1"
+        os.environ["JIMMY_IGNORE_USER_CONFIG"] = "1"
 
     # --ignore-rules: skip auto-injection of AGENTS.md/SOUL.md/.cursorrules
     # (rules), memory entries, and any preloaded skills coming from user config.
     # Maps to AIAgent(skip_context_files=True, skip_memory=True).
     if getattr(args, "ignore_rules", False):
-        os.environ["HERMES_IGNORE_RULES"] = "1"
+        os.environ["JIMMY_IGNORE_RULES"] = "1"
 
     # --source: tag session source for filtering (e.g. 'tool' for third-party integrations)
     if getattr(args, "source", None):
-        os.environ["HERMES_SESSION_SOURCE"] = args.source
+        os.environ["JIMMY_SESSION_SOURCE"] = args.source
 
     _pin_kanban_board_env()
     _confirm_startup_expensive_model_override(args)
@@ -3269,7 +3271,7 @@ def cmd_gateway(args):
     """Gateway management commands."""
     _sync_bundled_skills_quietly()
 
-    from hermes_cli.gateway import gateway_command
+    from jimmy_cli.gateway import gateway_command
 
     gateway_command(args)
 
@@ -3278,7 +3280,7 @@ def cmd_proxy(args):
     """Local OpenAI-compatible proxy to OAuth providers."""
     # Lazy import — pulls in aiohttp, which is gated behind an extras install
     # for users who don't run the proxy or the messaging gateway.
-    from hermes_cli.proxy.cli import cmd_proxy as _cmd_proxy
+    from jimmy_cli.proxy.cli import cmd_proxy as _cmd_proxy
 
     rc = _cmd_proxy(args)
     if isinstance(rc, int) and rc != 0:
@@ -3288,8 +3290,8 @@ def cmd_proxy(args):
 def cmd_whatsapp(args):
     """Set up WhatsApp: choose mode, configure, install bridge, pair via QR."""
     _require_tty("whatsapp")
-    from hermes_cli.config import get_env_value, save_env_value
-    from hermes_constants import find_node_executable, with_hermes_node_path
+    from jimmy_cli.config import get_env_value, save_env_value
+    from jimmy_constants import find_node_executable, with_jimmy_node_path
 
     print()
     print("⚕ WhatsApp Setup")
@@ -3299,7 +3301,7 @@ def cmd_whatsapp(args):
     current_mode = get_env_value("WHATSAPP_MODE") or ""
     if not current_mode:
         print()
-        print("How will you use WhatsApp with Hermes?")
+        print("How will you use WhatsApp with Jimmy?")
         print()
         print("  1. Separate bot number (recommended)")
         print("     People message the bot's number directly — cleanest experience.")
@@ -3349,7 +3351,7 @@ def cmd_whatsapp(args):
     # We intentionally don't write WHATSAPP_ENABLED=true here.  If the user
     # aborts the wizard later (Ctrl+C, failed npm install, missed QR scan),
     # we'd otherwise leave .env claiming WhatsApp is ready when the bridge
-    # has no creds.json.  Every subsequent `hermes gateway` then paid a 30s
+    # has no creds.json.  Every subsequent `jimmy gateway` then paid a 30s
     # bridge-bootstrap timeout and queued WhatsApp for indefinite retries.
     # Now: aborted setup leaves WHATSAPP_ENABLED unset → gateway skips it.
     # Re-runs that already have WHATSAPP_ENABLED=true (from a prior
@@ -3417,7 +3419,7 @@ def cmd_whatsapp(args):
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                env=with_hermes_node_path(),
+                env=with_jimmy_node_path(),
             )
         except KeyboardInterrupt:
             print("\n  ✗ Install cancelled")
@@ -3433,7 +3435,7 @@ def cmd_whatsapp(args):
         print("✓ Bridge dependencies already installed")
 
     # ── Step 5: Check for existing session ───────────────────────────────
-    session_dir = get_hermes_home() / "whatsapp" / "session"
+    session_dir = get_jimmy_home() / "whatsapp" / "session"
     session_dir.mkdir(parents=True, exist_ok=True)
 
     if (session_dir / "creds.json").exists():
@@ -3456,7 +3458,7 @@ def cmd_whatsapp(args):
             if (get_env_value("WHATSAPP_ENABLED") or "").lower() != "true":
                 save_env_value("WHATSAPP_ENABLED", "true")
             print("\n✓ WhatsApp is configured and paired!")
-            print("  Start the gateway with: hermes gateway")
+            print("  Start the gateway with: jimmy gateway")
             return
 
     # ── Step 6: QR code pairing ──────────────────────────────────────────
@@ -3482,7 +3484,7 @@ def cmd_whatsapp(args):
                 str(session_dir),
             ],
             cwd=str(bridge_dir),
-            env=with_hermes_node_path(),
+            env=with_jimmy_node_path(),
         )
     except KeyboardInterrupt:
         pass
@@ -3492,30 +3494,30 @@ def cmd_whatsapp(args):
     if (session_dir / "creds.json").exists():
         # Only enable WhatsApp now that pairing actually succeeded.  If the
         # user Ctrl+C'd at any earlier step, WHATSAPP_ENABLED stays unset
-        # and `hermes gateway` skips it cleanly instead of paying a 30s
+        # and `jimmy gateway` skips it cleanly instead of paying a 30s
         # bridge timeout + queueing the platform for indefinite retries.
         save_env_value("WHATSAPP_ENABLED", "true")
         print("✓ WhatsApp paired successfully!")
         print()
         if wa_mode == "bot":
             print("  Next steps:")
-            print("    1. Start the gateway:  hermes gateway")
+            print("    1. Start the gateway:  jimmy gateway")
             print("    2. Send a message to the bot's WhatsApp number")
             print("    3. The agent will reply automatically")
             print()
-            print("  Tip: Agent responses are prefixed with '⚕ Hermes Agent'")
+            print("  Tip: Agent responses are prefixed with '⚕ Jimmy'")
         else:
             print("  Next steps:")
-            print("    1. Start the gateway:  hermes gateway")
+            print("    1. Start the gateway:  jimmy gateway")
             print("    2. Open WhatsApp → Message Yourself")
             print("    3. Type a message — the agent will reply")
             print()
-            print("  Tip: Agent responses are prefixed with '⚕ Hermes Agent'")
+            print("  Tip: Agent responses are prefixed with '⚕ Jimmy'")
             print("  so you can tell them apart from your own messages.")
         print()
-        print("  Or install as a service: hermes gateway install")
+        print("  Or install as a service: jimmy gateway install")
     else:
-        print("⚠ Pairing may not have completed. Run 'hermes whatsapp' to try again.")
+        print("⚠ Pairing may not have completed. Run 'jimmy whatsapp' to try again.")
 
 
 def cmd_whatsapp_cloud(args):
@@ -3527,19 +3529,19 @@ def cmd_whatsapp_cloud(args):
     common setup mistakes (e.g. pasting a phone number into the Phone
     Number ID field).
 
-    Distinct from ``hermes whatsapp`` (the Baileys bridge wizard) — the
+    Distinct from ``jimmy whatsapp`` (the Baileys bridge wizard) — the
     two adapters are complementary, not alternatives. See
-    ``hermes_cli/setup_whatsapp_cloud.py``.
+    ``jimmy_cli/setup_whatsapp_cloud.py``.
     """
     _require_tty("whatsapp-cloud")
-    from hermes_cli.setup_whatsapp_cloud import run_whatsapp_cloud_setup
+    from jimmy_cli.setup_whatsapp_cloud import run_whatsapp_cloud_setup
 
     return run_whatsapp_cloud_setup()
 
 
 def cmd_setup(args):
     """Interactive setup wizard."""
-    from hermes_cli.setup import run_setup_wizard
+    from jimmy_cli.setup import run_setup_wizard
 
     run_setup_wizard(args)
 
@@ -3549,7 +3551,7 @@ def cmd_model(args):
     _require_tty("model")
     if getattr(args, "refresh", False):
         try:
-            from hermes_cli.models import clear_provider_models_cache
+            from jimmy_cli.models import clear_provider_models_cache
             clear_provider_models_cache()
             print("  Cleared model picker cache.")
         except Exception:
@@ -3575,22 +3577,22 @@ def _is_profile_api_key_provider(provider_id: str) -> bool:
 def select_provider_and_model(args=None):
     """Core provider selection + model picking logic.
 
-    Shared by ``cmd_model`` (``hermes model``) and the setup wizard
+    Shared by ``cmd_model`` (``jimmy model``) and the setup wizard
     (``setup_model_provider`` in setup.py).  Handles the full flow:
     provider picker, credential prompting, model selection, and config
     persistence.
     """
-    from hermes_cli.auth import (
+    from jimmy_cli.auth import (
         resolve_provider,
         AuthError,
         format_auth_error,
     )
-    from hermes_cli.config import (
+    from jimmy_cli.config import (
         get_compatible_custom_providers,
         load_config,
         get_env_value,
     )
-    from hermes_cli.providers import (
+    from jimmy_cli.providers import (
         custom_provider_aliases,
         custom_provider_slug,
         resolve_provider_full,
@@ -3610,11 +3612,11 @@ def select_provider_and_model(args=None):
         config_provider = model_cfg.get("provider")
 
     effective_provider = (
-        config_provider or os.getenv("HERMES_INFERENCE_PROVIDER") or "auto"
+        config_provider or os.getenv("JIMMY_INFERENCE_PROVIDER") or "auto"
     )
     compatible_custom_providers = get_compatible_custom_providers(config)
     def _named_custom_provider_map(cfg) -> dict[str, dict[str, str]]:
-        from hermes_cli.config import read_raw_config
+        from jimmy_cli.config import read_raw_config
 
         # Build lookups of raw (un-expanded) templates keyed by a
         # stable identity. We intentionally bypass
@@ -3781,8 +3783,8 @@ def select_provider_and_model(args=None):
                 active = _canonical_named_custom_key(active)
         else:
             warning = (
-                f"Unknown provider '{effective_provider}'. Check 'hermes model' for "
-                "available providers, or run 'hermes doctor' to diagnose config "
+                f"Unknown provider '{effective_provider}'. Check 'jimmy model' for "
+                "available providers, or run 'jimmy doctor' to diagnose config "
                 "issues."
             )
             print(f"Warning: {warning} Falling back to auto provider detection.")
@@ -3799,7 +3801,7 @@ def select_provider_and_model(args=None):
     if active == "openrouter" and get_env_value("OPENAI_BASE_URL"):
         active = "custom"
 
-    from hermes_cli.models import (
+    from jimmy_cli.models import (
         CANONICAL_PROVIDERS,
         _PROVIDER_LABELS,
         _PROVIDER_ALIASES,
@@ -3821,16 +3823,16 @@ def select_provider_and_model(args=None):
     # Step 1: Provider selection.
     #
     # Canonical providers are folded into top-level groups (display only — see
-    # PROVIDER_GROUPS in hermes_cli/models.py). A multi-member group shows one
+    # PROVIDER_GROUPS in jimmy_cli/models.py). A multi-member group shows one
     # row ("Kimi / Moonshot ▸"); picking it opens a member sub-picker that
     # resolves back to a concrete slug, so the dispatch chain below is
     # unchanged. Custom providers and the trailing actions stay flat.
     canonical_descs = {p.slug: p.tui_desc for p in CANONICAL_PROVIDERS}
-    # Honor ``model_catalog.excluded_providers`` so the CLI ``hermes model``
+    # Honor ``model_catalog.excluded_providers`` so the CLI ``jimmy model``
     # picker hides the same providers the gateway/TUI pickers do. A canonical
     # provider is hidden if its slug OR any of its aliases appears in the
     # exclusion list (case-insensitive), matching list_authenticated_providers'
-    # matching against hermes_id / alias / canonical slug.
+    # matching against jimmy_id / alias / canonical slug.
     _cli_excluded = {
         str(p).strip().lower()
         for p in (config.get("model_catalog", {}) or {}).get("excluded_providers") or []
@@ -4015,7 +4017,7 @@ def select_provider_and_model(args=None):
 
     # ── Post-switch cleanup: clear stale OPENAI_BASE_URL ──────────────
     # When the user switches to a named provider (anything except "custom"),
-    # a leftover OPENAI_BASE_URL in ~/.hermes/.env can poison auxiliary
+    # a leftover OPENAI_BASE_URL in ~/.jimmy/.env can poison auxiliary
     # clients that use provider:auto. Clear it proactively.  (#5161)
     if selected_provider not in {
         "custom",
@@ -4026,14 +4028,14 @@ def select_provider_and_model(args=None):
 
 
 def _clear_stale_openai_base_url():
-    """Remove OPENAI_BASE_URL from ~/.hermes/.env if the active provider is not 'custom'.
+    """Remove OPENAI_BASE_URL from ~/.jimmy/.env if the active provider is not 'custom'.
 
     After a provider switch, a leftover OPENAI_BASE_URL causes auxiliary
     clients (compression, vision, delegation) with provider:auto to route
     requests to the old custom endpoint instead of the newly selected
     provider.  See issue #5161.
     """
-    from hermes_cli.config import get_env_value, save_env_value, load_config
+    from jimmy_cli.config import get_env_value, save_env_value, load_config
 
     cfg = load_config()
     model_cfg = cfg.get("model", {})
@@ -4058,14 +4060,14 @@ def _clear_stale_openai_base_url():
 # ─────────────────────────────────────────────────────────────────────────────
 # Auxiliary model configuration
 #
-# Hermes uses lightweight "auxiliary" models for side tasks (vision analysis,
+# Jimmy uses lightweight "auxiliary" models for side tasks (vision analysis,
 # context compression, web extraction, session search, etc.). Each task has
 # its own provider+model pair in config.yaml under `auxiliary.<task>`.
 #
 # The UI lives behind "Configure auxiliary models..." at the bottom of the
-# `hermes model` provider picker. It does NOT re-run credential setup — it
+# `jimmy model` provider picker. It does NOT re-run credential setup — it
 # only routes already-authenticated providers to specific aux tasks. Users
-# configure new providers through the normal `hermes model` flow first.
+# configure new providers through the normal `jimmy model` flow first.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # (task_key, display_name, short_description)
@@ -4103,12 +4105,12 @@ def _all_aux_tasks() -> list[tuple[str, str, str]]:
     Built-in tasks come first (preserving order), followed by plugin tasks
     sorted by key. Used by ``_aux_config_menu``, ``_reset_aux_to_auto``, and
     display-name lookups so plugin-registered tasks (registered via
-    :meth:`hermes_cli.plugins.PluginContext.register_auxiliary_task`) appear
+    :meth:`jimmy_cli.plugins.PluginContext.register_auxiliary_task`) appear
     in the same surfaces as built-in ones without core knowing about them.
     """
     tasks = list(_AUX_TASKS)
     try:
-        from hermes_cli.plugins import get_plugin_auxiliary_tasks
+        from jimmy_cli.plugins import get_plugin_auxiliary_tasks
         for entry in get_plugin_auxiliary_tasks():
             tasks.append((entry["key"], entry["display_name"], entry["description"]))
     except Exception:
@@ -4180,7 +4182,7 @@ def _save_aux_choice(
     There, "auto" (inherit the parent agent) is stored as an empty provider —
     the literal string "auto" would be resolved as a provider name.
     """
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
 
@@ -4217,7 +4219,7 @@ def _reset_aux_to_auto() -> int:
     Includes plugin-registered tasks (via ``_all_aux_tasks``) so a plugin
     that contributed an auxiliary task gets reset alongside built-ins.
     """
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     aux = cfg.setdefault("auxiliary", {})
@@ -4263,7 +4265,7 @@ def _aux_config_menu() -> None:
     Loops until the user picks "Back" so multiple tasks can be configured
     without returning to the main provider menu.
     """
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     while True:
         cfg = load_config()
@@ -4274,7 +4276,7 @@ def _aux_config_menu() -> None:
         print()
         print("  Side tasks (vision, compression, web extraction, etc.) default")
         print('  to your main chat model.  "auto" means "use my main model" —')
-        print("  Hermes only falls back to a lightweight backend (OpenRouter,")
+        print("  Jimmy only falls back to a lightweight backend (OpenRouter,")
         print("  Nous Portal) if the main model is unavailable.  Override a")
         print("  task below if you want it pinned to a specific provider/model.")
         print()
@@ -4331,11 +4333,11 @@ def _aux_select_for_task(task: str) -> None:
     shows: authenticated built-ins, the user's own ``providers:`` /
     ``custom_providers:`` endpoints, and providers whose credential pool is
     temporarily exhausted. Only already-configured providers appear; users set
-    up new ones through the normal ``hermes model`` flow, then route aux tasks
+    up new ones through the normal ``jimmy model`` flow, then route aux tasks
     to them here.
     """
-    from hermes_cli.config import load_config
-    from hermes_cli.inventory import build_aux_picker_rows, format_aux_picker_entries
+    from jimmy_cli.config import load_config
+    from jimmy_cli.inventory import build_aux_picker_rows, format_aux_picker_entries
 
     cfg = load_config()
     if task == _DELEGATION_TASK_KEY:
@@ -4417,8 +4419,8 @@ def _aux_flow_provider_model(
     current_model: str = "",
 ) -> None:
     """Prompt for a model under an already-authenticated provider, save to aux."""
-    from hermes_cli.auth import _prompt_model_selection
-    from hermes_cli.models import get_pricing_for_provider
+    from jimmy_cli.auth import _prompt_model_selection
+    from jimmy_cli.models import get_pricing_for_provider
 
     display_name = _aux_task_display_name(task)
 
@@ -4465,7 +4467,7 @@ def _aux_flow_provider_model(
 
 def _aux_flow_custom_endpoint(task: str, task_cfg: dict) -> None:
     """Prompt for a direct OpenAI-compatible base_url + optional api_key/model."""
-    from hermes_cli.secret_prompt import masked_secret_prompt
+    from jimmy_cli.secret_prompt import masked_secret_prompt
 
     display_name = _aux_task_display_name(task)
     current_base_url = str(task_cfg.get("base_url") or "").strip()
@@ -4525,7 +4527,7 @@ def _prompt_provider_choice(choices, *, default=0, title="Select provider:"):
     if the user cancels.
     """
     try:
-        from hermes_cli.setup import _curses_prompt_choice
+        from jimmy_cli.setup import _curses_prompt_choice
 
         idx = _curses_prompt_choice(title, choices, default)
         if idx >= 0:
@@ -4575,7 +4577,7 @@ def _prompt_custom_api_mode_selection(base_url: str, current_api_mode: str = "")
 
     Returns an explicit mode string, or None to keep auto-detect behavior.
     """
-    from hermes_cli.runtime_provider import _detect_api_mode_for_url
+    from jimmy_cli.runtime_provider import _detect_api_mode_for_url
 
     detected_mode = _detect_api_mode_for_url(base_url)
     normalized_current = str(current_api_mode or "").strip().lower()
@@ -4585,7 +4587,7 @@ def _prompt_custom_api_mode_selection(base_url: str, current_api_mode: str = "")
         (
             "",
             "Auto-detect",
-            "Use Hermes URL heuristics; best for standard OpenAI-compatible endpoints.",
+            "Use Jimmy URL heuristics; best for standard OpenAI-compatible endpoints.",
         ),
         (
             "chat_completions",
@@ -4695,7 +4697,7 @@ def _save_custom_provider(
     When *key_env* is set the caller has already written the key to ``.env``,
     so the entry references it instead of inlining the secret (#69449).
     """
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     providers = cfg.get("custom_providers") or []
@@ -4760,7 +4762,7 @@ def _save_custom_provider(
 
 def _remove_custom_provider(config):
     """Let the user remove a saved custom provider from config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     providers = cfg.get("custom_providers") or []
@@ -4782,7 +4784,7 @@ def _remove_custom_provider(config):
     choices.append("Cancel")
 
     try:
-        from hermes_cli.curses_ui import curses_radiolist
+        from jimmy_cli.curses_ui import curses_radiolist
 
         idx = curses_radiolist(
             "Select provider to remove:",
@@ -4819,10 +4821,10 @@ def _remove_custom_provider(config):
 
 
 # Lazy-export the model catalog at module level. Tests and a handful of
-# downstream call sites read `hermes_cli.main._PROVIDER_MODELS` directly,
+# downstream call sites read `jimmy_cli.main._PROVIDER_MODELS` directly,
 # so the symbol needs to be reachable as a module attribute. But importing
-# the catalog eagerly costs ~55ms on every `hermes` invocation — including
-# fast paths like `hermes --version` and slash-command dispatch that never
+# the catalog eagerly costs ~55ms on every `jimmy` invocation — including
+# fast paths like `jimmy --version` and slash-command dispatch that never
 # touch the catalog. PEP 562 module-level __getattr__ defers the import
 # until first attribute access, so the cost is only paid by callers that
 # actually look up the catalog. Termux already defers via the same
@@ -4833,24 +4835,24 @@ _LAZY_MODEL_EXPORTS = ("_PROVIDER_MODELS",)
 
 # The main.py decomposition moved the sessions/update/dashboard command
 # implementations into their own modules, but main.py still re-exports their
-# surface so argparse wiring and test monkeypatches on hermes_cli.main.<name>
+# surface so argparse wiring and test monkeypatches on jimmy_cli.main.<name>
 # keep resolving unchanged. Importing those modules eagerly costs ~50ms on
-# every `hermes` invocation, including fast paths like `hermes --version`
+# every `jimmy` invocation, including fast paths like `jimmy --version`
 # that never run a subcommand. Resolve the re-exports through the module
 # __getattr__ below instead, so each module is only imported when one of its
 # names is actually touched. Monkeypatching keeps working: patch.object sets
 # a real module attribute, which shadows __getattr__.
 _LAZY_COMMAND_EXPORTS = {
-    "hermes_cli.sessions_cmd": (
+    "jimmy_cli.sessions_cmd": (
         "cmd_sessions",
     ),
-    "hermes_cli.dashboard_procs": (
-        "_detect_concurrent_hermes_instances",
+    "jimmy_cli.dashboard_procs": (
+        "_detect_concurrent_jimmy_instances",
         "_filter_dashboard_respawn_candidates",
         "_kill_stale_dashboard_processes",
         "_scan_dashboard_processes",
     ),
-    "hermes_cli.update_cmd": (
+    "jimmy_cli.update_cmd": (
         "_abort_dependency_sync_if_self_locked",
         "_add_upstream_remote",
         "_atomic_replace_dir",
@@ -4880,7 +4882,7 @@ _LAZY_COMMAND_EXPORTS = {
         "_format_time_ago",
         "_handoff_reapable_backend_pids",
         "_ledger_reapable_backend_pids",
-        "_purge_stale_hermes_modules",
+        "_purge_stale_jimmy_modules",
         "_format_venv_python_holders_message",
         "_gateway_prompt",
         "_get_origin_url",
@@ -4961,7 +4963,7 @@ _LAZY_COMMAND_ATTR_TO_MODULE = {
 # name. The kill behaviour replaced it; resolve to the new name lazily.
 _LAZY_COMMAND_ALIASES = {
     "_warn_stale_dashboard_processes": (
-        "hermes_cli.dashboard_procs",
+        "jimmy_cli.dashboard_procs",
         "_kill_stale_dashboard_processes",
     ),
 }
@@ -4973,7 +4975,7 @@ def _self():
     Bare-name global lookups inside this module do not go through the PEP 562
     __getattr__ below, so internal callers of the lazily re-exported names use
     _self().<name> instead. That resolves the lazy re-export on first use and
-    keeps monkeypatches on hermes_cli.main.<name> working, exactly like a
+    keeps monkeypatches on jimmy_cli.main.<name> working, exactly like a
     globals lookup did. ``sys`` is imported locally because some tests patch
     this module's ``sys`` attribute.
     """
@@ -4985,7 +4987,7 @@ def _self():
 def __getattr__(name):
     """Defer the model-catalog and command-module imports until first read."""
     if name in _LAZY_MODEL_EXPORTS:
-        from hermes_cli.models import _PROVIDER_MODELS
+        from jimmy_cli.models import _PROVIDER_MODELS
         # Cache on the module so subsequent accesses skip the import machinery.
         globals()[name] = _PROVIDER_MODELS
         return _PROVIDER_MODELS
@@ -5053,7 +5055,7 @@ def _prompt_reasoning_effort_selection(efforts, current_effort=""):
         default_idx = 0
 
     try:
-        from hermes_cli.curses_ui import curses_radiolist
+        from jimmy_cli.curses_ui import curses_radiolist
 
         choices = [_label(effort) for effort in ordered]
         choices.append(disable_label)
@@ -5112,19 +5114,19 @@ def _prompt_api_key(
     provider_id: str = "",
     existing_source: str = "",
 ) -> tuple:
-    """Shared API-key entry point for ``hermes setup`` / ``hermes model``.
+    """Shared API-key entry point for ``jimmy setup`` / ``jimmy model``.
 
     Handles both first-time entry and the already-configured case.  When a key
     is already present, offers [K]eep / [R]eplace / [C]lear so the user can
-    recover from a malformed paste without editing ``~/.hermes/.env`` by hand.
+    recover from a malformed paste without editing ``~/.jimmy/.env`` by hand.
 
     Returns ``(resolved_key, abort)``.  ``abort=True`` means the caller should
     ``return`` immediately — the user cancelled entry, declined to replace, or
     cleared the key and is now unconfigured.
     """
-    from hermes_cli.auth import LMSTUDIO_NOAUTH_PLACEHOLDER
-    from hermes_cli.config import save_env_value
-    from hermes_cli.secret_prompt import masked_secret_prompt
+    from jimmy_cli.auth import LMSTUDIO_NOAUTH_PLACEHOLDER
+    from jimmy_cli.config import save_env_value
+    from jimmy_cli.secret_prompt import masked_secret_prompt
 
     key_env = pconfig.api_key_env_vars[0] if pconfig.api_key_env_vars else ""
 
@@ -5157,7 +5159,7 @@ def _prompt_api_key(
         return new_key, False
 
     # Already configured — offer K / R / C ────────────────────────────────
-    from hermes_cli.env_loader import format_secret_source_suffix
+    from jimmy_cli.env_loader import format_secret_source_suffix
 
     source_suffix = format_secret_source_suffix(key_env) if key_env else ""
     print(f"  {pconfig.name} API key: {existing_key[:8]}... ✓{source_suffix}")
@@ -5191,7 +5193,7 @@ def _prompt_api_key(
     if choice.startswith("c") and not pool_backed:
         save_env_value(key_env, "")
         print(
-            f"  API key cleared.  Re-run `hermes setup` to configure {pconfig.name} again."
+            f"  API key cleared.  Re-run `jimmy setup` to configure {pconfig.name} again."
         )
         return "", True
 
@@ -5211,7 +5213,7 @@ def _infer_stepfun_region(base_url: str) -> str:
 
 
 def _stepfun_base_url_for_region(region: str) -> str:
-    from hermes_cli.auth import (
+    from jimmy_cli.auth import (
         STEPFUN_STEP_PLAN_CN_BASE_URL,
         STEPFUN_STEP_PLAN_INTL_BASE_URL,
     )
@@ -5238,7 +5240,7 @@ def _run_anthropic_oauth_flow(save_env_value):
         read_claude_code_credentials,
         is_claude_code_token_valid,
     )
-    from hermes_cli.config import (
+    from jimmy_cli.config import (
         save_anthropic_oauth_token,
         use_anthropic_claude_code_credentials,
     )
@@ -5253,10 +5255,10 @@ def _run_anthropic_oauth_flow(save_env_value):
         ):
             use_anthropic_claude_code_credentials(save_fn=save_env_value)
             print("  ✓ Claude Code credentials linked.")
-            from hermes_constants import display_hermes_home as _dhh_fn
+            from jimmy_constants import display_jimmy_home as _dhh_fn
 
             print(
-                f"    Hermes will use Claude's credential store directly instead of copying a setup-token into {_dhh_fn()}/.env."
+                f"    Jimmy will use Claude's credential store directly instead of copying a setup-token into {_dhh_fn()}/.env."
             )
             return True
         return False
@@ -5278,7 +5280,7 @@ def _run_anthropic_oauth_flow(save_env_value):
         print()
         print("  If the setup-token was displayed above, paste it here:")
         print()
-        from hermes_cli.secret_prompt import masked_secret_prompt
+        from jimmy_cli.secret_prompt import masked_secret_prompt
 
         try:
             manual_token = masked_secret_prompt(
@@ -5305,11 +5307,11 @@ def _run_anthropic_oauth_flow(save_env_value):
         print("    1. Install Claude Code:  npm install -g @anthropic-ai/claude-code")
         print("    2. Run:                  claude setup-token")
         print("    3. Follow the browser prompts to authorize")
-        print("    4. Re-run:               hermes model")
+        print("    4. Re-run:               jimmy model")
         print()
         print("  Or paste an existing setup-token now (sk-ant-oat-...):")
         print()
-        from hermes_cli.secret_prompt import masked_secret_prompt
+        from jimmy_cli.secret_prompt import masked_secret_prompt
 
         try:
             token = masked_secret_prompt("  Setup-token (or Enter to cancel): ").strip()
@@ -5327,36 +5329,36 @@ def _run_anthropic_oauth_flow(save_env_value):
 
 
 def cmd_login(args):
-    """Authenticate Hermes CLI with a provider."""
-    from hermes_cli.auth import login_command
+    """Authenticate Jimmy CLI with a provider."""
+    from jimmy_cli.auth import login_command
 
     login_command(args)
 
 
 def cmd_logout(args):
     """Clear provider authentication."""
-    from hermes_cli.auth import logout_command
+    from jimmy_cli.auth import logout_command
 
     logout_command(args)
 
 
 def cmd_auth(args):
     """Manage pooled credentials."""
-    from hermes_cli.auth_commands import auth_command
+    from jimmy_cli.auth_commands import auth_command
 
     auth_command(args)
 
 
 def cmd_status(args):
     """Show status of all components."""
-    from hermes_cli.status import show_status
+    from jimmy_cli.status import show_status
 
     show_status(args)
 
 
 def cmd_cron(args):
     """Cron job management."""
-    from hermes_cli.cron import cron_command
+    from jimmy_cli.cron import cron_command
 
     cron_command(args)
 
@@ -5369,7 +5371,7 @@ def cmd_sync(args):
 
     if sub in {None, ""}:
         print(
-            "usage: hermes sync "
+            "usage: jimmy sync "
             "<status|pull|push|now|enable|disable|device|propose>\n"
             "\n"
             "Your skills, across your devices:\n"
@@ -5438,7 +5440,7 @@ def cmd_sync(args):
             print(
                 f"'{skill}' is not sync-eligible (bundled, hub-installed, "
                 f"external, or not found). Only agent-created / user-authored "
-                f"skills under ~/.hermes/skills/ can sync.",
+                f"skills under ~/.jimmy/skills/ can sync.",
                 file=sys.stderr,
             )
             return 1
@@ -5464,7 +5466,7 @@ def cmd_sync(args):
                 print(
                     f"  {len(modified)} with local edits not yet shared: "
                     f"{', '.join(modified)}\n"
-                    f"  Share them back with `hermes sync propose <skill>`. "
+                    f"  Share them back with `jimmy sync propose <skill>`. "
                     f"Org updates will not overwrite them.",
                     file=sys.stderr,
                 )
@@ -5483,14 +5485,14 @@ def cmd_sync(args):
             )
         elif not status.get("feature_enabled"):
             print(
-                "\nSync feature is off for this instance (set HERMES_SYNC_ENABLED=1 "
+                "\nSync feature is off for this instance (set JIMMY_SYNC_ENABLED=1 "
                 "or config.yaml sync.enabled: true). Sync is inert.",
                 file=sys.stderr,
             )
         elif not status.get("base_url"):
             print(
                 "\nNo sync base URL configured (config.yaml sync.base_url or "
-                "HERMES_SYNC_BASE_URL). Sync is inert.",
+                "JIMMY_SYNC_BASE_URL). Sync is inert.",
                 file=sys.stderr,
             )
         return 0
@@ -5510,7 +5512,7 @@ def cmd_sync(args):
     if not ssc.resolve_sync_base_url():
         print(
             "sync inert: no sync base URL configured (config.yaml sync.base_url "
-            "or HERMES_SYNC_BASE_URL).",
+            "or JIMMY_SYNC_BASE_URL).",
             file=sys.stderr,
         )
         return 1
@@ -5540,10 +5542,10 @@ def cmd_sync(args):
                         file=sys.stderr,
                     )
         elif sub == "push":
-            result = ssc.push_skills(identity=identity, message="hermes sync push")
+            result = ssc.push_skills(identity=identity, message="jimmy sync push")
         elif sub == "now":
             pull_res = ssc.pull_skills(identity=identity)
-            push_res = ssc.push_skills(identity=identity, message="hermes sync now")
+            push_res = ssc.push_skills(identity=identity, message="jimmy sync now")
             result = {"pull": pull_res, "push": push_res}
         else:
             print(f"Unknown sync subcommand: {sub}", file=sys.stderr)
@@ -5558,7 +5560,7 @@ def cmd_sync(args):
 
 def cmd_webhook(args):
     """Webhook subscription management."""
-    from hermes_cli.webhook import webhook_command
+    from jimmy_cli.webhook import webhook_command
 
     webhook_command(args)
 
@@ -5566,7 +5568,7 @@ def cmd_webhook(args):
 def cmd_slack(args):
     """Slack integration helpers.
 
-    Dispatches ``hermes slack <subcommand>``. Currently supports:
+    Dispatches ``jimmy slack <subcommand>``. Currently supports:
       manifest — print or write a Slack app manifest with every gateway
                  command registered as a first-class slash.
     """
@@ -5574,19 +5576,19 @@ def cmd_slack(args):
     if sub in {None, ""}:
         # No subcommand — print usage hint.
         print(
-            "usage: hermes slack <subcommand>\n"
+            "usage: jimmy slack <subcommand>\n"
             "\n"
             "subcommands:\n"
             "  manifest   Generate a Slack app manifest with every gateway\n"
             "             command registered as a native slash\n"
             "\n"
-            "Run `hermes slack manifest -h` for details.",
+            "Run `jimmy slack manifest -h` for details.",
             file=sys.stderr,
         )
         return 1
 
     if sub == "manifest":
-        from hermes_cli.slack_cli import slack_manifest_command
+        from jimmy_cli.slack_cli import slack_manifest_command
 
         status = slack_manifest_command(args)
         if status:
@@ -5599,44 +5601,44 @@ def cmd_slack(args):
 
 def cmd_kanban(args):
     """Multi-profile collaboration board."""
-    from hermes_cli.kanban import kanban_command
+    from jimmy_cli.kanban import kanban_command
 
     return kanban_command(args)
 
 
 def cmd_project(args):
     """Manage projects (named, multi-folder workspaces)."""
-    from hermes_cli.projects_cmd import projects_command
+    from jimmy_cli.projects_cmd import projects_command
 
     return projects_command(args)
 
 
 def cmd_hooks(args):
     """Shell-hook inspection and management."""
-    from hermes_cli.hooks import hooks_command
+    from jimmy_cli.hooks import hooks_command
 
     hooks_command(args)
 
 
 def cmd_doctor(args):
     """Check configuration and dependencies."""
-    from hermes_cli.doctor import run_doctor
+    from jimmy_cli.doctor import run_doctor
 
     run_doctor(args)
 
 
 def cmd_verify(args):
     """Detect a project's run recipe and smoke-test it."""
-    from hermes_cli.verify_cmd import run_verify_command
+    from jimmy_cli.verify_cmd import run_verify_command
 
     sys.exit(run_verify_command(args))
 
 
 def cmd_security(args):
-    """Dispatch `hermes security <subcmd>`."""
+    """Dispatch `jimmy security <subcmd>`."""
     sub = getattr(args, "security_command", None)
     if sub in ("audit", None):
-        from hermes_cli.security_audit import cmd_security_audit
+        from jimmy_cli.security_audit import cmd_security_audit
 
         # Default subcommand is `audit` when no subcmd is given.
         code = cmd_security_audit(args)
@@ -5646,8 +5648,8 @@ def cmd_security(args):
 
 
 def cmd_approvals(args):
-    """Dispatch `hermes approvals <subcmd>`."""
-    from hermes_cli.approvals_suggest import approvals_command
+    """Dispatch `jimmy approvals <subcmd>`."""
+    from jimmy_cli.approvals_suggest import approvals_command
 
     status = approvals_command(args)
     if status:
@@ -5657,54 +5659,54 @@ def cmd_approvals(args):
 
 def cmd_dump(args):
     """Dump setup summary for support/debugging."""
-    from hermes_cli.dump import run_dump
+    from jimmy_cli.dump import run_dump
 
     run_dump(args)
 
 
 def cmd_debug(args):
     """Debug tools (share report, etc.)."""
-    from hermes_cli.debug import run_debug
+    from jimmy_cli.debug import run_debug
 
     run_debug(args)
 
 
 def cmd_config(args):
     """Configuration management."""
-    from hermes_cli.config import config_command
+    from jimmy_cli.config import config_command
 
     config_command(args)
 
 
 def cmd_skin(args):
     """Skin management (list / use / set)."""
-    from hermes_cli.skin_cmd import skin_command
+    from jimmy_cli.skin_cmd import skin_command
 
     skin_command(args)
 
 
 def cmd_backup(args):
-    """Back up Hermes home directory to a zip file."""
+    """Back up Jimmy home directory to a zip file."""
     if getattr(args, "quick", False):
-        from hermes_cli.backup import run_quick_backup
+        from jimmy_cli.backup import run_quick_backup
 
         run_quick_backup(args)
     else:
-        from hermes_cli.backup import run_backup
+        from jimmy_cli.backup import run_backup
 
         run_backup(args)
 
 
 def cmd_import(args):
-    """Restore a Hermes backup from a zip file."""
-    from hermes_cli.backup import run_import
+    """Restore a Jimmy backup from a zip file."""
+    from jimmy_cli.backup import run_import
 
     run_import(args)
 
 
 def _print_version_info(*, check_updates: bool = True) -> None:
     # Single source of truth for version output — shared with the
-    # `hermes --version` pre-import fast path (the `version` subcommand
+    # `jimmy --version` pre-import fast path (the `version` subcommand
     # was consolidated into `--version`).
     _startup_fast.print_fast_version_info(check_updates=check_updates)
 
@@ -5715,11 +5717,11 @@ def cmd_version(args):
 
 
 def cmd_uninstall(args):
-    """Uninstall Hermes Agent (or just the Chat GUI with --gui)."""
+    """Uninstall Jimmy (or just the Chat GUI with --gui)."""
     # Machine-readable install snapshot for the desktop app's uninstall UI.
     # Must run before any TTY gate — it's called from a non-interactive child.
     if getattr(args, "gui_summary", False):
-        from hermes_cli.gui_uninstall import gui_install_summary
+        from jimmy_cli.gui_uninstall import gui_install_summary
 
         print(json.dumps(gui_install_summary()))
         return
@@ -5729,7 +5731,7 @@ def cmd_uninstall(args):
     if getattr(args, "gui", False):
         if not getattr(args, "yes", False):
             _require_tty("uninstall --gui")
-        from hermes_cli.uninstall import run_gui_uninstall
+        from jimmy_cli.uninstall import run_gui_uninstall
 
         run_gui_uninstall(args)
         return
@@ -5739,7 +5741,7 @@ def cmd_uninstall(args):
     # gate on a TTY when we actually need to prompt for the option + confirm.
     if not getattr(args, "yes", False):
         _require_tty("uninstall")
-    from hermes_cli.uninstall import run_uninstall
+    from jimmy_cli.uninstall import run_uninstall
 
     run_uninstall(args)
 
@@ -5772,14 +5774,14 @@ def _clear_bytecode_cache(root: Path) -> int:
     return removed
 
 
-# Update pipeline lives in hermes_cli/update_cmd.py (main.py decomposition,
+# Update pipeline lives in jimmy_cli/update_cmd.py (main.py decomposition,
 # mechanical move). Its names are re-exported lazily through the module-level
 # __getattr__ above (see _LAZY_COMMAND_EXPORTS) so argparse wiring and test
-# monkeypatches on hermes_cli.main.<name> keep resolving unchanged without
+# monkeypatches on jimmy_cli.main.<name> keep resolving unchanged without
 # paying the update_cmd import cost on every CLI invocation.
 
 # Stamp file recording the checkout fingerprint the bytecode cache was last
-# validated against. Lives next to the checkout (NOT in HERMES_HOME) because
+# validated against. Lives next to the checkout (NOT in JIMMY_HOME) because
 # __pycache__ is per-checkout state shared by every profile.
 _BYTECODE_FINGERPRINT_FILE = ".bytecode-fingerprint"
 
@@ -5808,16 +5810,16 @@ def _sweep_stale_bytecode_if_checkout_changed() -> None:
     The stale-bytecode bug class (issues #6207, #60242; Dhruv's WhatsApp
     ``cannot import name 'parse_model_flags_detailed'`` report) has one
     shared shape: the checkout's ``.py`` files change (git pull inside
-    ``hermes update``, a manual ``git pull``, a ZIP update, a file-sync
+    ``jimmy update``, a manual ``git pull``, a ZIP update, a file-sync
     restore) while ``__pycache__`` retains bytecode from the previous
     revision, and a later process trusts the stale ``.pyc`` instead of the
     fresh source.
 
-    Update-time clears alone can never close this class: ``hermes update``
+    Update-time clears alone can never close this class: ``jimmy update``
     always executes the PRE-pull updater code, so any hardening added to it
     only takes effect one update late, and manual ``git pull`` never runs
     the updater at all. This launch-time guard closes the loop: every
-    ``hermes`` entry point compares the checkout fingerprint (cheap file
+    ``jimmy`` entry point compares the checkout fingerprint (cheap file
     reads, no git subprocess) against the last-validated stamp and sweeps
     the bytecode cache once when they diverge.
 
@@ -5853,18 +5855,18 @@ def _web_ui_build_needed(web_dir: Path) -> bool:
 
     Uses a SHA-256 content hash of the web source tree (the same approach
     ``_desktop_build_needed()`` already uses for the Electron build), NOT
-    mtime comparison. ``git checkout`` / ``git pull`` / ``hermes update``
+    mtime comparison. ``git checkout`` / ``git pull`` / ``jimmy update``
     rewrite source mtimes without changing content, which made the old
     mtime check unreliable in both directions: it could skip a rebuild when
     source had genuinely changed (serving a stale dashboard) and force a
     rebuild when nothing had. A content hash is stable across mtime churn.
 
     The dashboard source lives under ``web/`` but Vite outputs to
-    ``hermes_cli/web_dist/`` (per vite.config.ts outDir), NOT ``web/dist/``,
+    ``jimmy_cli/web_dist/`` (per vite.config.ts outDir), NOT ``web/dist/``,
     so the dist directory is never part of the hashed source tree.
     """
     project_root = web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
-    dist_dir = project_root / "hermes_cli" / "web_dist"
+    dist_dir = project_root / "jimmy_cli" / "web_dist"
     sentinel = dist_dir / ".vite" / "manifest.json"
     if not sentinel.exists():
         sentinel = dist_dir / "index.html"
@@ -5943,9 +5945,9 @@ def _compute_web_ui_content_hash(project_root: Path, web_dir: Path) -> str:
 
 
 def _web_ui_stamp_path() -> Path:
-    """Return the path to the web UI build stamp file under $HERMES_HOME."""
-    from hermes_constants import get_hermes_home
-    return get_hermes_home() / "web-ui-build-stamp.json"
+    """Return the path to the web UI build stamp file under $JIMMY_HOME."""
+    from jimmy_constants import get_jimmy_home
+    return get_jimmy_home() / "web-ui-build-stamp.json"
 
 
 def _write_web_ui_build_stamp(project_root: Path, web_dir: Path) -> None:
@@ -5979,7 +5981,7 @@ def _run_with_idle_timeout(
     WSL2 with the default 4 GB cap) the build can stall or sit silent for
     minutes; users see a frozen terminal, assume the update is hung, and
     reboot — leaving the editable install in a half-state with the
-    ``hermes`` launcher present but ``hermes_cli`` not importable.
+    ``jimmy`` launcher present but ``jimmy_cli`` not importable.
 
     This helper fixes both halves: stdout is streamed (so the user sees
     progress), and if no bytes have appeared on stdout/stderr for
@@ -6074,7 +6076,7 @@ def _nixos_build_env() -> dict[str, str] | None:
     does a bare ``PATH`` lookup — which fails on NixOS.
 
     Two-tier resolution:
-    1. Fast path — the hermes venv's python3 (present in managed installs)
+    1. Fast path — the jimmy venv's python3 (present in managed installs)
     2. Fallback — resolves the absolute python3 path via ``nix-shell``
 
     Returns an env dict suitable for ``subprocess.run(env=...)`` or
@@ -6093,7 +6095,7 @@ def _nixos_build_env() -> dict[str, str] | None:
     if shutil.which("python3"):
         return None
 
-    # Tier 1: fast path — hermes venv python3, no nix-shell overhead
+    # Tier 1: fast path — jimmy venv python3, no nix-shell overhead
     for venv_name in ("venv", ".venv"):
         venv_python = PROJECT_ROOT / venv_name / "bin" / "python3"
         if venv_python.exists():
@@ -6101,7 +6103,7 @@ def _nixos_build_env() -> dict[str, str] | None:
 
     # Tier 2: nix-shell fallback — resolves the absolute python3 path once.
     # Slower (~2–5 s for the nix-shell eval) but always works, even without
-    # a hermes venv (pip / non-managed / bare-git installs).  The resolved
+    # a jimmy venv (pip / non-managed / bare-git installs).  The resolved
     # path is a self-contained Nix store binary (all deps via RPATH) so it
     # stays valid even after the nix-shell exits.
     try:
@@ -6131,7 +6133,7 @@ def _run_npm_install_deterministic(
     falls back to ``npm install`` only if ``npm ci`` fails (e.g. lockfile out of
     sync on a WIP checkout).  Without this, ``npm install`` on npm ≥ 10 silently
     rewrites committed lockfiles (stripping ``"peer": true`` etc.), which leaves
-    the working tree dirty and causes the next ``hermes update`` to stash the
+    the working tree dirty and causes the next ``jimmy update`` to stash the
     lockfile — repeatedly.
 
     ``--include=dev`` is forced on every invocation: the callers are frontend
@@ -6184,9 +6186,9 @@ def _run_npm_install_deterministic(
     # command here identically (the `npm install` fallback included), so the
     # failure is worth exactly one repair attempt. `maybe_repair_npm_engine`
     # returns the npm to retry with — the same one after an in-place upgrade
-    # of a Hermes-managed install, or a freshly provisioned managed npm when
+    # of a Jimmy-managed install, or a freshly provisioned managed npm when
     # the failing npm belongs to the user's own toolchain.
-    from hermes_cli.npm_engine import maybe_repair_npm_engine
+    from jimmy_cli.npm_engine import maybe_repair_npm_engine
 
     combined = f"{result.stdout or ''}\n{result.stderr or ''}"
     repaired_npm = maybe_repair_npm_engine(npm, combined)
@@ -6195,9 +6197,9 @@ def _run_npm_install_deterministic(
     # The repaired npm may be a freshly provisioned managed one whose shebang
     # and lifecycle scripts resolve `node` from PATH — put the managed tree
     # first so they find the managed Node, not the mismatched system one.
-    from hermes_constants import with_hermes_node_path
+    from jimmy_constants import with_jimmy_node_path
 
-    run_env["PATH"] = with_hermes_node_path(run_env)["PATH"]
+    run_env["PATH"] = with_jimmy_node_path(run_env)["PATH"]
     return _attempt(repaired_npm)
 
 
@@ -6291,7 +6293,7 @@ def _build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
         # Windows: no flock — fall through to the unserialized build.
         return _do_build_web_ui(web_dir, fatal=fatal)
     project_root = web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
-    dist_index = project_root / "hermes_cli" / "web_dist" / "index.html"
+    dist_index = project_root / "jimmy_cli" / "web_dist" / "index.html"
     try:
         lock_file = open(project_root / ".web_ui_build.lock", "a", encoding="utf-8")
     except OSError:
@@ -6317,7 +6319,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
     Args:
         web_dir: Path to the dashboard frontend source directory.
         fatal: If True, print error guidance and return False on failure
-               instead of a soft warning (used by ``hermes web``).
+               instead of a soft warning (used by ``jimmy web``).
 
     Returns True if the build succeeded or was skipped (no package.json).
     """
@@ -6331,7 +6333,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
     # (or similar) and will raise UnicodeEncodeError on arrow / check
     # glyphs unless PYTHONIOENCODING=utf-8 is set. Routing every print
     # in this function through _say() with errors="replace" keeps the
-    # build path usable on a stock `py -m hermes_cli.main web` invocation.
+    # build path usable on a stock `py -m jimmy_cli.main web` invocation.
     def _say(text: str) -> None:
         try:
             print(text)
@@ -6339,7 +6341,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
             encoding = getattr(sys.stdout, "encoding", None) or "ascii"
             print(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
 
-    from hermes_constants import with_hermes_node_path
+    from jimmy_constants import with_jimmy_node_path
 
     npm = _resolve_node_runtime_npm()
     if not npm:
@@ -6347,7 +6349,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
             _say("Web UI frontend not built and npm is not available.")
             _say("Install Node.js, then run:  cd web && npm install && npm run build")
         return not fatal
-    build_env = _npm_lifecycle_env(with_hermes_node_path())
+    build_env = _npm_lifecycle_env(with_jimmy_node_path())
     _say("→ Building web UI...")
 
     def _relay(result: "subprocess.CompletedProcess") -> None:
@@ -6374,7 +6376,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
     # web_dir itself and --workspace would fail.  See #42973.
     #
     # When running from the workspace root, this must name the SAME closure
-    # as `hermes update`'s _update_node_dependencies() (ui-tui + web +
+    # as `jimmy update`'s _update_node_dependencies() (ui-tui + web +
     # --include-workspace-root): the helper prefers `npm ci`, which deletes
     # node_modules before reifying the requested tree, so a narrower closure
     # here silently prunes everything the update step just installed (root
@@ -6406,7 +6408,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
     if r1.returncode != 0:
         _say(
             f"  {'✗' if fatal else '⚠'} Web UI npm install failed"
-            + ("" if fatal else " (hermes web will not be available)")
+            + ("" if fatal else " (jimmy web will not be available)")
         )
         _relay(r1)
         if fatal:
@@ -6445,7 +6447,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
         stderr_preview = build_output.strip()
         stderr_tail = "\n  ".join(stderr_preview.splitlines()[-10:]) if stderr_preview else ""
         project_root = web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
-        dist_dir = project_root / "hermes_cli" / "web_dist"
+        dist_dir = project_root / "jimmy_cli" / "web_dist"
         dist_index = dist_dir / "index.html"
 
         # If a stale dist exists, serve it as a fallback instead of failing.
@@ -6459,7 +6461,7 @@ def _do_build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
 
         _say(
             f"  {'✗' if fatal else '⚠'} Web UI build failed"
-            + ("" if fatal else " (hermes web will not be available)")
+            + ("" if fatal else " (jimmy web will not be available)")
         )
         _relay(r2)
         if fatal:
@@ -6484,12 +6486,12 @@ def _desktop_dist_exists(desktop_dir: Path) -> bool:
 # SHA-256 content hash of the source tree so that:
 #   - ``git checkout`` / ``git pull`` that touch mtimes but not content
 #     don't trigger a rebuild
-#   - ``hermes update`` can unconditionally call ``hermes desktop --build-only``
+#   - ``jimmy update`` can unconditionally call ``jimmy desktop --build-only``
 #     and it will skip if nothing actually changed
-#   - ``hermes desktop`` (interactive launch) skips the build when the
+#   - ``jimmy desktop`` (interactive launch) skips the build when the
 #     stamp matches, making repeated launches fast
 #
-# Stamp file: $HERMES_HOME/desktop-build-stamp.json
+# Stamp file: $JIMMY_HOME/desktop-build-stamp.json
 # Schema:
 #   {
 #     "contentHash": "<sha256 hex of source files>",
@@ -6558,9 +6560,9 @@ def _compute_desktop_content_hash(project_root: Path) -> str:
 
 
 def _desktop_stamp_path() -> Path:
-    """Return the path to the desktop build stamp file under $HERMES_HOME."""
-    from hermes_constants import get_hermes_home
-    return get_hermes_home() / "desktop-build-stamp.json"
+    """Return the path to the desktop build stamp file under $JIMMY_HOME."""
+    from jimmy_constants import get_jimmy_home
+    return get_jimmy_home() / "desktop-build-stamp.json"
 
 
 def _renderer_bundle_dir(desktop_dir: Path, *, source_mode: bool) -> Optional[Path]:
@@ -6579,7 +6581,7 @@ def _renderer_bundle_dir(desktop_dir: Path, *, source_mode: bool) -> Optional[Pa
     if executable is None:
         return None
 
-    # macOS: …/Hermes.app/Contents/MacOS/Hermes → …/Contents/Resources
+    # macOS: …/Jimmy.app/Contents/MacOS/Jimmy → …/Contents/Resources
     resources = (
         executable.parent.parent / "Resources"
         if sys.platform == "darwin"
@@ -6603,7 +6605,7 @@ def _renderer_bundle_torn(dist_dir: Path) -> bool:
     behind from different generations. The app then launches and dies on the
     first lazy import with ``Failed to fetch dynamically imported module:
     …/assets/<chunk>-<hash>.js`` — and because the content stamp still matches
-    the intact SOURCE tree, ``hermes desktop`` skips the rebuild that would fix
+    the intact SOURCE tree, ``jimmy desktop`` skips the rebuild that would fix
     it, so every relaunch reproduces the crash and reinstalling looks like the
     only way out. Detecting the tear turns it into a normal rebuild.
 
@@ -6632,7 +6634,7 @@ def _desktop_build_needed(desktop_dir: Path, project_root: Path, *, source_mode:
 
     Compares the current content hash against the saved stamp. Also returns
     True if the expected build artifact doesn't exist (e.g. first run after
-    ``hermes update`` that pulled new source but hasn't built yet).
+    ``jimmy update`` that pulled new source but hasn't built yet).
     """
     # If there's no build output at all, we definitely need to build
     if source_mode:
@@ -6693,19 +6695,19 @@ def _desktop_packaged_executable(desktop_dir: Path) -> Optional[Path]:
     """Return the current platform's unpacked Electron app executable."""
     release_dir = desktop_dir / "release"
     if sys.platform == "darwin":
-        candidates = list(release_dir.glob("mac*/Hermes.app/Contents/MacOS/Hermes"))
+        candidates = list(release_dir.glob("mac*/Jimmy.app/Contents/MacOS/Jimmy"))
     elif sys.platform == "win32":
         candidates = [
-            release_dir / "win-unpacked" / "Hermes.exe",
-            release_dir / "win-ia32-unpacked" / "Hermes.exe",
-            release_dir / "win-arm64-unpacked" / "Hermes.exe",
+            release_dir / "win-unpacked" / "Jimmy.exe",
+            release_dir / "win-ia32-unpacked" / "Jimmy.exe",
+            release_dir / "win-arm64-unpacked" / "Jimmy.exe",
         ]
     else:
         candidates = [
-            release_dir / "linux-unpacked" / "hermes",
-            release_dir / "linux-unpacked" / "Hermes",
-            release_dir / "linux-arm64-unpacked" / "hermes",
-            release_dir / "linux-arm64-unpacked" / "Hermes",
+            release_dir / "linux-unpacked" / "jimmy",
+            release_dir / "linux-unpacked" / "Jimmy",
+            release_dir / "linux-arm64-unpacked" / "jimmy",
+            release_dir / "linux-arm64-unpacked" / "Jimmy",
         ]
 
     existing = [p for p in candidates if p.exists()]
@@ -6714,7 +6716,7 @@ def _desktop_packaged_executable(desktop_dir: Path) -> Optional[Path]:
     if sys.platform == "win32" and len(existing) > 1:
         # Multiple unpacked trees can coexist (e.g. a stale win-arm64-unpacked
         # left behind by a cross-arch experiment next to the real win-unpacked).
-        # Picking purely by mtime can then hand a wrong-architecture Hermes.exe
+        # Picking purely by mtime can then hand a wrong-architecture Jimmy.exe
         # to the launcher, which Windows rejects with "This app can't run on
         # your computer" (#69179). Prefer candidates whose PE machine field
         # matches the host; fall back to mtime when none can be parsed.
@@ -6727,16 +6729,16 @@ def _desktop_packaged_executable(desktop_dir: Path) -> Optional[Path]:
 
 # ─── Desktop exe integrity gate (#69179) ────────────────────────────────────
 #
-# The desktop self-update chain (Desktop → hermes-setup --update →
-# `hermes update` → `hermes desktop --build-only` → relaunch) rebuilds
-# Hermes.exe on the end user's machine and used to verify only that the file
+# The desktop self-update chain (Desktop → jimmy-setup --update →
+# `jimmy update` → `jimmy desktop --build-only` → relaunch) rebuilds
+# Jimmy.exe on the end user's machine and used to verify only that the file
 # EXISTS before declaring success. A corrupt cached Electron zip whose
 # extraction produced a truncated electron.exe, an interrupted rcedit resource
 # rewrite, a disk-full pack, or a wrong-arch unpacked tree therefore shipped a
 # broken binary that Windows refuses to load ("This app can't run on your
 # computer" / 此应用无法在你的电脑上运行). These helpers parse the PE header —
 # no signature infrastructure required — so a structurally broken or
-# wrong-architecture Hermes.exe is caught BEFORE the updater replaces the
+# wrong-architecture Jimmy.exe is caught BEFORE the updater replaces the
 # working app, and the previous build can be restored from the .bak tree that
 # apps/desktop/scripts/before-pack.mjs now preserves.
 
@@ -6770,7 +6772,7 @@ def _windows_native_machine_from_iswow64() -> Optional[str]:
     that makes ``IsWow64Process2`` fail with ``ERROR_INVALID_HANDLE`` (6),
     which is exactly the residual Windows-on-ARM failure after #71218: the
     gate fell through to ``PROCESSOR_ARCHITECTURE=AMD64`` (the emulated
-    process arch) and rejected a correctly-built ARM64 ``Hermes.exe``.
+    process arch) and rejected a correctly-built ARM64 ``Jimmy.exe``.
     Binding ``restype``/``argtypes`` to ``wintypes.HANDLE`` keeps the full
     ``0xFFFFFFFFFFFFFFFF`` pseudo-handle.
     """
@@ -6835,7 +6837,7 @@ def _windows_native_machine() -> str:
     """The Windows host OS's NATIVE machine architecture, normalized upper.
 
     ``platform.machine()`` reports the PROCESS architecture, which lies under
-    emulation: the desktop update chain runs an x64 hermes-setup.exe (and thus
+    emulation: the desktop update chain runs an x64 jimmy-setup.exe (and thus
     x64 Python) on Windows-on-ARM devices, where ``platform.machine()``
     returns ``AMD64`` even though the OS is ARM64. The #71119 integrity gate
     then rejected the CORRECT ARM64 rebuild as an "architecture mismatch"
@@ -7036,7 +7038,7 @@ def _ensure_desktop_exe_launchable(
     if error is None:
         return packaged_executable, False
 
-    print(f"✗ The built Hermes.exe failed its integrity check: {error}")
+    print(f"✗ The built Jimmy.exe failed its integrity check: {error}")
     print(f"    at: {packaged_executable}")
 
     # Self-heal setup for the retry: drop the (likely corrupt) cached Electron
@@ -7050,13 +7052,13 @@ def _ensure_desktop_exe_launchable(
 
     restored = _rollback_desktop_from_backup(packaged_executable)
     if restored is not None:
-        print("  ↩ Update aborted — restored the previous working Hermes.exe from backup.")
-        print("    Your existing version was kept and still works. Run `hermes desktop`")
+        print("  ↩ Update aborted — restored the previous working Jimmy.exe from backup.")
+        print("    Your existing version was kept and still works. Run `jimmy desktop`")
         print("    (or the in-app update) again to retry with a fresh Electron download.")
         return restored, True
 
     print("  ✗ No usable backup was found to restore.")
-    print("    Run `hermes desktop --force-build` to rebuild, or re-run the Hermes")
+    print("    Run `jimmy desktop --force-build` to rebuild, or re-run the Jimmy")
     print("    installer to repair the install.")
     return None, False
 
@@ -7103,7 +7105,7 @@ def _purge_electron_build_cache(desktop_dir: Path) -> list[Path]:
     next ``pack`` re-downloads and re-stages from scratch.
 
     Root cause of the ``ENOENT … rename '…/linux-unpacked/electron' ->
-    '…/linux-unpacked/Hermes'`` desktop build failure: a corrupt zip in the
+    '…/linux-unpacked/Jimmy'`` desktop build failure: a corrupt zip in the
     per-user Electron download cache (a partial download resumed into the same
     file leaves prepended/concatenated junk, or an interrupted write truncates
     it). electron-builder's ``app-builder unpack-electron`` extracts the
@@ -7234,7 +7236,7 @@ def _redownload_electron_dist(
     installer = electron_dir / "install.js"
     if not installer.is_file():
         return False
-    from hermes_constants import find_node_executable, with_hermes_node_path
+    from jimmy_constants import find_node_executable, with_jimmy_node_path
 
     node = find_node_executable("node")
     if not node:
@@ -7247,7 +7249,7 @@ def _redownload_electron_dist(
     except OSError:
         pass
 
-    dl_env = with_hermes_node_path(env)
+    dl_env = with_jimmy_node_path(env)
     if mirror:
         dl_env["ELECTRON_MIRROR"] = mirror
     try:
@@ -7270,9 +7272,9 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
     """Terminate any running desktop app executing from this build's ``release``
     dir so a rebuild can replace its (otherwise locked) executable.
 
-    On Windows a running ``Hermes.exe`` keeps an exclusive lock on
-    ``release/win-unpacked/Hermes.exe``. electron-builder's pack then can't
-    delete the stale binary and dies with ``remove …\\Hermes.exe: Access is
+    On Windows a running ``Jimmy.exe`` keeps an exclusive lock on
+    ``release/win-unpacked/Jimmy.exe``. electron-builder's pack then can't
+    delete the stale binary and dies with ``remove …\\Jimmy.exe: Access is
     denied`` / ``ERR_ELECTRON_BUILDER_CANNOT_EXECUTE`` (before-pack hits the same
     EPERM cleaning the dir). The retry path repeats the failure because the lock
     is still held. POSIX lets you unlink a running binary, so this is a no-op
@@ -7280,7 +7282,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
 
     Scope is deliberately narrow: only processes whose executable lives *inside*
     this desktop's ``release`` tree are stopped — a packaged install elsewhere or
-    an unrelated "Hermes" process is never touched. Best-effort: never raises.
+    an unrelated "Jimmy" process is never touched. Best-effort: never raises.
     Returns the PIDs we asked to stop.
     """
     if sys.platform != "win32":
@@ -7375,7 +7377,7 @@ def _desktop_macos_local_signing_identity() -> Optional[str]:
     if sys.platform != "darwin":
         return None
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
 
         desktop = load_config().get("desktop", {})
         if not isinstance(desktop, dict):
@@ -7480,7 +7482,7 @@ def _desktop_macos_local_codesign(
 
     # 1) Standalone Mach-O files (native modules, dylibs, crashpad handler).
     #    Compare paths relative to the app root — the absolute path always
-    #    contains the outer Hermes.app component, so an absolute-parts check
+    #    contains the outer Jimmy.app component, so an absolute-parts check
     #    would skip every file.
     contents = app / "Contents"
     standalone: list[Path] = []
@@ -7530,7 +7532,7 @@ def _desktop_macos_relaunchable_fixup(
 
     An ad-hoc-signed .app has no stable Designated Requirement, so when the
     self-updater rebuilds the bundle in place (new cdhash) Gatekeeper reports
-    "Hermes is damaged and can't be opened" — and macOS TCC forgets every
+    "Jimmy is damaged and can't be opened" — and macOS TCC forgets every
     permission the user granted (Full Disk Access, Desktop/Downloads/Documents,
     Accessibility, Automation, microphone), re-prompting on every launch after
     every update.
@@ -7558,7 +7560,7 @@ def _desktop_macos_relaunchable_fixup(
     exe = _desktop_packaged_executable(desktop_dir)
     if exe is None:
         return True
-    # exe = .../Hermes.app/Contents/MacOS/Hermes  ->  app bundle = .../Hermes.app
+    # exe = .../Jimmy.app/Contents/MacOS/Jimmy  ->  app bundle = .../Jimmy.app
     app = exe.parents[2]
     if not str(app).endswith(".app") or not app.is_dir():
         return True
@@ -7592,7 +7594,7 @@ def _force_adhoc_macos_signing(env: dict, *, source_mode: bool) -> bool:
     """Stop electron-builder grabbing a random keychain identity on self-update.
 
     The desktop self-updater rebuilds *and re-signs the .app on the end user's
-    machine* (``hermes desktop --build-only`` → electron-builder ``--dir``).
+    machine* (``jimmy desktop --build-only`` → electron-builder ``--dir``).
     With ``CSC_IDENTITY_AUTO_DISCOVERY`` on (its default), electron-builder
     signs the ``type=distribution``, hardened-runtime bundle with whatever it
     finds in that user's keychain — typically a personal "Apple Development"
@@ -7666,7 +7668,7 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     sandbox = packaged_executable.parent / "chrome-sandbox"
     if not sandbox.exists():
-        print(f"✗ Hermes Desktop is missing Electron's Linux sandbox helper: {sandbox}")
+        print(f"✗ Jimmy Desktop is missing Electron's Linux sandbox helper: {sandbox}")
         return False
 
     # Reject symlinks — chown/chmod must not follow an attacker-controlled
@@ -7686,7 +7688,7 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     sudo = shutil.which("sudo")
     if not sudo:
-        print("✗ Hermes Desktop requires sudo to configure Electron's Linux sandbox helper.")
+        print("✗ Jimmy Desktop requires sudo to configure Electron's Linux sandbox helper.")
         return False
 
     print("→ Configuring Electron Linux sandbox helper (sudo required)...")
@@ -7705,7 +7707,7 @@ def _detect_linux_password_store() -> str | None:
 
     Electron's safeStorage only reports encryption as available when Chromium
     selects the right keychain backend, and Chromium's own detection routinely
-    fails under `hermes desktop` because the launcher environment doesn't look
+    fails under `jimmy desktop` because the launcher environment doesn't look
     like a full desktop session. Probe order: KDE session env vars, GNOME
     Keyring's control socket, then a D-Bus ping of org.freedesktop.secrets
     (covers any Secret Service implementation, e.g. KeePassXC). Returns None
@@ -7745,7 +7747,7 @@ def _desktop_launch_options() -> tuple[list[str], str, str]:
 
     Returns ``(electron_flags, disable_gpu, password_store)`` where
     ``electron_flags`` is a list of extra Electron CLI flags, ``disable_gpu``
-    is one of "auto"/"1"/"0" (normalized for the HERMES_DESKTOP_DISABLE_GPU
+    is one of "auto"/"1"/"0" (normalized for the JIMMY_DESKTOP_DISABLE_GPU
     env var the Electron app reads), and ``password_store`` is "auto" or one
     of the Chromium password-store backends (unknown values normalize to
     "auto"). Best-effort: any config error yields the safe defaults
@@ -7755,7 +7757,7 @@ def _desktop_launch_options() -> tuple[list[str], str, str]:
     disable_gpu = "auto"
     password_store = "auto"
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
 
         desktop_cfg = (load_config() or {}).get("desktop") or {}
     except Exception:
@@ -7788,14 +7790,14 @@ def _desktop_launch_options() -> tuple[list[str], str, str]:
 
 
 def _register_linux_desktop_entry() -> None:
-    """Install the XDG desktop entry for Hermes Desktop (Linux only, best-effort).
+    """Install the XDG desktop entry for Jimmy Desktop (Linux only, best-effort).
 
     Gives the Electron app a launcher presence: a menu item and an icon.
     ``Exec`` and ``Icon`` are absolute, so the entry works outside a login
-    shell. ``hermes uninstall --gui`` removes it.
+    shell. ``jimmy uninstall --gui`` removes it.
     """
     try:
-        from hermes_cli.linux_desktop_entry import install_desktop_entry, is_supported
+        from jimmy_cli.linux_desktop_entry import install_desktop_entry, is_supported
 
         if not is_supported():
             return
@@ -7814,48 +7816,48 @@ def cmd_gui(args: argparse.Namespace):
         sys.exit(1)
 
     try:
-        from hermes_logging import setup_logging as _setup_logging_gui
+        from jimmy_logging import setup_logging as _setup_logging_gui
         _setup_logging_gui(mode="gui")
     except Exception:
         pass
 
-    from hermes_constants import with_hermes_node_path
+    from jimmy_constants import with_jimmy_node_path
 
-    # with_hermes_node_path() copies os.environ when called with no arg.
-    env = with_hermes_node_path()
+    # with_jimmy_node_path() copies os.environ when called with no arg.
+    env = with_jimmy_node_path()
     if getattr(args, "fake_boot", False):
-        env["HERMES_DESKTOP_BOOT_FAKE"] = "1"
+        env["JIMMY_DESKTOP_BOOT_FAKE"] = "1"
     if getattr(args, "ignore_existing", False):
-        env["HERMES_DESKTOP_IGNORE_EXISTING"] = "1"
-    if getattr(args, "hermes_root", None):
-        env["HERMES_DESKTOP_HERMES_ROOT"] = str(Path(args.hermes_root).expanduser().resolve())
+        env["JIMMY_DESKTOP_IGNORE_EXISTING"] = "1"
+    if getattr(args, "jimmy_root", None):
+        env["JIMMY_DESKTOP_JIMMY_ROOT"] = str(Path(args.jimmy_root).expanduser().resolve())
     if getattr(args, "cwd", None):
-        env["HERMES_DESKTOP_CWD"] = str(Path(args.cwd).expanduser().resolve())
+        env["JIMMY_DESKTOP_CWD"] = str(Path(args.cwd).expanduser().resolve())
     else:
-        env["HERMES_DESKTOP_CWD"] = os.getcwd()
+        env["JIMMY_DESKTOP_CWD"] = os.getcwd()
 
     # Desktop launch options from config.yaml (`desktop.electron_flags`,
     # `desktop.disable_gpu`). The GPU policy is bridged to the env var the
     # Electron app already reads; an explicit env var still wins over config so
-    # `HERMES_DESKTOP_DISABLE_GPU=... hermes desktop` keeps working.
+    # `JIMMY_DESKTOP_DISABLE_GPU=... jimmy desktop` keeps working.
     config_electron_flags, config_disable_gpu, config_password_store = _desktop_launch_options()
-    if config_disable_gpu != "auto" and "HERMES_DESKTOP_DISABLE_GPU" not in os.environ:
-        env["HERMES_DESKTOP_DISABLE_GPU"] = config_disable_gpu
+    if config_disable_gpu != "auto" and "JIMMY_DESKTOP_DISABLE_GPU" not in os.environ:
+        env["JIMMY_DESKTOP_DISABLE_GPU"] = config_disable_gpu
 
     # Linux keychain backend for safeStorage (`desktop.password_store`).
     # Chromium needs the --password-store switch to pick the right keychain;
     # without it safeStorage.isEncryptionAvailable() is often false and the
     # desktop app refuses to persist remote gateway tokens. Config wins over
     # detection; an explicit env var wins over both so
-    # `HERMES_DESKTOP_PASSWORD_STORE=... hermes desktop` keeps working.
-    if sys.platform == "linux" and "HERMES_DESKTOP_PASSWORD_STORE" not in os.environ:
+    # `JIMMY_DESKTOP_PASSWORD_STORE=... jimmy desktop` keeps working.
+    if sys.platform == "linux" and "JIMMY_DESKTOP_PASSWORD_STORE" not in os.environ:
         password_store = (
             config_password_store
             if config_password_store != "auto"
             else _detect_linux_password_store()
         )
         if password_store:
-            env["HERMES_DESKTOP_PASSWORD_STORE"] = password_store
+            env["JIMMY_DESKTOP_PASSWORD_STORE"] = password_store
 
     source_mode = getattr(args, "source", False)
     skip_build = getattr(args, "skip_build", False)
@@ -7867,7 +7869,7 @@ def cmd_gui(args: argparse.Namespace):
         npm = _resolve_node_runtime_npm()
         if not npm:
             print("Desktop GUI requires Node.js/npm, but npm was not found on PATH.")
-            print("Install Node.js, then run:  hermes gui")
+            print("Install Node.js, then run:  jimmy gui")
             sys.exit(1)
     else:
         npm = None
@@ -7905,14 +7907,14 @@ def cmd_gui(args: argparse.Namespace):
             print(f"✓ Desktop {build_label} is up to date (content stamp matches)")
         else:
             print("→ Installing desktop workspace dependencies...")
-            # Put the Hermes-managed Node on PATH so npm's child scripts (which
+            # Put the Jimmy-managed Node on PATH so npm's child scripts (which
             # shell out to bare `node`, e.g. electron-winstaller's
             # select-7z-arch.js) resolve it even when the parent PATH is
-            # stripped — the desktop updater chain (Desktop → hermes-setup →
-            # hermes update) loses shell PATH customizations. Wrapping the
+            # stripped — the desktop updater chain (Desktop → jimmy-setup →
+            # jimmy update) loses shell PATH customizations. Wrapping the
             # NixOS build env keeps its PYTHON hint while restoring managed Node
-            # ahead of a bare PATH (same idiom as the `hermes update` path).
-            nixos_env = with_hermes_node_path(_nixos_build_env())
+            # ahead of a bare PATH (same idiom as the `jimmy update` path).
+            nixos_env = with_jimmy_node_path(_nixos_build_env())
             install_result = _run_npm_install_deterministic(npm, PROJECT_ROOT, capture_output=False, env=nixos_env)
             if install_result.returncode != 0:
                 if not _electron_pkg_staged_missing_dist(PROJECT_ROOT):
@@ -7937,7 +7939,7 @@ def cmd_gui(args: argparse.Namespace):
             npm_build_env = _npm_lifecycle_env(env)
             if not source_mode:
                 # A running desktop instance launched from release/win-unpacked
-                # holds Hermes.exe locked on Windows, so the pack can't replace
+                # holds Jimmy.exe locked on Windows, so the pack can't replace
                 # it ("Access is denied" / ERR_ELECTRON_BUILDER_CANNOT_EXECUTE).
                 # Stop it first so the rebuild — including the installer's
                 # headless --update rebuild — succeeds instead of failing cryptically.
@@ -7970,7 +7972,7 @@ def cmd_gui(args: argparse.Namespace):
                     print("  ⚠ Desktop build failed; refreshed the Electron download and retrying once...")
                     for p in purged:
                         print(f"    - {p}")
-                    # The purge can't remove a win-unpacked tree whose Hermes.exe
+                    # The purge can't remove a win-unpacked tree whose Jimmy.exe
                     # is still locked by a running instance; stop it before retry.
                     _stop_desktop_processes_locking_build(desktop_dir)
                     build_result = subprocess.run(
@@ -7996,20 +7998,20 @@ def cmd_gui(args: argparse.Namespace):
                 print("✗ Desktop GUI build failed")
                 print(f"  Run manually:  cd apps/desktop && npm run {build_script}")
                 if sys.platform == "win32":
-                    print("  If this says \"Access is denied\" on Hermes.exe, close any")
-                    print("  running Hermes desktop window and retry.")
+                    print("  If this says \"Access is denied\" on Jimmy.exe, close any")
+                    print("  running Jimmy desktop window and retry.")
                 print("  If the log shows Electron download retries, rebuild via a mirror:")
-                print("    ELECTRON_MIRROR=<mirror-base-url> hermes desktop --force-build")
+                print("    ELECTRON_MIRROR=<mirror-base-url> jimmy desktop --force-build")
                 sys.exit(build_result.returncode or 1)
             packaged_executable = _desktop_packaged_executable(desktop_dir)
             if not source_mode:
                 # Locally-built apps are ad-hoc signed; make them relaunchable after
-                # an in-place self-update (otherwise macOS reports "Hermes is
+                # an in-place self-update (otherwise macOS reports "Jimmy is
                 # damaged"). No-op on non-macOS and on real-identity builds.
                 _desktop_macos_relaunchable_fixup(desktop_dir)
 
                 # Windows integrity gate (#69179): never declare the rebuild a
-                # success on a Hermes.exe Windows cannot load (truncated PE from
+                # success on a Jimmy.exe Windows cannot load (truncated PE from
                 # a corrupt cached Electron zip, wrong-arch tree, interrupted
                 # rcedit rewrite). Roll back to the .bak tree preserved by
                 # before-pack.mjs when possible, then fail loudly so the
@@ -8027,7 +8029,7 @@ def cmd_gui(args: argparse.Namespace):
             # Build succeeded — write the stamp so next run can skip
             _write_desktop_build_stamp(PROJECT_ROOT, source_mode=source_mode)
 
-    # Linux: register the app in the desktop launcher, so Hermes shows up
+    # Linux: register the app in the desktop launcher, so Jimmy shows up
     # in the application menu with its icon. Best-effort and idempotent.
     # A failure must never stop the app from launching.
     _register_linux_desktop_entry()
@@ -8053,7 +8055,7 @@ def cmd_gui(args: argparse.Namespace):
         return
 
     if source_mode:
-        print("→ Launching Hermes Desktop from source build...")
+        print("→ Launching Jimmy Desktop from source build...")
         launch_result = subprocess.run([npm, "exec", "--", "electron", "."], cwd=desktop_dir, env=env, check=False)
         sys.exit(launch_result.returncode)
 
@@ -8071,15 +8073,15 @@ def cmd_gui(args: argparse.Namespace):
             sys.exit(1)
 
     launch_command.extend(config_electron_flags)
-    print(f"→ Launching packaged Hermes Desktop: {' '.join(launch_command)}")
+    print(f"→ Launching packaged Jimmy Desktop: {' '.join(launch_command)}")
     launch_result = subprocess.run(launch_command, cwd=desktop_dir, env=env, check=False)
     sys.exit(launch_result.returncode)
 
 
-# Dashboard process-hygiene helpers live in hermes_cli/dashboard_procs.py
+# Dashboard process-hygiene helpers live in jimmy_cli/dashboard_procs.py
 # (main.py decomposition, mechanical move). Re-exported lazily through the
 # module-level __getattr__ above so callers and test monkeypatches on
-# hermes_cli.main.<name> keep resolving unchanged.
+# jimmy_cli.main.<name> keep resolving unchanged.
 
 def _find_stale_dashboard_pids(
     *,
@@ -8095,18 +8097,18 @@ def _parse_dashboard_runtime(command: str) -> tuple[str, str, int] | None:
     if any(
         pattern in command
         for pattern in (
-            "hermes dashboard",
-            "hermes_cli.main dashboard",
-            "hermes_cli/main.py dashboard",
+            "jimmy dashboard",
+            "jimmy_cli.main dashboard",
+            "jimmy_cli/main.py dashboard",
         )
     ):
         mode = "dashboard"
     elif any(
         pattern in command
         for pattern in (
-            "hermes serve",
-            "hermes_cli.main serve",
-            "hermes_cli/main.py serve",
+            "jimmy serve",
+            "jimmy_cli.main serve",
+            "jimmy_cli/main.py serve",
         )
     ):
         mode = "serve"
@@ -8138,7 +8140,7 @@ def _dashboard_probe_host(host: str | None) -> str:
     return normalized
 
 
-_DASHBOARD_SYSTEMD_UNIT = "hermes-dashboard.service"
+_DASHBOARD_SYSTEMD_UNIT = "jimmy-dashboard.service"
 
 
 def _restart_managed_dashboard_service(
@@ -8164,7 +8166,7 @@ def _restart_managed_dashboard_service(
             timeout=timeout,
         )
 
-    # Probe the user manager first: Hermes installs Linux services in the
+    # Probe the user manager first: Jimmy installs Linux services in the
     # user's systemd scope by default.  Only fall back to the system manager
     # when the unit is not present there, preserving root/system deployments.
     # Crucially, keep the selected scope for *all* probes and the restart — a
@@ -8253,7 +8255,7 @@ def _get_systemd_service_for_pid(pid: int) -> str | None:
     """If *pid* belongs to a systemd service unit, return the unit name.
 
     Reads ``/proc/<pid>/cgroup`` and extracts the service name (e.g.
-    ``hermes-serve.service``).  Returns ``None`` when the PID is not
+    ``jimmy-serve.service``).  Returns ``None`` when the PID is not
     part of a systemd service, when the file is unreadable, or on
     non-Linux platforms.
     """
@@ -8264,7 +8266,7 @@ def _get_systemd_service_for_pid(pid: int) -> str | None:
         text = cgroup_path.read_text(encoding="utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip()
-            # Format: 0::/system.slice/hermes-serve.service
+            # Format: 0::/system.slice/jimmy-serve.service
             #         0::/user.slice/user-1000.slice/session-42.scope
             parts = line.split("::", 1)
             if len(parts) != 2:
@@ -8361,7 +8363,7 @@ def _dashboard_cmdline_for_pid(pid: int) -> list[str] | None:
 
     Linux: reads ``/proc/<pid>/cmdline`` (NUL-separated, lossless).
     macOS: falls back to ``ps -o command=`` + shlex (best effort — quoting
-    is reconstructed, but hermes launch commands don't embed exotic args).
+    is reconstructed, but jimmy launch commands don't embed exotic args).
     Windows: returns ``None``; taskkill /F gives no graceful window and the
     desktop app manages its own backend there.
     """
@@ -8400,7 +8402,7 @@ def _dashboard_cmdline_for_pid(pid: int) -> list[str] | None:
 
 
 def _respawn_dashboard_processes(commands: list[list[str]]) -> list[list[str]]:
-    """Best-effort respawn of manually-started dashboards after ``hermes update``.
+    """Best-effort respawn of manually-started dashboards after ``jimmy update``.
 
     Spawns each recovered argv detached (new session, output to the profile's
     ``logs/dashboard-restart.log``).  Returns the commands that failed to
@@ -8410,11 +8412,11 @@ def _respawn_dashboard_processes(commands: list[list[str]]) -> list[list[str]]:
     Desktop ``serve|dashboard --port 0`` backends are not replayed and
     duplicates are capped per profile (#78821).
     """
-    from hermes_constants import get_hermes_home
+    from jimmy_constants import get_jimmy_home
 
     respawned: list[list[str]] = []
     failed: list[tuple[list[str], str]] = []
-    log_path = get_hermes_home() / "logs" / "dashboard-restart.log"
+    log_path = get_jimmy_home() / "logs" / "dashboard-restart.log"
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -8452,7 +8454,7 @@ def _respawn_dashboard_processes(commands: list[list[str]]) -> list[list[str]]:
 
 
 # =========================================================================
-# Fork detection and upstream management for `hermes update`
+# Fork detection and upstream management for `jimmy update`
 # =========================================================================
 
 
@@ -8485,7 +8487,7 @@ def _load_installable_optional_extras(group: str = "all") -> list[str]:
     return referenced
 
 
-# Install-scoped breadcrumbs live next to the venv (not under $HERMES_HOME)
+# Install-scoped breadcrumbs live next to the venv (not under $JIMMY_HOME)
 # because the venv is shared across profiles.
 #
 # ``.update-incomplete`` — generic core ``.[all]`` install was interrupted.
@@ -8540,7 +8542,7 @@ def _clear_lazy_refresh_incomplete_marker() -> None:
 
 
 def _recover_from_interrupted_install() -> None:
-    """Finish update work left half-done by a prior ``hermes update``.
+    """Finish update work left half-done by a prior ``jimmy update``.
 
     Handles two independent breadcrumbs:
 
@@ -8562,7 +8564,7 @@ def _recover_from_interrupted_install() -> None:
 
     Output: everything — our status lines AND the streamed pip/uv install
     (which inherits fd 1) — is routed to stderr.  Launches whose stdout is a
-    protocol stream (``hermes acp`` speaks JSON-RPC on stdout) must never get
+    protocol stream (``jimmy acp`` speaks JSON-RPC on stdout) must never get
     install noise on stdout.
     """
     if _pytest_owns_live_checkout(PROJECT_ROOT):
@@ -8673,31 +8675,31 @@ def _recover_core_update_marker_locked() -> None:
     would otherwise look healthy and clear the breadcrumb too early.
     """
     print(
-        "⚠ A previous `hermes update` was interrupted mid-install — "
+        "⚠ A previous `jimmy update` was interrupted mid-install — "
         "finishing dependency installation now..."
     )
 
-    # Windows: a normal ``hermes.exe`` launch always has the launcher as an
+    # Windows: a normal ``jimmy.exe`` launch always has the launcher as an
     # ancestor. Full editable reinstall uses quarantine so the live shim can
     # still be replaced. Package-only import repair may help as first aid but
     # must NEVER clear this core marker on its own (#58004 review).
-    self_locked = _windows_running_hermes_launcher_locked()
+    self_locked = _windows_running_jimmy_launcher_locked()
     if self_locked:
         install_prefix, install_env = _default_venv_install_target()
         print(
-            "  → Running from hermes.exe; applying package-only first aid, "
+            "  → Running from jimmy.exe; applying package-only first aid, "
             "then quarantined full reinstall (core marker stays until that "
             "succeeds)..."
         )
         _repair_venv_via_import_probes(install_prefix, env=install_env)
 
     try:
-        from hermes_cli import _install_repair as _ir
+        from jimmy_cli import _install_repair as _ir
 
         # ensure_uv bootstraps the installer itself when missing (the early
         # pass's stdlib-only lookup cannot); keeping it here means the late
         # path still self-heals a venv whose uv vanished mid-update.
-        from hermes_cli.managed_uv import ensure_uv
+        from jimmy_cli.managed_uv import ensure_uv
 
         ensure_uv()
 
@@ -8717,8 +8719,8 @@ def _recover_core_update_marker_locked() -> None:
         print("✗ Could not auto-recover the interrupted install.")
         if self_locked:
             print(
-                "  Hermes is still running from the launcher that needs "
-                "replacing. Close other Hermes windows, restart from a "
+                "  Jimmy is still running from the launcher that needs "
+                "replacing. Close other Jimmy windows, restart from a "
                 "different terminal, then run:"
             )
             print(f'    cd /d "{PROJECT_ROOT}"')
@@ -8743,10 +8745,10 @@ def _norm_exe_path(path) -> str:
 def _windows_shim_in_process_chain() -> Path | None:
     """The venv console shim this process runs from or under, if any.
 
-    ``venv\\Scripts\\hermes.exe`` is a launcher that runs the interpreter with
+    ``venv\\Scripts\\jimmy.exe`` is a launcher that runs the interpreter with
     the shim itself as its script, and that keeps the shim open — without
     ``FILE_SHARE_DELETE`` — for the whole process lifetime. So every
-    ``hermes ...`` command holds its own shim, and an editable install run
+    ``jimmy ...`` command holds its own shim, and an editable install run
     from one can never rewrite it (#88838, #89599).
 
     Two independent probes, because either can come up empty. Process
@@ -8757,14 +8759,14 @@ def _windows_shim_in_process_chain() -> Path | None:
     argv[0] check misses.
 
     Candidates are intersected with the project venv's own shims, so a
-    ``hermes.exe`` belonging to some other install never matches.
+    ``jimmy.exe`` belonging to some other install never matches.
     """
     if not _is_windows():
         return None
     scripts_dir = _venv_scripts_dir()
     if scripts_dir is None:
         return None
-    shims = {_norm_exe_path(shim): shim for shim in _hermes_exe_shims(scripts_dir)}
+    shims = {_norm_exe_path(shim): shim for shim in _jimmy_exe_shims(scripts_dir)}
     if not shims:
         return None
 
@@ -8801,8 +8803,8 @@ def _windows_shim_in_process_chain() -> Path | None:
     return None
 
 
-def _windows_running_hermes_launcher_locked() -> bool:
-    """True when a venv ``hermes*.exe`` shim is this process or an ancestor.
+def _windows_running_jimmy_launcher_locked() -> bool:
+    """True when a venv ``jimmy*.exe`` shim is this process or an ancestor.
 
     Best-effort: returns False when psutil is unavailable or inspection fails.
     """
@@ -8810,7 +8812,7 @@ def _windows_running_hermes_launcher_locked() -> bool:
 
 
 # Set on the re-exec'd child so it can never spawn another one.
-_UPDATE_REEXEC_ENV = "HERMES_UPDATE_REEXEC"
+_UPDATE_REEXEC_ENV = "JIMMY_UPDATE_REEXEC"
 
 
 def _reexec_dependency_sync_off_windows_shim() -> bool:
@@ -8830,7 +8832,7 @@ def _reexec_dependency_sync_off_windows_shim() -> bool:
     user's own console. Only the venv rewrite is left, and that is the single
     step that genuinely cannot run from inside the shim.
 
-    ``venv\\Scripts\\hermes.exe`` is a launcher that runs the interpreter with
+    ``venv\\Scripts\\jimmy.exe`` is a launcher that runs the interpreter with
     the shim as its script and holds it open without ``FILE_SHARE_DELETE`` for
     the whole command, so the quarantine rename is refused and uv fails to
     replace it with os error 32 (#88838, #89599).
@@ -8842,7 +8844,7 @@ def _reexec_dependency_sync_off_windows_shim() -> bool:
     console and prints its own result, and ``--gateway`` writes the true exit
     code to ``.update_exit_code`` for the gateway watcher.
 
-    The child re-runs ``hermes update``, so the whole remaining flow — the
+    The child re-runs ``jimmy update``, so the whole remaining flow — the
     dependency sync and the node/web/lazy-refresh tail behind it — still
     happens exactly once. ``_UPDATE_REEXEC_ENV`` marks it so it cannot spawn
     another child, and so the "already up to date" early return does not
@@ -8861,10 +8863,10 @@ def _reexec_dependency_sync_off_windows_shim() -> bool:
     if shim is None:
         return False
 
-    from hermes_constants import venv_python_path
+    from jimmy_constants import venv_python_path
 
     python_exe = venv_python_path(shim.parent.parent, windows=True)
-    cmd = [str(python_exe), "-m", "hermes_cli.main", *sys.argv[1:]]
+    cmd = [str(python_exe), "-m", "jimmy_cli.main", *sys.argv[1:]]
     if python_exe.is_file():
         try:
             subprocess.Popen(
@@ -8892,13 +8894,13 @@ def _reexec_dependency_sync_off_windows_shim() -> bool:
 def _default_venv_install_target() -> tuple[list[str], dict[str, str] | None]:
     """Return ``(install_cmd_prefix, env)`` for the project venv when possible."""
     try:
-        from hermes_cli.managed_uv import ensure_uv
+        from jimmy_cli.managed_uv import ensure_uv
 
         uv_bin = ensure_uv()
     except Exception:
         uv_bin = None
     if uv_bin:
-        from hermes_constants import project_venv_dir
+        from jimmy_constants import project_venv_dir
 
         venv_dir = project_venv_dir(PROJECT_ROOT) or PROJECT_ROOT / "venv"
         env = {**os.environ, "VIRTUAL_ENV": str(venv_dir)}
@@ -8919,7 +8921,7 @@ def _run_install_with_heartbeat(
 
     Some resolvers/build backends (especially when compiling Rust/C extensions)
     can stay quiet for minutes. Emit a simple elapsed-time heartbeat so users
-    know ``hermes update`` is still progressing even if pip/uv itself is silent.
+    know ``jimmy update`` is still progressing even if pip/uv itself is silent.
     """
     done = threading.Event()
     start = _time.time()
@@ -8954,7 +8956,7 @@ def _is_windows() -> bool:
 
 def _venv_scripts_dir() -> Path | None:
     """Return the venv Scripts directory if we're running inside the project venv."""
-    from hermes_constants import project_venv_dir, venv_bin_dir
+    from jimmy_constants import project_venv_dir, venv_bin_dir
 
     venv_dir = project_venv_dir(PROJECT_ROOT)
     if venv_dir is None:
@@ -8964,7 +8966,7 @@ def _venv_scripts_dir() -> Path | None:
     return scripts if scripts.is_dir() else None
 
 
-def _hermes_exe_shims(scripts_dir: Path) -> list[Path]:
+def _jimmy_exe_shims(scripts_dir: Path) -> list[Path]:
     """Entry-point shims that uv may try to rewrite during ``pip install -e .``.
 
     On Windows these are .exe launchers generated by setuptools/uv. On POSIX
@@ -8974,40 +8976,40 @@ def _hermes_exe_shims(scripts_dir: Path) -> list[Path]:
     if not _is_windows():
         return []
 
-    names = set(_load_console_script_names()) or {"hermes", "hermes-agent", "hermes-acp"}
+    names = set(_load_console_script_names()) or {"jimmy", "jimmy-agent", "jimmy-acp"}
     # The gateway shim is not a [project.scripts] entry point, but older
     # update/install paths still rewrite and quarantine it.
-    names.add("hermes-gateway")
+    names.add("jimmy-gateway")
     return [scripts_dir / f"{name}.exe" for name in sorted(names)]
 
 
-def _quarantine_running_hermes_exe(
+def _quarantine_running_jimmy_exe(
     scripts_dir: Path, *, max_attempts: int = 4
 ) -> list[tuple[Path, Path]]:
-    """Pre-empt Windows file lock on the running ``hermes.exe``.
+    """Pre-empt Windows file lock on the running ``jimmy.exe``.
 
     Windows allows RENAMING a mapped/running executable (the kernel tracks the
     file by handle, not path), but blocks DELETE/REPLACE while it's loaded. uv
     needs to overwrite the entry-point shims during ``pip install -e .``;
-    when ``hermes update`` runs, ``hermes.exe`` IS the live process, and uv
+    when ``jimmy update`` runs, ``jimmy.exe`` IS the live process, and uv
     fails with ``Access is denied. (os error 5)``.
 
-    We rename live shims to ``hermes.exe.old.<unix-ms>`` first. uv then writes
+    We rename live shims to ``jimmy.exe.old.<unix-ms>`` first. uv then writes
     fresh shims at the original paths. The ``.old`` files are cleaned up on
-    the next hermes invocation by ``_cleanup_quarantined_exes``.
+    the next jimmy invocation by ``_cleanup_quarantined_exes``.
 
     Rename can still fail when *another* process has opened the .exe without
     ``FILE_SHARE_DELETE`` — typically AV real-time scanners with transient
-    handles (recovers in <1s), or the Hermes Desktop backend child process
+    handles (recovers in <1s), or the Jimmy Desktop backend child process
     (won't recover until the user closes it). We mitigate:
 
     1. Retry up to ``max_attempts`` times with exponential backoff
        (100/250/500/1000 ms). Handles the AV-scanner case.
     2. If all retries fail, print a clear warning naming the most likely
-       culprit (running Hermes Desktop / gateway / REPL).
+       culprit (running Jimmy Desktop / gateway / REPL).
 
     The updater's own launcher is no longer one of those culprits: an update
-    started from ``hermes.exe`` re-runs itself under the venv Python before
+    started from ``jimmy.exe`` re-runs itself under the venv Python before
     reaching here (``_reexec_dependency_sync_off_windows_shim``).
 
     Returns the list of (original, quarantined) pairs so the caller can roll
@@ -9025,7 +9027,7 @@ def _quarantine_running_hermes_exe(
     backoff_ms = [0, 100, 250, 500, 1000]
     attempts = max(1, min(max_attempts, len(backoff_ms)))
 
-    for shim in _hermes_exe_shims(scripts_dir):
+    for shim in _jimmy_exe_shims(scripts_dir):
         if not shim.exists():
             continue
         target = shim.with_suffix(shim.suffix + f".old.{stamp}")
@@ -9059,8 +9061,8 @@ def _quarantine_running_hermes_exe(
             f"another process is holding it open)."
         )
         print(
-            "    Close Hermes Desktop, exit other `hermes` REPLs, stop the "
-            "gateway, or pause AV scanning, then re-run `hermes update`."
+            "    Close Jimmy Desktop, exit other `jimmy` REPLs, stop the "
+            "gateway, or pause AV scanning, then re-run `jimmy update`."
         )
 
     return moved
@@ -9104,9 +9106,9 @@ def _filter_pending_shim_renames(
 
 
 def _cleanup_pending_shim_renames(scripts_dir: Path) -> int:
-    """Drop reboot renames older Hermes versions queued for our shims.
+    """Drop reboot renames older Jimmy versions queued for our shims.
 
-    Hermes used to fall back to ``MoveFileExW(MOVEFILE_DELAY_UNTIL_REBOOT)``
+    Jimmy used to fall back to ``MoveFileExW(MOVEFILE_DELAY_UNTIL_REBOOT)``
     when the quarantine rename failed. Those entries outlive the update that
     queued them, so at the next boot they move away whatever now sits at the
     shim path — including a shim a later repair just wrote. Needs elevation
@@ -9127,7 +9129,7 @@ def _cleanup_pending_shim_renames(scripts_dir: Path) -> int:
             if value_type != winreg.REG_MULTI_SZ or not isinstance(entries, list):
                 return 0
             kept, removed = _filter_pending_shim_renames(
-                entries, _hermes_exe_shims(scripts_dir)
+                entries, _jimmy_exe_shims(scripts_dir)
             )
             if not removed:
                 return 0
@@ -9141,7 +9143,7 @@ def _cleanup_pending_shim_renames(scripts_dir: Path) -> int:
 
 
 def _restore_quarantined_exes(moved: list[tuple[Path, Path]]) -> None:
-    """Roll back ``_quarantine_running_hermes_exe`` if uv didn't write replacements."""
+    """Roll back ``_quarantine_running_jimmy_exe`` if uv didn't write replacements."""
     for original, quarantined in moved:
         try:
             if not original.exists() and quarantined.exists():
@@ -9156,12 +9158,12 @@ def _run_quarantined_install(
     env: dict[str, str] | None = None,
     scripts_dir: Path | None = None,
 ) -> None:
-    """Run an editable install, quarantining the running ``hermes.exe`` first.
+    """Run an editable install, quarantining the running ``jimmy.exe`` first.
 
     Any ``pip install -e .`` (or ``--reinstall``) rewrites the entry-point
-    shims, and on Windows the live ``hermes.exe`` is the running process —
+    shims, and on Windows the live ``jimmy.exe`` is the running process —
     pip can neither delete nor overwrite it, so without quarantine the shim
-    is left missing and ``hermes`` drops off PATH. This wraps
+    is left missing and ``jimmy`` drops off PATH. This wraps
     :func:`_run_install_with_heartbeat` with the same rename-out-of-the-way /
     restore-on-failure dance that the primary install path uses, so EVERY
     install that touches the shims is protected — including the
@@ -9173,7 +9175,7 @@ def _run_quarantined_install(
     """
     moved: list[tuple[Path, Path]] = []
     if scripts_dir is not None:
-        moved = _quarantine_running_hermes_exe(scripts_dir)
+        moved = _quarantine_running_jimmy_exe(scripts_dir)
     try:
         _run_install_with_heartbeat(cmd, env=env)
     finally:
@@ -9181,7 +9183,7 @@ def _run_quarantined_install(
         # FAILURE (install died before the entry-points step) and on SUCCESS
         # too: uv audits an already-satisfied editable install as a no-op and
         # rewrites no entry points, which would otherwise leave the shims
-        # quarantined aside and `hermes` missing from PATH after a green
+        # quarantined aside and `jimmy` missing from PATH after a green
         # install (#75584). _restore_quarantined_exes skips any shim the
         # installer actually replaced, so this never clobbers fresh output.
         # Errors are not swallowed — the finally re-raises whatever escaped.
@@ -9190,9 +9192,9 @@ def _run_quarantined_install(
 
 
 def _cleanup_quarantined_exes(scripts_dir: Path | None = None) -> None:
-    """Sweep ``hermes.exe.old.*`` and stale reboot renames left by prior updates.
+    """Sweep ``jimmy.exe.old.*`` and stale reboot renames left by prior updates.
 
-    Called early on every hermes invocation. The .old files are unlocked once
+    Called early on every jimmy invocation. The .old files are unlocked once
     their owning process exited, so deletion succeeds the next run. Silent
     no-op when nothing's there or on file-locked / permission errors.
     """
@@ -9235,7 +9237,7 @@ def _run_package_only_install(
     """Run a package-only pip/uv install without quarantining entry-point shims.
 
     ``pip install --upgrade pip`` and ``--force-reinstall <pkg>`` do not
-    rewrite ``hermes.exe``. The editable-install quarantine path would rename
+    rewrite ``jimmy.exe``. The editable-install quarantine path would rename
     shims without uv recreating them on Windows (#57828).
     """
     _run_install_with_heartbeat(cmd, env=env)
@@ -9394,7 +9396,7 @@ def _repair_venv_via_import_probes(
 
     Uses real ``import`` checks (not distribution metadata) so a venv where
     METADATA remains but ``.py`` files were wiped mid-install is still
-    detected (#57828). Package-only reinstall — never rewrites ``hermes.exe``.
+    detected (#57828). Package-only reinstall — never rewrites ``jimmy.exe``.
 
     Never raises. Returns one of:
       - ``"healthy"`` — probes ran and found nothing broken
@@ -9422,7 +9424,7 @@ def _repair_venv_via_import_probes(
     manual = " ".join(
         shlex.quote(s) for s in _lazy_refresh_repair_specs(broken)
     )
-    print("  ⚠ Venv repair incomplete. Run manually, then `hermes update`:")
+    print("  ⚠ Venv repair incomplete. Run manually, then `jimmy update`:")
     print(
         f"    {' '.join(install_cmd_prefix)} install --force-reinstall {manual}"
     )
@@ -9440,10 +9442,10 @@ def _install_python_dependencies_with_optional_fallback(
     By default this targets ``.[all]``; Termux callers can pass
     ``group='termux-all'`` to use the curated Android-compatible profile.
 
-    On Windows, pre-renames live ``hermes.exe`` / ``hermes-gateway.exe`` shims
+    On Windows, pre-renames live ``jimmy.exe`` / ``jimmy-gateway.exe`` shims
     in the venv Scripts dir before each install attempt so uv can write fresh
     copies (Windows blocks REPLACE on a running .exe but allows RENAME). See
-    ``_quarantine_running_hermes_exe`` for the rationale.
+    ``_quarantine_running_jimmy_exe`` for the rationale.
     """
     scripts_dir = _venv_scripts_dir() if _is_windows() else None
 
@@ -9487,7 +9489,7 @@ def _install_python_dependencies_with_optional_fallback(
     # partial installs where a newly added base dep (e.g. ``pathspec``)
     # silently fails to land on top of a half-stale venv, and the only
     # symptom is a downstream subprocess crashing with ModuleNotFoundError
-    # hours later inside ``hermes update``'s desktop-rebuild or skill-sync
+    # hours later inside ``jimmy update``'s desktop-rebuild or skill-sync
     # stage. Reinstall with --reinstall to force resolution if anything is
     # missing, then re-verify so the failure surfaces here instead of
     # downstream.
@@ -9523,11 +9525,11 @@ def _verify_console_scripts_installed(
 ) -> None:
     """Ensure every declared console_script shim exists on disk after install.
 
-    On Windows, ``uv pip install -e .`` can register ``hermes.exe`` in the
+    On Windows, ``uv pip install -e .`` can register ``jimmy.exe`` in the
     wheel RECORD while the file never lands on disk — typically when the live
-    ``hermes.exe`` shim is locked during ``hermes update``, or when uv/distlib
-    skips a launcher write. The symptom is ``hermes-agent.exe`` and
-    ``hermes-acp.exe`` present but ``hermes.exe`` missing, so ``hermes`` drops
+    ``jimmy.exe`` shim is locked during ``jimmy update``, or when uv/distlib
+    skips a launcher write. The symptom is ``jimmy-agent.exe`` and
+    ``jimmy-acp.exe`` present but ``jimmy.exe`` missing, so ``jimmy`` drops
     off PATH even though the install reported success (issue #52931).
 
     If any shim is missing we reinstall with ``--reinstall -e .`` under the
@@ -9570,8 +9572,8 @@ def _verify_console_scripts_installed(
     except subprocess.CalledProcessError as e:
         logger.warning("console script verification: repair install failed: %s", e)
         print(
-            "  ⚠ Entry point repair failed; try `hermes update --force` after "
-            "closing other hermes processes."
+            "  ⚠ Entry point repair failed; try `jimmy update --force` after "
+            "closing other jimmy processes."
         )
         return
 
@@ -9579,7 +9581,7 @@ def _verify_console_scripts_installed(
     if still_missing:
         print(
             f"  ⚠ Still missing after repair: {', '.join(still_missing)}. "
-            "Workaround: python -m hermes_cli.main <command>"
+            "Workaround: python -m jimmy_cli.main <command>"
         )
     else:
         print("  ✓ All console entry points restored")
@@ -9663,7 +9665,7 @@ def _verify_core_dependencies_installed(
         return
 
     # Run the check inside the venv Python — sys.executable here may be the
-    # outer Python that drove ``hermes update``, not the venv we just wrote
+    # outer Python that drove ``jimmy update``, not the venv we just wrote
     # to. The uv install_cmd_prefix encodes which environment we targeted
     # (either ``[uv, pip]`` with VIRTUAL_ENV in env, or
     # ``[sys.executable, -m, pip]`` for the in-process Python); resolve the
@@ -9710,9 +9712,9 @@ def _verify_core_dependencies_installed(
     # extras install can cost minutes and trips on whatever optional extra
     # was already broken upstream. Base is fast and is what's actually wrong.
     #
-    # Quarantine the running ``hermes.exe`` first: ``--reinstall -e .``
+    # Quarantine the running ``jimmy.exe`` first: ``--reinstall -e .``
     # rewrites the entry-point shims, and on Windows pip can't overwrite the
-    # live launcher, which would leave ``hermes`` off PATH.
+    # live launcher, which would leave ``jimmy`` off PATH.
     scripts_dir = _venv_scripts_dir() if _is_windows() else None
     repair_args = ["install", "--reinstall", "-e", "."]
     try:
@@ -9721,7 +9723,7 @@ def _verify_core_dependencies_installed(
         )
     except subprocess.CalledProcessError as e:
         logger.warning("dep verification: repair install failed: %s", e)
-        print("  ⚠ Repair install failed; check `hermes update` output above.")
+        print("  ⚠ Repair install failed; check `jimmy update` output above.")
         return
 
     still_missing = _missing_deps()
@@ -9754,7 +9756,7 @@ def _verify_core_dependencies_installed(
         logger.warning("dep verification: per-package repair failed: %s", e)
         print(
             f"  ⚠ Could not install: {', '.join(still_missing)}. "
-            "Run `hermes update --force` after closing other hermes processes."
+            "Run `jimmy update --force` after closing other jimmy processes."
         )
         return
 
@@ -9762,7 +9764,7 @@ def _verify_core_dependencies_installed(
     if final_missing:
         print(
             f"  ⚠ Still missing after repair: {', '.join(final_missing)}. "
-            "Run `hermes update --force` after closing other hermes processes."
+            "Run `jimmy update --force` after closing other jimmy processes."
         )
     else:
         print("  ✓ All declared core dependencies now installed")
@@ -9780,7 +9782,7 @@ def _resolve_install_target_python(
     ``importlib.metadata`` queries the right site-packages.
     """
     if env and "VIRTUAL_ENV" in env:
-        from hermes_constants import venv_python_path
+        from jimmy_constants import venv_python_path
 
         venv_root = Path(env["VIRTUAL_ENV"])
         candidate = venv_python_path(venv_root, windows=_is_windows())
@@ -9831,7 +9833,7 @@ def _resolve_node_runtime_npm() -> str | None:
     entries) for a Linux-native npm. Returns the npm path, or ``None`` when
     no suitable npm is reachable.
     """
-    from hermes_constants import find_node_executable
+    from jimmy_constants import find_node_executable
 
     npm = find_node_executable("npm")
 
@@ -9859,12 +9861,12 @@ def _resolve_node_runtime_npm() -> str | None:
 
 
 class _UpdateOutputStream:
-    """Stream wrapper used during ``hermes update`` to survive terminal loss.
+    """Stream wrapper used during ``jimmy update`` to survive terminal loss.
 
     Wraps the process's original stdout/stderr so that:
 
     * Every write is also mirrored to an append-only log file
-      (``~/.hermes/logs/update.log``) that users can inspect after the
+      (``~/.jimmy/logs/update.log``) that users can inspect after the
       terminal disconnects.
     * Writes to the original stream that fail with ``BrokenPipeError`` /
       ``OSError`` / ``ValueError`` (closed file) no longer cascade into
@@ -9872,7 +9874,7 @@ class _UpdateOutputStream:
       stops.
 
     Combined with ``SIGHUP -> SIG_IGN`` installed by
-    ``_install_hangup_protection``, this makes ``hermes update`` safe to
+    ``_install_hangup_protection``, this makes ``jimmy update`` safe to
     run in a plain SSH session that might disconnect mid-install.
     """
 
@@ -9934,7 +9936,7 @@ class _UpdateOutputStream:
 def _install_hangup_protection(gateway_mode: bool = False):
     """Protect ``cmd_update`` from SIGHUP and broken terminal pipes.
 
-    Users commonly run ``hermes update`` in an SSH session or a terminal
+    Users commonly run ``jimmy update`` in an SSH session or a terminal
     that may close mid-install.  Without protection, ``SIGHUP`` from the
     terminal kills the Python process during ``pip install`` and leaves
     the venv half-installed; the documented workaround ("use screen /
@@ -9946,14 +9948,14 @@ def _install_hangup_protection(gateway_mode: bool = False):
        across ``exec()``, so pip and git subprocesses also stop dying on
        hangup.
     2. ``sys.stdout`` / ``sys.stderr`` are wrapped to mirror output to
-       ``~/.hermes/logs/update.log`` and to silently absorb
+       ``~/.jimmy/logs/update.log`` and to silently absorb
        ``BrokenPipeError`` when the terminal vanishes.
 
     ``SIGINT`` (Ctrl-C) and ``SIGTERM`` (systemd shutdown) are
     **intentionally left alone** — those are legitimate cancellation
     signals the user or OS sent on purpose.
 
-    In gateway mode (``hermes update --gateway``) the update is already
+    In gateway mode (``jimmy update --gateway``) the update is already
     spawned detached from a terminal, so this function is a no-op.
 
     Returns a dict that ``cmd_update`` can pass to
@@ -9985,10 +9987,10 @@ def _install_hangup_protection(gateway_mode: bool = False):
     # tolerance.  Any failure here is non-fatal; we just skip the wrap.
     try:
         # Late-bound import so tests can monkeypatch
-        # hermes_cli.config.get_hermes_home to simulate setup failure.
-        from hermes_cli.config import get_hermes_home as _get_hermes_home
+        # jimmy_cli.config.get_jimmy_home to simulate setup failure.
+        from jimmy_cli.config import get_jimmy_home as _get_jimmy_home
 
-        logs_dir = _get_hermes_home() / "logs"
+        logs_dir = _get_jimmy_home() / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
         log_path = logs_dir / "update.log"
         log_file = open(log_path, "a", buffering=1, encoding="utf-8")
@@ -9996,7 +9998,7 @@ def _install_hangup_protection(gateway_mode: bool = False):
         import datetime as _dt
 
         log_file.write(
-            f"\n=== hermes update started "
+            f"\n=== jimmy update started "
             f"{_dt.datetime.now().isoformat(timespec='seconds')} ===\n"
         )
 
@@ -10059,13 +10061,13 @@ def _size_delta_label(saved_mb: float) -> str:
 
 
 def cmd_update(args):
-    """Update Hermes Agent to the latest version.
+    """Update Jimmy to the latest version.
 
     Thin wrapper around ``_cmd_update_impl``: installs hangup protection,
     runs the update, then restores stdio on the way out (even on
     ``sys.exit`` or unhandled exceptions).
     """
-    from hermes_cli.config import (
+    from jimmy_cli.config import (
         detect_install_method,
         format_docker_update_message,
         is_managed,
@@ -10075,7 +10077,7 @@ def cmd_update(args):
     )
 
     if is_managed():
-        managed_error("update Hermes Agent")
+        managed_error("update Jimmy")
         return
 
     # Docker users can't ``git pull`` — the image excludes ``.git`` from
@@ -10095,7 +10097,7 @@ def cmd_update(args):
 
     if getattr(args, "check", False):
         # --check honors --branch so the "any new commits?" answer matches
-        # what a subsequent `hermes update --branch=<x>` would actually pull.
+        # what a subsequent `jimmy update --branch=<x>` would actually pull.
         branch = _resolve_update_branch(args)
         _self()._cmd_update_check(
             branch=branch,
@@ -10115,7 +10117,7 @@ def cmd_update(args):
     # them running together rewrite source under a live interpreter and strand
     # the tree half-updated. Share the marker the Tauri updater and Electron
     # already use rather than inventing a second lock.
-    from hermes_cli.update_lock import (
+    from jimmy_cli.update_lock import (
         UPDATE_EXIT_CONCURRENT,
         UpdateLock,
         describe_holder,
@@ -10137,7 +10139,7 @@ def cmd_update(args):
 def _coalesce_session_name_args(argv: list) -> list:
     """Join unquoted multi-word session names after -c/--continue and -r/--resume.
 
-    When a user types ``hermes -c Pokemon Agent Dev`` without quoting the
+    When a user types ``jimmy -c Pokemon Agent Dev`` without quoting the
     session name, argparse sees three separate tokens.  This function merges
     them into a single argument so argparse receives
     ``['-c', 'Pokemon Agent Dev']`` instead.
@@ -10215,7 +10217,7 @@ def _coalesce_session_name_args(argv: list) -> list:
 
 def cmd_profile(args):
     """Profile management — create, delete, list, switch, alias."""
-    from hermes_cli.profiles import (
+    from jimmy_cli.profiles import (
         list_profiles,
         create_profile,
         delete_profile,
@@ -10228,16 +10230,16 @@ def cmd_profile(args):
         _is_wrapper_dir_in_path,
         _get_wrapper_dir,
     )
-    from hermes_constants import display_hermes_home
+    from jimmy_constants import display_jimmy_home
 
     action = getattr(args, "profile_action", None)
 
     if action is None:
-        # Bare `hermes profile` — show current profile status
-        from hermes_cli.profiles import format_profile_label
+        # Bare `jimmy profile` — show current profile status
+        from jimmy_cli.profiles import format_profile_label
 
         profile_name = get_active_profile_name()
-        dhh = display_hermes_home()
+        dhh = display_jimmy_home()
 
         profiles = list_profiles()
         current = next(
@@ -10268,12 +10270,12 @@ def cmd_profile(args):
             print(f"Skills:         {p.skill_count} installed")
             if p.alias_path:
                 alias_display = p.alias_name or p.name
-                print(f"Alias:          {alias_display} → hermes -p {p.name}")
+                print(f"Alias:          {alias_display} → jimmy -p {p.name}")
         print()
         return
 
     if action == "list":
-        from hermes_cli.profiles import format_profile_label
+        from jimmy_cli.profiles import format_profile_label
 
         profiles = list_profiles()
         active = get_active_profile_name()
@@ -10317,7 +10319,7 @@ def cmd_profile(args):
         try:
             set_active_profile(name)
             if name == "default":
-                print("Switched to: default (~/.hermes)")
+                print("Switched to: default (~/.jimmy)")
             else:
                 print(f"Switched to: {name}")
         except (ValueError, FileNotFoundError) as e:
@@ -10396,9 +10398,9 @@ def cmd_profile(args):
                 if collision:
                     print(f"\n⚠ Cannot create alias '{name}' — {collision}")
                     print(
-                        f"  Choose a custom alias:  hermes profile alias {name} --name <custom>"
+                        f"  Choose a custom alias:  jimmy profile alias {name} --name <custom>"
                     )
-                    print(f"  Or access via flag:     hermes -p {name} chat")
+                    print(f"  Or access via flag:     jimmy -p {name} chat")
                 else:
                     wrapper_path = create_wrapper_script(name)
                     if wrapper_path:
@@ -10449,7 +10451,7 @@ def cmd_profile(args):
         # Read or write a profile's description. The description is
         # consumed by the kanban decomposer to route tasks based on
         # role instead of name alone.
-        from hermes_cli import profiles as _profiles_mod
+        from jimmy_cli import profiles as _profiles_mod
 
         all_flag = bool(getattr(args, "all_missing", False))
         auto_flag = bool(getattr(args, "auto", False))
@@ -10480,7 +10482,7 @@ def cmd_profile(args):
         if name and not text_value and not auto_flag:
             try:
                 if _profiles_mod.normalize_profile_name(name) == "default":
-                    from hermes_constants import get_hermes_home as _hh
+                    from jimmy_constants import get_jimmy_home as _hh
                     profile_dir = Path(_hh())
                 else:
                     profile_dir = _profiles_mod.get_profile_dir(name)
@@ -10503,7 +10505,7 @@ def cmd_profile(args):
         if text_value:
             try:
                 if _profiles_mod.normalize_profile_name(name) == "default":
-                    from hermes_constants import get_hermes_home as _hh
+                    from jimmy_constants import get_jimmy_home as _hh
                     profile_dir = Path(_hh())
                 else:
                     profile_dir = _profiles_mod.get_profile_dir(name)
@@ -10519,7 +10521,7 @@ def cmd_profile(args):
             sys.exit(0)
 
         # --auto path: invoke the LLM describer.
-        from hermes_cli import profile_describer as _pd
+        from jimmy_cli import profile_describer as _pd
 
         if all_flag:
             targets = _pd.list_describable_profiles(missing_only=True)
@@ -10548,7 +10550,7 @@ def cmd_profile(args):
 
     elif action == "show":
         name = args.profile_name
-        from hermes_cli.profiles import (
+        from jimmy_cli.profiles import (
             get_profile_dir,
             profile_exists,
             _read_config_model,
@@ -10588,11 +10590,11 @@ def cmd_profile(args):
             print(f"Distribution: {dist_name}@{dist_version or '?'}")
             if dist_source:
                 print(f"Installed from: {dist_source}")
-            print(f"  (run `hermes profile info {name}` for full manifest)")
+            print(f"  (run `jimmy profile info {name}` for full manifest)")
         if alias_name:
             is_windows = sys.platform == "win32"
             wrapper = _get_wrapper_dir() / (f"{alias_name}.bat" if is_windows else alias_name)
-            print(f"Alias:   {alias_name} → hermes -p {name}  ({wrapper})")
+            print(f"Alias:   {alias_name} → jimmy -p {name}  ({wrapper})")
         print()
 
     elif action == "alias":
@@ -10600,7 +10602,7 @@ def cmd_profile(args):
         remove = getattr(args, "remove", False)
         custom_name = getattr(args, "alias_name", None)
 
-        from hermes_cli.profiles import profile_exists, validate_alias_name
+        from jimmy_cli.profiles import profile_exists, validate_alias_name
 
         if not profile_exists(name):
             print(f"Error: Profile '{name}' does not exist.")
@@ -10633,7 +10635,7 @@ def cmd_profile(args):
                     print(f"⚠ {_get_wrapper_dir()} is not in your PATH.")
 
     elif action == "rename":
-        from hermes_cli.profiles import normalize_profile_name, rename_profile
+        from jimmy_cli.profiles import normalize_profile_name, rename_profile
 
         try:
             new_dir = rename_profile(args.old_name, args.new_name)
@@ -10645,7 +10647,7 @@ def cmd_profile(args):
             sys.exit(1)
 
     elif action == "export":
-        from hermes_cli.profiles import export_profile
+        from jimmy_cli.profiles import export_profile
 
         name = args.profile_name
         output = args.output or f"{name}.tar.gz"
@@ -10657,7 +10659,7 @@ def cmd_profile(args):
             sys.exit(1)
 
     elif action == "import":
-        from hermes_cli.profiles import import_profile
+        from jimmy_cli.profiles import import_profile
 
         try:
             profile_dir = import_profile(
@@ -10679,7 +10681,7 @@ def cmd_profile(args):
 
     elif action == "install":
         import tempfile
-        from hermes_cli.profile_distribution import (
+        from jimmy_cli.profile_distribution import (
             plan_install,
             install_distribution,
             DistributionError,
@@ -10689,7 +10691,7 @@ def cmd_profile(args):
             # Preview: stage the distribution into a scratch dir, show the
             # manifest, then do the real install.  The double-stage avoids
             # any side-effects if the user declines.
-            with tempfile.TemporaryDirectory(prefix="hermes_dist_preview_") as tmp:
+            with tempfile.TemporaryDirectory(prefix="jimmy_dist_preview_") as tmp:
                 plan = plan_install(
                     args.source,
                     Path(tmp),
@@ -10722,20 +10724,20 @@ def cmd_profile(args):
             if plan.has_cron:
                 print(
                     "  Cron jobs were included but are NOT scheduled automatically.\n"
-                    f"  Review them with:  hermes -p {plan.manifest.name} cron list"
+                    f"  Review them with:  jimmy -p {plan.manifest.name} cron list"
                 )
-            print(f"\n  Use with:      hermes -p {plan.manifest.name} chat")
+            print(f"\n  Use with:      jimmy -p {plan.manifest.name} chat")
         except (DistributionError, ValueError) as e:
             print(f"Error: {e}")
             sys.exit(1)
 
     elif action == "update":
-        from hermes_cli.profile_distribution import (
+        from jimmy_cli.profile_distribution import (
             update_distribution,
             read_manifest,
             DistributionError,
         )
-        from hermes_cli.profiles import get_profile_dir, normalize_profile_name
+        from jimmy_cli.profiles import get_profile_dir, normalize_profile_name
 
         name = args.profile_name
         try:
@@ -10744,7 +10746,7 @@ def cmd_profile(args):
             if current is None:
                 print(
                     f"Error: Profile '{canon}' is not a distribution (no distribution.yaml). "
-                    "Only profiles installed via `hermes profile install` can be updated."
+                    "Only profiles installed via `jimmy profile install` can be updated."
                 )
                 sys.exit(1)
 
@@ -10770,14 +10772,14 @@ def cmd_profile(args):
             if plan.has_cron:
                 print(
                     "  Cron files were refreshed.  Review with:  "
-                    f"hermes -p {plan.manifest.name} cron list"
+                    f"jimmy -p {plan.manifest.name} cron list"
                 )
         except (DistributionError, ValueError) as e:
             print(f"Error: {e}")
             sys.exit(1)
 
     elif action == "info":
-        from hermes_cli.profile_distribution import describe_distribution, DistributionError
+        from jimmy_cli.profile_distribution import describe_distribution, DistributionError
 
         try:
             data = describe_distribution(args.profile_name)
@@ -10798,8 +10800,8 @@ def cmd_profile(args):
             print(f"Author:       {data['author']}")
         if data.get("license"):
             print(f"License:      {data['license']}")
-        if data.get("hermes_requires"):
-            print(f"Requires:     Hermes {data['hermes_requires']}")
+        if data.get("jimmy_requires"):
+            print(f"Requires:     Jimmy {data['jimmy_requires']}")
         if data.get("source"):
             print(f"Source:       {data['source']}")
         if data.get("installed_at"):
@@ -10820,15 +10822,15 @@ def cmd_profile(args):
 
 def _render_distribution_plan(plan) -> None:
     """Print a human-readable summary of a pending distribution install."""
-    from hermes_cli.profile_distribution import MANIFEST_FILENAME
+    from jimmy_cli.profile_distribution import MANIFEST_FILENAME
     mf = plan.manifest
     print(f"\nDistribution: {mf.name} v{mf.version}")
     if mf.description:
         print(f"  {mf.description}")
     if mf.author:
         print(f"  Author:   {mf.author}")
-    if mf.hermes_requires:
-        print(f"  Requires: Hermes {mf.hermes_requires}")
+    if mf.jimmy_requires:
+        print(f"  Requires: Jimmy {mf.jimmy_requires}")
     print(f"  Source:   {plan.provenance}")
     print(f"  Target:   {plan.target_dir}")
     if plan.existing:
@@ -10906,10 +10908,10 @@ def _report_dashboard_status() -> int:
         live.append((pid, command))
 
     if not live:
-        print("No hermes dashboard processes running.")
+        print("No jimmy dashboard processes running.")
         return 0
 
-    print(f"{len(live)} hermes dashboard process(es) running:")
+    print(f"{len(live)} jimmy dashboard process(es) running:")
     for pid, command in live:
         print(f"    PID {pid}: {command}")
     return len(live)
@@ -10939,7 +10941,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     ``DashboardAuthProvider`` is registered. Rather than greet an interactive
     operator with that hard error, prompt them to set up the bundled
     username/password provider on the spot — or point them at
-    ``hermes dashboard register`` for OAuth.
+    ``jimmy dashboard register`` for OAuth.
 
     No-ops (so the existing fail-closed ``SystemExit`` remains the backstop)
     when:
@@ -10950,14 +10952,14 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     host = getattr(args, "host", "127.0.0.1") or "127.0.0.1"
 
     try:
-        from hermes_cli.web_server import should_require_auth
+        from jimmy_cli.web_server import should_require_auth
         if not should_require_auth(host):
             return  # loopback bind — gate never engages
     except Exception:
         return  # if we can't tell, defer to start_server's own gate
 
     try:
-        from hermes_cli.dashboard_auth import list_providers
+        from jimmy_cli.dashboard_auth import list_providers
         if list_providers():
             return  # a provider is already configured/registered
     except Exception:
@@ -10980,7 +10982,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     print()
     print("  How do you want to authenticate the dashboard?")
     print("    [1] Username & password (quickest; for a trusted LAN / VPN)")
-    print("    [2] OAuth via Nous Portal (run `hermes dashboard register`)")
+    print("    [2] OAuth via Nous Portal (run `jimmy dashboard register`)")
     print("    [3] Cancel")
     print()
 
@@ -10995,10 +10997,10 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
         print(
             "  Run this on the host where the dashboard lives, then start "
             "the dashboard again:\n"
-            "    hermes dashboard register\n"
+            "    jimmy dashboard register\n"
             "  It provisions a Nous Portal OAuth client and writes "
-            "HERMES_DASHBOARD_OAUTH_CLIENT_ID into ~/.hermes/.env for you.\n"
-            "  Docs: https://hermes-agent.nousresearch.com/docs/"
+            "JIMMY_DASHBOARD_OAUTH_CLIENT_ID into ~/.jimmy/.env for you.\n"
+            "  Docs: https://jimmy-agent.jimmy-agent.com/docs/"
             "user-guide/features/web-dashboard#authentication-gated-mode"
         )
         sys.exit(0)
@@ -11038,8 +11040,8 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     secret = secrets.token_urlsafe(32)
 
     try:
-        from hermes_cli.config import load_config, save_config
-        from hermes_cli.plugins_cmd import ensure_basic_auth_plugin_enabled_in_config
+        from jimmy_cli.config import load_config, save_config
+        from jimmy_cli.plugins_cmd import ensure_basic_auth_plugin_enabled_in_config
 
         cfg = load_config()
         dash = cfg.setdefault("dashboard", {})
@@ -11068,7 +11070,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     # Re-run plugin discovery so the basic provider registers from the
     # just-written config before start_server's gate check runs.
     try:
-        from hermes_cli.plugins import discover_plugins
+        from jimmy_cli.plugins import discover_plugins
 
         discover_plugins(force=True)
     except Exception as exc:
@@ -11085,7 +11087,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 def _read_ssh_session_token_file(path: str) -> str:
     """Read and unlink a Desktop SSH token from its private runtime directory."""
     if sys.platform == "win32":
-        from hermes_cli.windows_ssh_runtime import read_token
+        from jimmy_cli.windows_ssh_runtime import read_token
         return read_token(path)
 
     import stat as _stat
@@ -11095,14 +11097,14 @@ def _read_ssh_session_token_file(path: str) -> str:
         raise SystemExit("--ssh-session-token-file must be absolute")
 
     token_path = _Path(path)
-    # The Desktop client writes the token under $HOME/.hermes/desktop-ssh: a
-    # literal "~/.hermes/desktop-ssh" in apps/desktop/electron/remote-lifecycle.ts
-    # expanded against the account's $HOME, independent of HERMES_HOME and the
+    # The Desktop client writes the token under $HOME/.jimmy/desktop-ssh: a
+    # literal "~/.jimmy/desktop-ssh" in apps/desktop/electron/remote-lifecycle.ts
+    # expanded against the account's $HOME, independent of JIMMY_HOME and the
     # active profile. Anchor validation to that same OS-home path, NOT to
-    # get_hermes_home(): a non-default sticky profile (or any HERMES_HOME pointing
-    # elsewhere, e.g. a Docker /opt/data root) re-homes get_hermes_home() and
+    # get_jimmy_home(): a non-default sticky profile (or any JIMMY_HOME pointing
+    # elsewhere, e.g. a Docker /opt/data root) re-homes get_jimmy_home() and
     # would otherwise reject every token the client legitimately wrote (#69551).
-    token_root = _Path.home() / ".hermes" / "desktop-ssh"
+    token_root = _Path.home() / ".jimmy" / "desktop-ssh"
     try:
         relative = token_path.relative_to(token_root)
     except ValueError as exc:
@@ -11174,8 +11176,8 @@ def _read_ssh_session_token_file(path: str) -> str:
 def _is_electron_packaged_web_dist(path: str) -> bool:
     """True when *path* looks like an Electron-packaged renderer dist.
 
-    Packaged Desktop sets ``HERMES_WEB_DIST`` to ``.../app.asar/dist`` or
-    ``.../app.asar.unpacked/dist``. A standalone ``hermes dashboard`` that
+    Packaged Desktop sets ``JIMMY_WEB_DIST`` to ``.../app.asar/dist`` or
+    ``.../app.asar.unpacked/dist``. A standalone ``jimmy dashboard`` that
     inherits that value serves the desktop frontend in the browser
     (issue #52945 — "Desktop IPC bridge is unavailable").
     """
@@ -11203,9 +11205,9 @@ def cmd_dashboard(args):
     if getattr(args, "stop", False):
         pids = _find_stale_dashboard_pids()
         if not pids:
-            print("No hermes dashboard processes running.")
+            print("No jimmy dashboard processes running.")
             sys.exit(0)
-        # Reuse the same SIGTERM-grace-SIGKILL path used after `hermes update`.
+        # Reuse the same SIGTERM-grace-SIGKILL path used after `jimmy update`.
         _self()._kill_stale_dashboard_processes(reason="requested via --stop")
         # _kill_stale_dashboard_processes prints outcomes itself.  Exit 0 if
         # we killed at least one, 1 if they were all unkillable.
@@ -11221,33 +11223,33 @@ def cmd_dashboard(args):
         raise SystemExit("--ssh-owner-nonce must be 16 lowercase hex characters")
     _ssh_session_token = None
     if _token_file and not _headless_backend:
-        raise SystemExit("--ssh-session-token-file is only valid with hermes serve")
+        raise SystemExit("--ssh-session-token-file is only valid with jimmy serve")
 
     # ── Sanitize Desktop-inherited env that hijacks a standalone launch ─
-    # Desktop Electron spawns its backend with HERMES_DESKTOP=1 plus
-    # HERMES_WEB_DIST=<packaged app.asar[/unpacked]/dist> (and often
-    # HERMES_SERVE_HEADLESS=1 on the serve path). A shell that inherits
-    # those vars then runs `hermes dashboard` would otherwise:
+    # Desktop Electron spawns its backend with JIMMY_DESKTOP=1 plus
+    # JIMMY_WEB_DIST=<packaged app.asar[/unpacked]/dist> (and often
+    # JIMMY_SERVE_HEADLESS=1 on the serve path). A shell that inherits
+    # those vars then runs `jimmy dashboard` would otherwise:
     #   - serve the desktop renderer → "Desktop IPC bridge is unavailable"
     #     (issue #52945), or
-    #   - disable the SPA via inherited HERMES_SERVE_HEADLESS.
+    #   - disable the SPA via inherited JIMMY_SERVE_HEADLESS.
     # Only strip Electron-packaged WEB_DIST contamination — caller-managed
-    # HERMES_WEB_DIST overrides (dev / custom builds) must still work.
-    # The desktop-spawned backend itself (HERMES_DESKTOP=1) keeps its dist.
-    # Intentionally headless `serve` re-sets HERMES_SERVE_HEADLESS below.
-    if os.environ.get("HERMES_DESKTOP") != "1":
-        _inherited_web_dist = os.environ.get("HERMES_WEB_DIST", "")
+    # JIMMY_WEB_DIST overrides (dev / custom builds) must still work.
+    # The desktop-spawned backend itself (JIMMY_DESKTOP=1) keeps its dist.
+    # Intentionally headless `serve` re-sets JIMMY_SERVE_HEADLESS below.
+    if os.environ.get("JIMMY_DESKTOP") != "1":
+        _inherited_web_dist = os.environ.get("JIMMY_WEB_DIST", "")
         if _is_electron_packaged_web_dist(_inherited_web_dist):
-            os.environ.pop("HERMES_WEB_DIST", None)
+            os.environ.pop("JIMMY_WEB_DIST", None)
     if not _headless_backend:
-        os.environ.pop("HERMES_SERVE_HEADLESS", None)
+        os.environ.pop("JIMMY_SERVE_HEADLESS", None)
 
     # ── Unified profile launch routing ────────────────────────────────
     # The dashboard is a MACHINE management surface: it can read/write any
     # profile via the per-request ?profile= scoping. Running one dashboard
     # per profile just fragments that (port collisions, N processes, and a
     # "which dashboard am I on?" guessing game). So when a NAMED profile
-    # launches the dashboard (`worker dashboard` → HERMES_HOME points into
+    # launches the dashboard (`worker dashboard` → JIMMY_HOME points into
     # profiles/), default to the machine dashboard:
     #   - already running → open the browser at ?profile=<name> and exit
     #   - not running     → re-exec as the machine dashboard (pinned to the
@@ -11256,7 +11258,7 @@ def cmd_dashboard(args):
     #     preselected in the UI's switcher.
     # `--isolated` opts out and preserves the old per-profile behavior.
     try:
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
         _launch_profile = get_active_profile_name()
     except Exception:
         _launch_profile = "default"
@@ -11266,7 +11268,7 @@ def cmd_dashboard(args):
         and not getattr(args, "isolated", False)
         and not getattr(args, "open_profile", "")
         # Desktop pool backends are intentionally per-profile.
-        and os.environ.get("HERMES_DESKTOP") != "1"
+        and os.environ.get("JIMMY_DESKTOP") != "1"
     ):
         url = f"http://{args.host or '127.0.0.1'}:{args.port}/?profile={_launch_profile}"
         if _dashboard_listening(args.host, args.port):
@@ -11285,7 +11287,7 @@ def cmd_dashboard(args):
             f"preselected). Use --isolated for a dedicated per-profile server."
         )
         reexec_argv = [
-            sys.executable, "-m", "hermes_cli.main",
+            sys.executable, "-m", "jimmy_cli.main",
             "-p", "default",
             # Preserve the lean serve path across the re-exec so a named-profile
             # `serve` doesn't silently rebuild the UI as `dashboard`.
@@ -11305,27 +11307,27 @@ def cmd_dashboard(args):
         if getattr(args, "skip_build", False):
             reexec_argv.append("--skip-build")
         from tools.environments.local import build_subprocess_env
-        # Exact env preservation: HERMES_HOME is explicitly pinned to the
+        # Exact env preservation: JIMMY_HOME is explicitly pinned to the
         # machine root below — the factory must not re-inject a profile home.
         env = build_subprocess_env(scrub_secrets=False, inherit_profile_home=False)
         # Pin the child to the machine ROOT, not the launching profile's
-        # HERMES_HOME.  We must resolve the root explicitly instead of just
-        # dropping HERMES_HOME: in the Docker layout the machine root is
-        # /opt/data (set via `ENV HERMES_HOME=/opt/data`), so an unset
-        # HERMES_HOME falls back to $HOME/.hermes = /opt/data/.hermes — an
+        # JIMMY_HOME.  We must resolve the root explicitly instead of just
+        # dropping JIMMY_HOME: in the Docker layout the machine root is
+        # /opt/data (set via `ENV JIMMY_HOME=/opt/data`), so an unset
+        # JIMMY_HOME falls back to $HOME/.jimmy = /opt/data/.jimmy — an
         # empty, auto-seeded home where the dashboard sees only the default
         # profile and the install-method stamp is missing (so the Docker
-        # update-button guard also misfires).  get_default_hermes_root()
-        # returns the root for both layouts: ~/.hermes for a standard install
+        # update-button guard also misfires).  get_default_jimmy_root()
+        # returns the root for both layouts: ~/.jimmy for a standard install
         # and /opt/data for Docker (it strips a trailing profiles/<name>).
         # See the support report for the double-mount workaround this avoids.
         try:
-            from hermes_constants import get_default_hermes_root
-            env["HERMES_HOME"] = str(get_default_hermes_root())
+            from jimmy_constants import get_default_jimmy_root
+            env["JIMMY_HOME"] = str(get_default_jimmy_root())
         except Exception:
             # Best-effort: if root resolution fails, fall back to the prior
-            # behaviour (drop HERMES_HOME) rather than block the reroute.
-            env.pop("HERMES_HOME", None)
+            # behaviour (drop JIMMY_HOME) rather than block the reroute.
+            env.pop("JIMMY_HOME", None)
         # On Windows, os.execvpe() does not truly replace the process — it
         # spawns via CreateProcess then the parent exits.  Under Python 3.14+
         # this can crash with STATUS_ACCESS_VIOLATION (0xC0000005) when
@@ -11342,7 +11344,7 @@ def cmd_dashboard(args):
     # named-profile re-exec could leak that profile's higher limit into the
     # machine/default dashboard, whose lower policy intentionally cannot undo it.
     # This also covers Desktop SSH's isolated `serve` child, which does not route.
-    from hermes_cli.resource_limits import apply_nofile_soft_limit
+    from jimmy_cli.resource_limits import apply_nofile_soft_limit
 
     apply_nofile_soft_limit()
 
@@ -11350,9 +11352,9 @@ def cmd_dashboard(args):
         _ssh_session_token = _read_ssh_session_token_file(_token_file)
 
     # Attach gui.log early so dashboard startup/build failures are captured in
-    # the same logs directory as every other Hermes surface.
+    # the same logs directory as every other Jimmy surface.
     try:
-        from hermes_logging import setup_logging as _setup_logging_gui
+        from jimmy_logging import setup_logging as _setup_logging_gui
         _setup_logging_gui(mode="gui")
     except Exception:
         pass
@@ -11387,7 +11389,7 @@ def cmd_dashboard(args):
     # (#63141, #54449, #61115, #65696). PTY chat spawns already bridge their
     # child env copy; this covers the in-process consumers.
     try:
-        from hermes_cli.config import apply_terminal_config_to_env
+        from jimmy_cli.config import apply_terminal_config_to_env
 
         apply_terminal_config_to_env()
     except Exception:
@@ -11397,8 +11399,8 @@ def cmd_dashboard(args):
     if _headless_backend:
         # Don't build the SPA, and tell mount_spa() (read at web_server import
         # below) to disable it even if a stray dist exists. Set it first.
-        os.environ["HERMES_SERVE_HEADLESS"] = "1"
-    elif "HERMES_WEB_DIST" not in os.environ and not getattr(args, "skip_build", False):
+        os.environ["JIMMY_SERVE_HEADLESS"] = "1"
+    elif "JIMMY_WEB_DIST" not in os.environ and not getattr(args, "skip_build", False):
         if not _build_web_ui(PROJECT_ROOT / "web", fatal=True):
             sys.exit(1)
     elif getattr(args, "skip_build", False):
@@ -11406,18 +11408,18 @@ def cmd_dashboard(args):
         # Verify the dist actually exists; otherwise the server will start
         # and serve 404s with no obvious cause (issue #23817).
         _dist_root = (
-            Path(os.environ["HERMES_WEB_DIST"])
-            if "HERMES_WEB_DIST" in os.environ
-            else PROJECT_ROOT / "hermes_cli" / "web_dist"
+            Path(os.environ["JIMMY_WEB_DIST"])
+            if "JIMMY_WEB_DIST" in os.environ
+            else PROJECT_ROOT / "jimmy_cli" / "web_dist"
         )
         if not (_dist_root / "index.html").exists():
             # The caller promised a pre-built dist but there isn't one.
             # Instead of hard-failing (issue #59288 — desktop launches with
             # --build-mode skip after a wipe of web_dist), warn and attempt
             # ONE recovery build through the normal build path. Only the
-            # default dist location is recoverable: a custom HERMES_WEB_DIST
+            # default dist location is recoverable: a custom JIMMY_WEB_DIST
             # points at a caller-managed directory the build cannot populate.
-            _recoverable = "HERMES_WEB_DIST" not in os.environ
+            _recoverable = "JIMMY_WEB_DIST" not in os.environ
             if _recoverable:
                 print(f"⚠ --skip-build was passed but no web dist found at: {_dist_root}")
                 print("  Attempting one recovery build of the web UI...")
@@ -11432,22 +11434,22 @@ def cmd_dashboard(args):
             print("  ✓ Recovery build produced a web dist")
         print(f"→ Skipping web UI build (--skip-build); using dist at {_dist_root}")
     else:
-        # HERMES_WEB_DIST is set without --skip-build: the build is skipped
+        # JIMMY_WEB_DIST is set without --skip-build: the build is skipped
         # (the env var points at a caller-managed dist), so validate it the
         # same way the --skip-build branch does — otherwise the server starts
         # and serves 404s with no obvious cause (same failure mode as #23817,
         # via the env-var path).
-        _dist_root = Path(os.environ["HERMES_WEB_DIST"]).expanduser()
+        _dist_root = Path(os.environ["JIMMY_WEB_DIST"]).expanduser()
         if not (_dist_root / "index.html").exists():
-            print(f"✗ HERMES_WEB_DIST is set but no web dist found at: {_dist_root}")
+            print(f"✗ JIMMY_WEB_DIST is set but no web dist found at: {_dist_root}")
             print("  Pre-build first:  npm install --workspace web && npm run build -w web")
-            print("  Or unset HERMES_WEB_DIST to build and use the default web UI dist.")
+            print("  Or unset JIMMY_WEB_DIST to build and use the default web UI dist.")
             sys.exit(1)
-        # Write the expanded path back: web_server reads HERMES_WEB_DIST raw
+        # Write the expanded path back: web_server reads JIMMY_WEB_DIST raw
         # at import (no expanduser), so a validated "~/dist" would otherwise
         # pass here and still 404 there.
-        os.environ["HERMES_WEB_DIST"] = str(_dist_root)
-        print(f"→ Using web dist from HERMES_WEB_DIST: {_dist_root}")
+        os.environ["JIMMY_WEB_DIST"] = str(_dist_root)
+        print(f"→ Using web dist from JIMMY_WEB_DIST: {_dist_root}")
 
     # Discover and load plugins so any DashboardAuthProvider plugin
     # (e.g. plugins/dashboard_auth/nous) registers BEFORE start_server's
@@ -11457,7 +11459,7 @@ def cmd_dashboard(args):
     # the dashboard's server-side runtime depends on plugin-registered
     # providers (image_gen, web, dashboard_auth, …).
     try:
-        from hermes_cli.plugins import discover_plugins
+        from jimmy_cli.plugins import discover_plugins
         discover_plugins()
     except Exception as exc:
         # Discovery failures must not block dashboard startup outright —
@@ -11473,7 +11475,7 @@ def cmd_dashboard(args):
     # sessions show no MCP tools.  Spawn discovery in the background here so a
     # slow/dead server can't block dashboard startup.
     try:
-        from hermes_cli.mcp_startup import start_background_mcp_discovery
+        from jimmy_cli.mcp_startup import start_background_mcp_discovery
 
         start_background_mcp_discovery(
             logger=logger,
@@ -11485,7 +11487,7 @@ def cmd_dashboard(args):
             exc_info=True,
         )
 
-    from hermes_cli.web_server import start_server
+    from jimmy_cli.web_server import start_server
 
     # Interactive auth setup: if this bind will engage the auth gate but no
     # provider is registered yet, offer to configure one here (TTY only)
@@ -11511,21 +11513,21 @@ def cmd_dashboard(args):
 
 def cmd_dashboard_register(args):
     """Register a self-hosted dashboard OAuth client with Nous Portal."""
-    from hermes_cli.dashboard_register import cmd_dashboard_register as _impl
+    from jimmy_cli.dashboard_register import cmd_dashboard_register as _impl
 
     _impl(args)
 
 
 def cmd_gateway_enroll(args):
     """Enroll a self-hosted gateway with a relay connector."""
-    from hermes_cli.gateway_enroll import cmd_gateway_enroll as _impl
+    from jimmy_cli.gateway_enroll import cmd_gateway_enroll as _impl
 
     _impl(args)
 
 
 def cmd_completion(args, parser=None):
     """Print shell completion script."""
-    from hermes_cli.completion import generate_bash, generate_zsh, generate_fish
+    from jimmy_cli.completion import generate_bash, generate_zsh, generate_fish
 
     shell = getattr(args, "shell", "bash")
     if shell == "zsh":
@@ -11538,14 +11540,28 @@ def cmd_completion(args, parser=None):
 
 def cmd_prompt_size(args):
     """Show a byte/char breakdown of the system prompt + tool schemas."""
-    from hermes_cli.prompt_size import cmd_prompt_size as _impl
+    from jimmy_cli.prompt_size import cmd_prompt_size as _impl
+
+    _impl(args)
+
+
+def cmd_optimize(args):
+    """AutoAgent-style harness optimizer (benchmark + reversible candidates)."""
+    from jimmy_cli.optimize.cli import cmd_optimize as _impl
+
+    _impl(args)
+
+
+def cmd_command_center(args):
+    """Jimmy Command Center — orchestrate OpenClaw, Munder-Difflin, and ECC."""
+    from jimmy.cli import cmd_command_center as _impl
 
     _impl(args)
 
 
 def cmd_logs(args):
-    """View and filter Hermes log files."""
-    from hermes_cli.logs import tail_log, list_logs
+    """View and filter Jimmy log files."""
+    from jimmy_cli.logs import tail_log, list_logs
 
     log_name = getattr(args, "log_name", "agent") or "agent"
 
@@ -11565,8 +11581,8 @@ def cmd_logs(args):
 
 
 def cmd_console(args):
-    """Open the safe Hermes command console."""
-    from hermes_cli.console_engine import run_console_repl
+    """Open the safe Jimmy command console."""
+    from jimmy_cli.console_engine import run_console_repl
 
     return run_console_repl()
 
@@ -11574,7 +11590,7 @@ def cmd_console(args):
 def _build_provider_choices() -> list[str]:
     """Build the --provider choices list from CANONICAL_PROVIDERS + 'auto'."""
     try:
-        from hermes_cli.models import CANONICAL_PROVIDERS as _cp
+        from jimmy_cli.models import CANONICAL_PROVIDERS as _cp
         return ["auto"] + [p.slug for p in _cp]
     except Exception:
         # Fallback: static list guarantees the CLI always works
@@ -11607,6 +11623,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "model", "monitoring", "pairing", "pause", "peer", "pets", "plugins", "portal", "profile",
         "project", "proxy",
         "prompt-size",
+        "optimize",
         "resume",
         "send", "sessions", "setup",
         "skin", "skills", "slack", "status", "sync", "tools", "uninstall", "update",
@@ -11621,9 +11638,9 @@ _BUILTIN_SUBCOMMANDS = frozenset(
 
 
 # Top-level flags that take a value. Needed by ``_first_positional_argv``
-# so that in ``hermes -m gpt5 chat``, ``gpt5`` is correctly skipped as a
+# so that in ``jimmy -m gpt5 chat``, ``gpt5`` is correctly skipped as a
 # flag value rather than misclassified as a subcommand. Kept in sync with
-# the top-level flags declared in ``hermes_cli/_parser.py``.
+# the top-level flags declared in ``jimmy_cli/_parser.py``.
 #
 # Correctness-safe either way: missing an entry here only makes the
 # fast-path bail out too eagerly (we run plugin discovery when we didn't
@@ -11652,7 +11669,7 @@ def _first_positional_argv() -> str | None:
 
     Used by ``main()`` to decide whether plugin discovery has to run at
     argparse-setup time. Handles common invocations like
-    ``hermes -m gpt5 --provider openai chat "msg"`` by skipping the
+    ``jimmy -m gpt5 --provider openai chat "msg"`` by skipping the
     values attached to known top-level flags.
 
     Does NOT fully simulate argparse — unknown ``--foo=bar`` / ``--foo
@@ -11691,7 +11708,7 @@ def _plugin_cli_discovery_needed() -> bool:
     """
     first = _first_positional_argv()
     if first is None:
-        # Bare ``hermes`` or only flags → defaults to ``chat``.
+        # Bare ``jimmy`` or only flags → defaults to ``chat``.
         return False
     if first in _BUILTIN_SUBCOMMANDS:
         return False
@@ -11708,11 +11725,11 @@ def _resolve_deferred_platform_cli_command(command_name: str | None) -> None:
 
     Bundled platform plugins are cheap-registered as *deferred* entries to
     avoid importing every gateway SDK during normal startup. A platform that
-    registers a top-level ``hermes <name>`` command (e.g. Photon ->
+    registers a top-level ``jimmy <name>`` command (e.g. Photon ->
     ``ctx.register_cli_command(name="photon", ...)``) only runs that side
     effect when its module is imported. On the unknown-top-level-command slow
     path, ``discover_plugins()`` records the deferred loader but does not
-    import it, so the CLI registration never happens and ``hermes photon``
+    import it, so the CLI registration never happens and ``jimmy photon``
     fails with argparse ``invalid choice`` (issue #54678).
 
     Resolving only the platform whose name matches the first positional token
@@ -11741,7 +11758,7 @@ _AGENT_SUBCOMMANDS = {
 
 
 def _is_tui_chat_launch(args) -> bool:
-    return bool(getattr(args, "tui", False) or os.environ.get("HERMES_TUI") == "1")
+    return bool(getattr(args, "tui", False) or os.environ.get("JIMMY_TUI") == "1")
 
 
 def _command_has_dedicated_mcp_startup(args) -> bool:
@@ -11762,7 +11779,7 @@ def _should_background_mcp_startup(args) -> bool:
 
 def _prepare_agent_startup(args) -> None:
     """Discover plugins/MCP/hooks for commands that can run an agent turn."""
-    # --yolo: chokepoint guarantee that HERMES_YOLO_MODE is set before ANY
+    # --yolo: chokepoint guarantee that JIMMY_YOLO_MODE is set before ANY
     # plugin/tool discovery below imports tools.approval, which freezes
     # _YOLO_MODE_FROZEN at import time (PR #7994 security design).  main()'s
     # dispatch path also sets this earlier, but _prepare_agent_startup() is
@@ -11770,7 +11787,7 @@ def _prepare_agent_startup(args) -> None:
     # so the guarantee lives here where the import is actually triggered
     # (#60328).
     if getattr(args, "yolo", False):
-        os.environ["HERMES_YOLO_MODE"] = "1"
+        os.environ["JIMMY_YOLO_MODE"] = "1"
     _apply_safe_mode(args)
 
     _sub_attr, _sub_set = _AGENT_SUBCOMMANDS.get(args.command, (None, None))
@@ -11785,7 +11802,7 @@ def _prepare_agent_startup(args) -> None:
         # The TUI backend process does its own plugin discovery; the launcher
         # only spawns Node, so discovery here would be thrown-away work.
         try:
-            from hermes_cli.plugins import start_background_plugin_discovery
+            from jimmy_cli.plugins import start_background_plugin_discovery
 
             # Discovery runs in a daemon thread so its ~150ms of manifest
             # scanning + plugin imports overlaps the rest of startup (cli /
@@ -11812,7 +11829,7 @@ def _prepare_agent_startup(args) -> None:
         _run_inline_mcp_discovery = False
     elif _should_background_mcp_startup(args):
         try:
-            from hermes_cli.mcp_startup import start_background_mcp_discovery
+            from jimmy_cli.mcp_startup import start_background_mcp_discovery
 
             start_background_mcp_discovery(
                 logger=logger,
@@ -11837,7 +11854,7 @@ def _prepare_agent_startup(args) -> None:
                 exc_info=True,
             )
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         from agent.shell_hooks import register_from_config
 
         _hooks_cfg = load_config()
@@ -11858,9 +11875,9 @@ def _prepare_agent_startup(args) -> None:
 def _apply_safe_mode(args) -> None:
     if not getattr(args, "safe_mode", False):
         return
-    os.environ["HERMES_SAFE_MODE"] = "1"
-    os.environ["HERMES_IGNORE_USER_CONFIG"] = "1"
-    os.environ["HERMES_IGNORE_RULES"] = "1"
+    os.environ["JIMMY_SAFE_MODE"] = "1"
+    os.environ["JIMMY_IGNORE_USER_CONFIG"] = "1"
+    os.environ["JIMMY_IGNORE_RULES"] = "1"
 
 
 def _set_chat_arg_defaults(args) -> None:
@@ -11881,7 +11898,7 @@ def _set_chat_arg_defaults(args) -> None:
 def _try_fast_chat_launch() -> bool:
     """Fast path for unambiguous interactive chat launches (all hosts).
 
-    ``hermes`` / ``hermes -w -s foo --yolo`` / ``hermes chat`` don't need the
+    ``jimmy`` / ``jimmy -w -s foo --yolo`` / ``jimmy chat`` don't need the
     full argparse tree: building all ~40 subcommand parsers costs ~140ms of
     pure-Python argparse setup plus their module imports, none of which the
     chat path uses. Parse the lightweight top-level/chat parser instead and
@@ -11893,7 +11910,7 @@ def _try_fast_chat_launch() -> bool:
     ``_try_termux_fast_cli_launch`` minus the Termux-specific deferred
     startup; kept separate so phone-tuned behavior doesn't leak to desktops.
     """
-    if os.environ.get("HERMES_DISABLE_FAST_CHAT_LAUNCH") == "1":
+    if os.environ.get("JIMMY_DISABLE_FAST_CHAT_LAUNCH") == "1":
         return False
     argv = sys.argv[1:]
     if "-h" in argv or "--help" in argv:
@@ -11901,7 +11918,7 @@ def _try_fast_chat_launch() -> bool:
     # Container-aware routing must win: when NixOS container mode is
     # active, EVERY invocation is forwarded into the managed container.
     try:
-        from hermes_cli.config import get_container_exec_info
+        from jimmy_cli.config import get_container_exec_info
         if get_container_exec_info():
             return False
     except Exception:
@@ -11913,7 +11930,7 @@ def _try_fast_chat_launch() -> bool:
     if _first_positional_argv() not in {None, "chat"}:
         return False
 
-    from hermes_cli._parser import build_top_level_parser
+    from jimmy_cli._parser import build_top_level_parser
 
     parser, _subparsers, chat_parser = build_top_level_parser()
     chat_parser.set_defaults(func=cmd_chat)
@@ -11931,7 +11948,7 @@ def _try_fast_chat_launch() -> bool:
         return False
 
     if getattr(args, "yolo", False):
-        os.environ["HERMES_YOLO_MODE"] = "1"
+        os.environ["JIMMY_YOLO_MODE"] = "1"
     _prepare_agent_startup(args)
 
     if getattr(args, "oneshot", None):
@@ -11957,7 +11974,7 @@ def _try_termux_fast_cli_launch() -> bool:
     """Run obvious Termux non-TUI chat/oneshot/version paths on a light parser."""
     if not _is_termux_startup_environment():
         return False
-    if os.environ.get("HERMES_TERMUX_DISABLE_FAST_CLI") == "1":
+    if os.environ.get("JIMMY_TERMUX_DISABLE_FAST_CLI") == "1":
         return False
 
     argv = sys.argv[1:]
@@ -11981,7 +11998,7 @@ def _try_termux_fast_cli_launch() -> bool:
     if not has_oneshot and first not in {None, "chat"}:
         return False
 
-    from hermes_cli._parser import build_top_level_parser
+    from jimmy_cli._parser import build_top_level_parser
 
     parser, _subparsers, chat_parser = build_top_level_parser()
     chat_parser.set_defaults(func=cmd_chat)
@@ -12013,10 +12030,10 @@ def _try_termux_fast_cli_launch() -> bool:
             # Bare Termux CLI should reach the prompt first and do agent-only
             # discovery on the first submitted turn instead of before input.
             setattr(args, "compact", True)
-            os.environ["HERMES_DEFER_AGENT_STARTUP"] = "1"
-            os.environ["HERMES_FAST_STARTUP_BANNER"] = "1"
+            os.environ["JIMMY_DEFER_AGENT_STARTUP"] = "1"
+            os.environ["JIMMY_FAST_STARTUP_BANNER"] = "1"
             if getattr(args, "accept_hooks", False):
-                os.environ["HERMES_ACCEPT_HOOKS"] = "1"
+                os.environ["JIMMY_ACCEPT_HOOKS"] = "1"
         else:
             _prepare_agent_startup(args)
         cmd_chat(args)
@@ -12028,7 +12045,7 @@ def _try_termux_fast_cli_launch() -> bool:
 def _try_termux_fast_tui_launch() -> bool:
     """Launch obvious Termux TUI invocations before building every subparser.
 
-    `hermes --tui` is the hot path on phones. The full parser setup imports
+    `jimmy --tui` is the hot path on phones. The full parser setup imports
     command modules for model, fallback, migrate, kanban, bundles, plugins,
     etc. even though the TUI immediately execs Node. On Termux only, parse the
     lightweight top-level/chat parser and hand off to ``cmd_chat`` when the
@@ -12048,7 +12065,7 @@ def _try_termux_fast_tui_launch() -> bool:
     if first not in {None, "chat"}:
         return False
 
-    from hermes_cli._parser import build_top_level_parser
+    from jimmy_cli._parser import build_top_level_parser
 
     parser, _subparsers, chat_parser = build_top_level_parser()
     chat_parser.set_defaults(func=cmd_chat)
@@ -12069,7 +12086,7 @@ def _try_termux_fast_tui_launch() -> bool:
 def cmd_memory(args):
     sub = getattr(args, "memory_command", None)
     if sub == "off":
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.config import load_config, save_config
 
         config = load_config()
         if not isinstance(config.get("memory"), dict):
@@ -12079,9 +12096,9 @@ def cmd_memory(args):
         print("\n  ✓ Memory provider: built-in only")
         print("  Saved to config.yaml\n")
     elif sub == "reset":
-        from hermes_constants import get_hermes_home, display_hermes_home
+        from jimmy_constants import get_jimmy_home, display_jimmy_home
 
-        mem_dir = get_hermes_home() / "memories"
+        mem_dir = get_jimmy_home() / "memories"
         target = getattr(args, "target", "all")
         files_to_reset = []
         if target in {"all", "memory"}:
@@ -12095,7 +12112,7 @@ def cmd_memory(args):
         ]
         if not existing:
             print(
-                f"\n  Nothing to reset — no memory files found in {display_hermes_home()}/memories/\n"
+                f"\n  Nothing to reset — no memory files found in {display_jimmy_home()}/memories/\n"
             )
             return
 
@@ -12122,15 +12139,15 @@ def cmd_memory(args):
         print(
             "\n  Memory reset complete. New sessions will start with a blank slate."
         )
-        print(f"  Files were in: {display_hermes_home()}/memories/\n")
+        print(f"  Files were in: {display_jimmy_home()}/memories/\n")
     else:
-        from hermes_cli.memory_setup import memory_command
+        from jimmy_cli.memory_setup import memory_command
 
         memory_command(args)
 
 
 def cmd_acp(args):
-    """Launch Hermes Agent as an ACP server."""
+    """Launch Jimmy as an ACP server."""
     try:
         from acp_adapter.entry import main as acp_main
 
@@ -12155,16 +12172,16 @@ def cmd_acp(args):
 def cmd_tools(args):
     action = getattr(args, "tools_action", None)
     if action in {"list", "disable", "enable"}:
-        from hermes_cli.tools_config import tools_disable_enable_command
+        from jimmy_cli.tools_config import tools_disable_enable_command
 
         tools_disable_enable_command(args)
     elif action == "post-setup":
-        from hermes_cli.tools_config import run_post_setup_command
+        from jimmy_cli.tools_config import run_post_setup_command
 
         sys.exit(run_post_setup_command(args))
     else:
         _require_tty("tools")
-        from hermes_cli.tools_config import tools_command
+        from jimmy_cli.tools_config import tools_command
 
         tools_command(args)
 
@@ -12172,7 +12189,7 @@ def cmd_tools(args):
 def cmd_insights(args):
     db = None
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
         from agent.insights import InsightsEngine
 
         db = SessionDB()
@@ -12191,7 +12208,7 @@ def cmd_insights(args):
 
 def cmd_monitoring(args):
     """Gateway monitoring status: health & diagnostics export posture."""
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     action = getattr(args, "monitoring_action", None) or "status"
     config = load_config()
@@ -12225,7 +12242,7 @@ def cmd_monitoring(args):
         else:
             print("  OTLP endpoint:  not configured (monitoring.export.otlp)")
         print(f"  OTel SDK:       {'installed' if otlp_exporter.is_available() else 'not installed'} "
-              f"(optional extra: hermes-agent[otlp])")
+              f"(optional extra: jimmy-agent[otlp])")
         print("\n  Scope: gateway service health + redacted diagnostics only.")
         print("  No prompts, messages, tool args/results, usage analytics, or traces.")
         return
@@ -12238,19 +12255,19 @@ def cmd_skills(args):
     # Route 'config' action to skills_config module
     if getattr(args, "skills_action", None) == "config":
         _require_tty("skills config")
-        from hermes_cli.skills_config import skills_command as skills_config_command
+        from jimmy_cli.skills_config import skills_command as skills_config_command
 
         skills_config_command(args)
     elif getattr(args, "skills_action", None) in ("trust", "untrust"):
         _cmd_skills_trust(args)
     else:
-        from hermes_cli.skills_hub import skills_command
+        from jimmy_cli.skills_hub import skills_command
 
         skills_command(args)
 
 
 def _cmd_skills_trust(args):
-    """``hermes skills trust [path]`` / ``hermes skills untrust [path]``.
+    """``jimmy skills trust [path]`` / ``jimmy skills untrust [path]``.
 
     Manages ``skills.trusted_project_dirs`` in config.yaml. With no path,
     operates on the project root enclosing the current directory (nearest
@@ -12264,7 +12281,7 @@ def _cmd_skills_trust(args):
         find_project_root,
         iter_skill_index_files,
     )
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     action = args.skills_action
     raw_path = getattr(args, "path", None)
@@ -12325,25 +12342,25 @@ def _cmd_skills_trust(args):
 
 
 def cmd_pairing(args):
-    from hermes_cli.pairing import pairing_command
+    from jimmy_cli.pairing import pairing_command
 
     pairing_command(args)
 
 
 def cmd_plugins(args):
-    from hermes_cli.plugins_cmd import plugins_command
+    from jimmy_cli.plugins_cmd import plugins_command
 
     plugins_command(args)
 
 
 def cmd_mcp(args):
-    from hermes_cli.mcp_config import mcp_command
+    from jimmy_cli.mcp_config import mcp_command
 
     mcp_command(args)
 
 
 def cmd_claw(args):
-    from hermes_cli.claw import claw_command
+    from jimmy_cli.claw import claw_command
 
     claw_command(args)
 
@@ -12355,19 +12372,19 @@ def _advertise_agent_env() -> None:
     detection reads it; pi and other agents set it — earendil-works/pi#7493)
     so generic tooling can attribute subprocesses to the harness that spawned
     them. The value must be our id in the public agent-harness registry
-    (``hermes-agent`` in huggingface.js ``agent-harnesses.ts``): standard-var
+    (``jimmy-agent`` in huggingface.js ``agent-harnesses.ts``): standard-var
     matching is exact, so any other value is counted as "unknown".
-    ``HERMES_AGENT`` is the Hermes-specific marker. setdefault: never
-    clobber an outer harness (e.g. Hermes running inside another agent's
+    ``JIMMY_AGENT`` is the Jimmy-specific marker. setdefault: never
+    clobber an outer harness (e.g. Jimmy running inside another agent's
     terminal).
     """
-    os.environ.setdefault("AI_AGENT", "hermes-agent")
-    os.environ.setdefault("HERMES_AGENT", "true")
+    os.environ.setdefault("AI_AGENT", "jimmy-agent")
+    os.environ.setdefault("JIMMY_AGENT", "true")
 
 
 def main():
-    """Main entry point for hermes CLI."""
-    # Cosmetic: make the process show up as 'hermes' instead of 'python3.11'
+    """Main entry point for jimmy CLI."""
+    # Cosmetic: make the process show up as 'jimmy' instead of 'python3.11'
     # in ps/top/htop.  Non-fatal — just a nicer UX.
     _set_process_title()
 
@@ -12377,34 +12394,34 @@ def main():
 
     # Force UTF-8 stdio on Windows before anything prints.  No-op elsewhere.
     try:
-        from hermes_cli.stdio import configure_windows_stdio
+        from jimmy_cli.stdio import configure_windows_stdio
         configure_windows_stdio()
     except Exception:
         pass
 
-    # Sweep stale ``hermes.exe.old.*`` quarantine files left by previous
-    # ``hermes update`` runs on Windows. Silent no-op on non-Windows or when
-    # there's nothing to clean. See ``_quarantine_running_hermes_exe``.
+    # Sweep stale ``jimmy.exe.old.*`` quarantine files left by previous
+    # ``jimmy update`` runs on Windows. Silent no-op on non-Windows or when
+    # there's nothing to clean. See ``_quarantine_running_jimmy_exe``.
     try:
         _cleanup_quarantined_exes()
     except Exception:
         pass
 
-    # If the checkout changed since the last launch (hermes update, manual
+    # If the checkout changed since the last launch (jimmy update, manual
     # git pull, old-updater update that predates newer clears), sweep stale
     # __pycache__ once so no process — this one's lazy imports included —
     # resolves fresh source against old bytecode. Never raises.
     _sweep_stale_bytecode_if_checkout_changed()
 
-    # Self-heal a venv left half-built by an interrupted ``hermes update``
+    # Self-heal a venv left half-built by an interrupted ``jimmy update``
     # (Ctrl-C, terminal close, WSL OOM mid-install). Skip when the user is
     # *running* update — that flow writes and clears its own marker, and we
     # don't want a recovery install racing the real one. Never raises.
     #
     # The substring match is deliberately loose: argv isn't parsed yet at this
     # point, and the failure modes are asymmetric. Over-matching (e.g.
-    # ``hermes skills install update``) merely defers recovery one launch;
-    # under-matching (missing ``hermes -p work update``) would race a recovery
+    # ``jimmy skills install update``) merely defers recovery one launch;
+    # under-matching (missing ``jimmy -p work update``) would race a recovery
     # install against the real one. Loose wins.
     try:
         if "update" not in sys.argv[1:]:
@@ -12419,17 +12436,17 @@ def main():
     if _try_fast_chat_launch():
         return
 
-    from hermes_cli._parser import build_top_level_parser
+    from jimmy_cli._parser import build_top_level_parser
 
     parser, subparsers, chat_parser = build_top_level_parser()
     chat_parser.set_defaults(func=cmd_chat)
 
     # =========================================================================
-    # model command  (parser built in hermes_cli/subcommands/model.py)
+    # model command  (parser built in jimmy_cli/subcommands/model.py)
     # =========================================================================
     build_model_parser(subparsers, cmd_model=cmd_model)
 
-    from hermes_cli.moa_cmd import cmd_moa
+    from jimmy_cli.moa_cmd import cmd_moa
 
     moa_parser = subparsers.add_parser(
         "moa",
@@ -12447,7 +12464,7 @@ def main():
     # =========================================================================
     # fallback command — manage the fallback provider chain
     # =========================================================================
-    from hermes_cli.fallback_cmd import cmd_fallback
+    from jimmy_cli.fallback_cmd import cmd_fallback
 
     fallback_parser = subparsers.add_parser(
         "fallback",
@@ -12456,7 +12473,7 @@ def main():
             "Manage the fallback provider chain.  Fallback providers are tried "
             "in order when the primary model fails with rate-limit, overload, or "
             "connection errors.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers"
+            "https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/fallback-providers"
         ),
     )
     fallback_subparsers = fallback_parser.add_subparsers(dest="fallback_command")
@@ -12467,7 +12484,7 @@ def main():
     )
     fallback_subparsers.add_parser(
         "add",
-        help="Pick a provider + model (same picker as `hermes model`) and append to the chain",
+        help="Pick a provider + model (same picker as `jimmy model`) and append to the chain",
     )
     fallback_subparsers.add_parser(
         "remove",
@@ -12487,11 +12504,11 @@ def main():
         "worktree",
         help="Audit and reclaim accumulated git worktrees and merged branches",
         description=(
-            "Attended reclaim for the .worktrees/ directory hermes -w sessions "
+            "Attended reclaim for the .worktrees/ directory jimmy -w sessions "
             "accumulate. Never deletes uncommitted tracked changes, unique "
             "unpushed commits, or in-use trees; untracked-only scratch is "
-            "archived to ~/.hermes/archive/worktree-prune/ before removal. See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/cli#worktree-cleanup"
+            "archived to ~/.jimmy/archive/worktree-prune/ before removal. See: "
+            "https://jimmy-agent.jimmy-agent.com/docs/user-guide/cli#worktree-cleanup"
         ),
     )
     worktree_subparsers = worktree_parser.add_subparsers(dest="worktree_action")
@@ -12520,7 +12537,7 @@ def main():
     )
 
     def _dispatch_worktree(_args):
-        from hermes_cli.worktree_cmd import cmd_worktree
+        from jimmy_cli.worktree_cmd import cmd_worktree
 
         # argparse aliases set dest to the literal typed string ("ls"/"audit").
         action = getattr(_args, "worktree_action", None)
@@ -12539,9 +12556,9 @@ def main():
         help="Manage external secret sources (Bitwarden, 1Password)",
         description=(
             "Pull API keys from an external secret manager at process startup "
-            "instead of storing them in ~/.hermes/.env.  Supports Bitwarden "
+            "instead of storing them in ~/.jimmy/.env.  Supports Bitwarden "
             "Secrets Manager and 1Password.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/secrets/"
+            "https://jimmy-agent.jimmy-agent.com/docs/user-guide/secrets/"
         ),
     )
     secrets_subparsers = secrets_parser.add_subparsers(dest="secrets_command")
@@ -12564,8 +12581,8 @@ def main():
     # defer (#86781).  secrets_cli defers its backend import to first use
     # (module-level __getattr__ + handler-level _load_bw()), so register_cli
     # at parse time only wires argparse structure with no crypto cost.
-    from hermes_cli import secrets_cli as _secrets_cli
-    from hermes_cli import onepassword_secrets_cli as _op_secrets_cli
+    from jimmy_cli import secrets_cli as _secrets_cli
+    from jimmy_cli import onepassword_secrets_cli as _op_secrets_cli
 
     _secrets_cli.register_cli(secrets_bw)
     _op_secrets_cli.register_cli(secrets_op)
@@ -12583,7 +12600,7 @@ def main():
     # egress command — iron-proxy outbound credential-injection firewall
     # =========================================================================
     # NOTE: this is the OUTBOUND egress firewall (ironsh/iron-proxy).
-    # `hermes proxy` (defined elsewhere in this file) is a separate INBOUND
+    # `jimmy proxy` (defined elsewhere in this file) is a separate INBOUND
     # OAuth-aggregator reverse proxy.  Different direction, different purpose.
     egress_parser = subparsers.add_parser(
         "egress",
@@ -12592,16 +12609,16 @@ def main():
             "Manage iron-proxy, the optional TLS-intercepting egress firewall "
             "that swaps proxy tokens for real API credentials before outbound "
             "requests leave a sandbox.  Disabled by default.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/egress/iron-proxy"
+            "https://jimmy-agent.jimmy-agent.com/docs/user-guide/egress/iron-proxy"
         ),
     )
 
-    from hermes_cli import proxy_cli as _proxy_cli
+    from jimmy_cli import proxy_cli as _proxy_cli
     _proxy_cli.register_cli(egress_parser)
 
     def _dispatch_egress(args):  # noqa: ANN001
         # The egress subparser uses dest='egress_command' to stay disjoint
-        # from the inbound OAuth ``hermes proxy`` subparser (dest='proxy_command').
+        # from the inbound OAuth ``jimmy proxy`` subparser (dest='proxy_command').
         sub = getattr(args, "egress_command", None)
         if sub is not None and hasattr(args, "func") and args.func is not _dispatch_egress:
             return args.func(args)
@@ -12613,7 +12630,7 @@ def main():
     # =========================================================================
     # migrate command
     # =========================================================================
-    from hermes_cli.migrate import cmd_migrate, cmd_migrate_xai
+    from jimmy_cli.migrate import cmd_migrate, cmd_migrate_xai
 
     migrate_parser = subparsers.add_parser(
         "migrate",
@@ -12649,7 +12666,7 @@ def main():
     migrate_parser.set_defaults(func=cmd_migrate)
 
     # =========================================================================
-    # gateway + proxy commands  (parsers built in hermes_cli/subcommands/gateway.py)
+    # gateway + proxy commands  (parsers built in jimmy_cli/subcommands/gateway.py)
     # =========================================================================
     build_gateway_parser(
         subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy, cmd_gateway_enroll=cmd_gateway_enroll
@@ -12667,13 +12684,13 @@ def main():
         logger.debug("LSP CLI registration failed: %s", _lsp_err)
 
     # =========================================================================
-    # setup command  (parser built in hermes_cli/subcommands/setup.py)
+    # setup command  (parser built in jimmy_cli/subcommands/setup.py)
     # =========================================================================
     build_setup_parser(subparsers, cmd_setup=cmd_setup)
 
 
     # =========================================================================
-    # whatsapp command  (parser built in hermes_cli/subcommands/whatsapp.py)
+    # whatsapp command  (parser built in jimmy_cli/subcommands/whatsapp.py)
     # =========================================================================
     build_whatsapp_parser(subparsers, cmd_whatsapp=cmd_whatsapp)
 
@@ -12686,76 +12703,76 @@ def main():
         description=(
             "Configure the official Meta WhatsApp Business Cloud API "
             "adapter (Business account required, public webhook URL "
-            "required). Distinct from `hermes whatsapp` which sets up "
+            "required). Distinct from `jimmy whatsapp` which sets up "
             "the Baileys bridge for personal accounts."
         ),
     )
     whatsapp_cloud_parser.set_defaults(func=cmd_whatsapp_cloud)
 
     # =========================================================================
-    # slack command  (parser built in hermes_cli/subcommands/slack.py)
+    # slack command  (parser built in jimmy_cli/subcommands/slack.py)
     # =========================================================================
     build_slack_parser(subparsers, cmd_slack=cmd_slack)
 
     # =========================================================================
     # send command — pipe shell-script output to any configured platform
     # =========================================================================
-    from hermes_cli.send_cmd import register_send_subparser
+    from jimmy_cli.send_cmd import register_send_subparser
     register_send_subparser(subparsers)
 
     # =========================================================================
-    # login command  (parser built in hermes_cli/subcommands/login.py)
+    # login command  (parser built in jimmy_cli/subcommands/login.py)
     # =========================================================================
     build_login_parser(subparsers, cmd_login=cmd_login)
 
     # =========================================================================
-    # logout command  (parser built in hermes_cli/subcommands/logout.py)
+    # logout command  (parser built in jimmy_cli/subcommands/logout.py)
     # =========================================================================
     build_logout_parser(subparsers, cmd_logout=cmd_logout)
 
     # =========================================================================
-    # auth command  (parser built in hermes_cli/subcommands/auth.py)
+    # auth command  (parser built in jimmy_cli/subcommands/auth.py)
     # =========================================================================
     build_auth_parser(subparsers, cmd_auth=cmd_auth)
 
     # =========================================================================
-    # status command  (parser built in hermes_cli/subcommands/status.py)
+    # status command  (parser built in jimmy_cli/subcommands/status.py)
     # =========================================================================
     build_status_parser(subparsers, cmd_status=cmd_status)
 
     # =========================================================================
-    # pause / resume commands  (parser built in hermes_cli/subcommands/pause.py)
+    # pause / resume commands  (parser built in jimmy_cli/subcommands/pause.py)
     # =========================================================================
     build_pause_parser(subparsers)
 
     # =========================================================================
-    # cron command  (parser built in hermes_cli/subcommands/cron.py)
+    # cron command  (parser built in jimmy_cli/subcommands/cron.py)
     # =========================================================================
     build_cron_parser(subparsers, cmd_cron=cmd_cron)
     build_sync_parser(subparsers, cmd_sync=cmd_sync)
 
     # =========================================================================
-    # webhook command  (parser built in hermes_cli/subcommands/webhook.py)
+    # webhook command  (parser built in jimmy_cli/subcommands/webhook.py)
     # =========================================================================
     build_webhook_parser(subparsers, cmd_webhook=cmd_webhook)
 
     # =========================================================================
-    # peer command — bot-to-bot DMs across machines (peer Hermes gateways)
+    # peer command — bot-to-bot DMs across machines (peer Jimmy gateways)
     # =========================================================================
-    from hermes_cli.subcommands.peer import build_peer_parser
+    from jimmy_cli.subcommands.peer import build_peer_parser
 
     build_peer_parser(subparsers)
 
     # =========================================================================
     # portal command — Nous Portal status + Tool Gateway routing
     # =========================================================================
-    from hermes_cli.portal_cli import add_parser as _add_portal_parser
+    from jimmy_cli.portal_cli import add_parser as _add_portal_parser
     _add_portal_parser(subparsers)
 
     # =========================================================================
     # kanban command — multi-profile collaboration board
     # =========================================================================
-    from hermes_cli.kanban import build_parser as _build_kanban_parser
+    from jimmy_cli.kanban import build_parser as _build_kanban_parser
 
     kanban_parser = _build_kanban_parser(subparsers)
     kanban_parser.set_defaults(func=cmd_kanban)
@@ -12763,7 +12780,7 @@ def main():
     # =========================================================================
     # project command — named, multi-folder workspaces
     # =========================================================================
-    from hermes_cli.projects_cmd import build_parser as _build_project_parser
+    from jimmy_cli.projects_cmd import build_parser as _build_project_parser
 
     project_parser = _build_project_parser(subparsers)
     project_parser.set_defaults(func=cmd_project)
@@ -12771,44 +12788,44 @@ def main():
     # =========================================================================
     # hooks command — shell-hook inspection and management
     # =========================================================================
-    # hooks command  (parser built in hermes_cli/subcommands/hooks.py)
+    # hooks command  (parser built in jimmy_cli/subcommands/hooks.py)
     # =========================================================================
     build_hooks_parser(subparsers, cmd_hooks=cmd_hooks)
 
     # =========================================================================
-    # doctor command  (parser built in hermes_cli/subcommands/doctor.py)
+    # doctor command  (parser built in jimmy_cli/subcommands/doctor.py)
     # =========================================================================
     build_doctor_parser(subparsers, cmd_doctor=cmd_doctor)
 
     # =========================================================================
-    # verify command  (parser built in hermes_cli/subcommands/verify.py)
+    # verify command  (parser built in jimmy_cli/subcommands/verify.py)
     # =========================================================================
     build_verify_parser(subparsers, cmd_verify=cmd_verify)
 
     # =========================================================================
     # security command — on-demand supply-chain audit
     # =========================================================================
-    # security command  (parser built in hermes_cli/subcommands/security.py)
+    # security command  (parser built in jimmy_cli/subcommands/security.py)
     # =========================================================================
     build_security_parser(subparsers, cmd_security=cmd_security)
 
     # =========================================================================
-    # approvals command  (parser built in hermes_cli/subcommands/approvals.py)
+    # approvals command  (parser built in jimmy_cli/subcommands/approvals.py)
     # =========================================================================
     build_approvals_parser(subparsers, cmd_approvals=cmd_approvals)
 
     # =========================================================================
-    # dump command  (parser built in hermes_cli/subcommands/dump.py)
+    # dump command  (parser built in jimmy_cli/subcommands/dump.py)
     # =========================================================================
     build_dump_parser(subparsers, cmd_dump=cmd_dump)
 
     # =========================================================================
-    # debug command  (parser built in hermes_cli/subcommands/debug.py)
+    # debug command  (parser built in jimmy_cli/subcommands/debug.py)
     # =========================================================================
     build_debug_parser(subparsers, cmd_debug=cmd_debug)
 
     # =========================================================================
-    # backup command  (parser built in hermes_cli/subcommands/backup.py)
+    # backup command  (parser built in jimmy_cli/subcommands/backup.py)
     # =========================================================================
     build_backup_parser(subparsers, cmd_backup=cmd_backup)
 
@@ -12817,51 +12834,51 @@ def main():
     # =========================================================================
     checkpoints_parser = subparsers.add_parser(
         "checkpoints",
-        help="Inspect / prune / clear ~/.hermes/checkpoints/",
+        help="Inspect / prune / clear ~/.jimmy/checkpoints/",
         description="Manage the filesystem checkpoint store — the shadow git "
-        "repo hermes uses to snapshot working directories before "
+        "repo jimmy uses to snapshot working directories before "
         "write_file/patch/terminal calls. Lets you see how much "
         "space checkpoints occupy, force a prune, or wipe the base.",
     )
-    from hermes_cli.checkpoints import register_cli as _register_checkpoints_cli
+    from jimmy_cli.checkpoints import register_cli as _register_checkpoints_cli
     _register_checkpoints_cli(checkpoints_parser)
 
     # =========================================================================
-    # import command  (parser built in hermes_cli/subcommands/import_cmd.py)
+    # import command  (parser built in jimmy_cli/subcommands/import_cmd.py)
     # =========================================================================
     build_import_cmd_parser(subparsers, cmd_import=cmd_import)
 
     # =========================================================================
-    # import-agent command  (parser: hermes_cli/subcommands/import_agent.py)
+    # import-agent command  (parser: jimmy_cli/subcommands/import_agent.py)
     # =========================================================================
     def cmd_import_agent(args):
-        from hermes_cli.agent_import import import_agent_command
+        from jimmy_cli.agent_import import import_agent_command
         import_agent_command(args)
 
     build_import_agent_parser(subparsers, cmd_import_agent=cmd_import_agent)
 
     # =========================================================================
-    # config command  (parser built in hermes_cli/subcommands/config.py)
+    # config command  (parser built in jimmy_cli/subcommands/config.py)
     # =========================================================================
     build_config_parser(subparsers, cmd_config=cmd_config)
 
     # =========================================================================
-    # skin command  (parser built in hermes_cli/subcommands/skin.py)
+    # skin command  (parser built in jimmy_cli/subcommands/skin.py)
     # =========================================================================
     build_skin_parser(subparsers, cmd_skin=cmd_skin)
 
     # =========================================================================
-    # console command  (parser built in hermes_cli/subcommands/console.py)
+    # console command  (parser built in jimmy_cli/subcommands/console.py)
     # =========================================================================
     build_console_parser(subparsers, cmd_console=cmd_console)
 
     # =========================================================================
-    # pairing command  (parser built in hermes_cli/subcommands/pairing.py)
+    # pairing command  (parser built in jimmy_cli/subcommands/pairing.py)
     # =========================================================================
     build_pairing_parser(subparsers, cmd_pairing=cmd_pairing)
 
     # =========================================================================
-    # skills command  (parser built in hermes_cli/subcommands/skills.py)
+    # skills command  (parser built in jimmy_cli/subcommands/skills.py)
     # =========================================================================
     build_skills_parser(subparsers, cmd_skills=cmd_skills)
 
@@ -12877,12 +12894,12 @@ def main():
             "referenced skill at once."
         ),
     )
-    from hermes_cli.bundles import register_cli as _bundles_register, bundles_command
+    from jimmy_cli.bundles import register_cli as _bundles_register, bundles_command
     _bundles_register(bundles_parser)
     bundles_parser.set_defaults(func=bundles_command)
 
     # =========================================================================
-    # plugins command  (parser built in hermes_cli/subcommands/plugins.py)
+    # plugins command  (parser built in jimmy_cli/subcommands/plugins.py)
     # =========================================================================
     build_plugins_parser(subparsers, cmd_plugins=cmd_plugins)
 
@@ -12892,7 +12909,7 @@ def main():
     # own argparse tree.  No hardcoded plugin commands in main.py.
     #
     # Skipped when the invocation is already targeting a known built-in
-    # subcommand — ``hermes --help``, ``hermes logs``,
+    # subcommand — ``jimmy --help``, ``jimmy logs``,
     # etc.  This avoids eagerly importing every bundled plugin module
     # (google.cloud.pubsub_v1, aiohttp, grpc, PIL …) which costs
     # 500-650ms on typical installs.
@@ -12900,7 +12917,7 @@ def main():
     if _plugin_cli_discovery_needed():
         try:
             from plugins.memory import discover_plugin_cli_commands
-            from hermes_cli.plugins import discover_plugins, get_plugin_manager
+            from jimmy_cli.plugins import discover_plugins, get_plugin_manager
 
             seen_plugin_commands = set()
             for cmd_info in discover_plugin_cli_commands():
@@ -12951,7 +12968,7 @@ def main():
         ),
     )
     try:
-        from hermes_cli.curator import register_cli as _register_curator_cli
+        from jimmy_cli.curator import register_cli as _register_curator_cli
 
         _register_curator_cli(curator_parser)
     except Exception as _exc:
@@ -12966,12 +12983,12 @@ def main():
         description=(
             "Petdex (https://github.com/crafter-station/petdex) is a public "
             "gallery of animated sprite pets for coding agents. Install one "
-            "and Hermes shows it reacting to agent activity across the CLI, "
+            "and Jimmy shows it reacting to agent activity across the CLI, "
             "TUI, and desktop app."
         ),
     )
     try:
-        from hermes_cli.pets import register_cli as _register_pets_cli
+        from jimmy_cli.pets import register_cli as _register_pets_cli
 
         _register_pets_cli(pets_parser)
     except Exception as _exc:
@@ -12992,19 +13009,19 @@ def main():
         ),
     )
     try:
-        from hermes_cli.journey import register_cli as _register_journey_cli
+        from jimmy_cli.journey import register_cli as _register_journey_cli
 
         _register_journey_cli(journey_parser)
     except Exception as _exc:
         logging.getLogger(__name__).debug("journey CLI wiring failed: %s", _exc)
 
     # =========================================================================
-    # memory command  (parser built in hermes_cli/subcommands/memory.py)
+    # memory command  (parser built in jimmy_cli/subcommands/memory.py)
     # =========================================================================
     build_memory_parser(subparsers, cmd_memory=cmd_memory)
 
     # =========================================================================
-    # tools command  (parser built in hermes_cli/subcommands/tools.py)
+    # tools command  (parser built in jimmy_cli/subcommands/tools.py)
     # =========================================================================
     build_tools_parser(subparsers, cmd_tools=cmd_tools)
 
@@ -13018,13 +13035,13 @@ def main():
             "Install or check the cua-driver binary used by the\n"
             "`computer_use` toolset. Supported on macOS, Windows, and\n"
             "Linux.\n\n"
-            "Use `hermes computer-use install` to fetch and run the\n"
+            "Use `jimmy computer-use install` to fetch and run the\n"
             "upstream cua-driver installer. This is equivalent to the\n"
-            "post-setup hook that `hermes tools` runs when you first\n"
+            "post-setup hook that `jimmy tools` runs when you first\n"
             "enable the Computer Use toolset, and is a stable target\n"
             "for re-running the install if it didn't fire (e.g. when\n"
             "toggling the toolset on a returning-user setup).\n\n"
-            "Use `hermes computer-use doctor` to run cua-driver's\n"
+            "Use `jimmy computer-use doctor` to run cua-driver's\n"
             "`health_report` MCP tool and surface its check matrix\n"
             "(TCC, bundle identity, version, platform support, ...)\n"
             "in human-readable form."
@@ -13091,7 +13108,7 @@ def main():
         description=(
             "Computer Use drives the Mac through cua-driver, whose TCC grants\n"
             "attach to cua-driver's own identity (com.trycua.driver) — not the\n"
-            "terminal or the Hermes app. `status` reports the driver's grant\n"
+            "terminal or the Jimmy app. `status` reports the driver's grant\n"
             "state; `grant` launches CuaDriver via LaunchServices so the macOS\n"
             "permission dialog is attributed to the process that does the work."
         ),
@@ -13115,7 +13132,7 @@ def main():
     def cmd_computer_use(args):
         action = getattr(args, "computer_use_action", None)
         if action == "install":
-            from hermes_cli.tools_config import (
+            from jimmy_cli.tools_config import (
                 _cua_driver_contract_status,
                 install_cua_driver,
             )
@@ -13125,7 +13142,7 @@ def main():
         if action == "status":
             import os as _os
             import subprocess
-            from hermes_cli.tools_config import _cua_driver_contract_status
+            from jimmy_cli.tools_config import _cua_driver_contract_status
             from tools.computer_use.cua_backend import (
                 cua_driver_update_check,
                 resolve_cua_driver_cmd,
@@ -13133,11 +13150,11 @@ def main():
             # Must match the runtime resolver: Desktop/TUI processes can omit
             # ~/.local/bin even though the official installer put the driver there.
             path = resolve_cua_driver_cmd()
-            override = _os.environ.get("HERMES_CUA_DRIVER_CMD", "").strip()
+            override = _os.environ.get("JIMMY_CUA_DRIVER_CMD", "").strip()
             if path:
                 version = ""
                 try:
-                    from hermes_cli.tools_config import _cua_driver_env
+                    from jimmy_cli.tools_config import _cua_driver_env
                     version = subprocess.run(
                         [path, "--version"],
                         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
@@ -13145,13 +13162,13 @@ def main():
                     ).stdout.strip()
                 except Exception:
                     pass
-                from hermes_cli.tools_config import _cua_version_summary
+                from jimmy_cli.tools_config import _cua_version_summary
                 version = _cua_version_summary(version)
                 # Name the override here too. Without it the operator is told
-                # to repair an install that `hermes computer-use install` will
+                # to repair an install that `jimmy computer-use install` will
                 # (correctly) refuse to touch, with nothing pointing at the
                 # env var that actually selected the binary.
-                origin = " [custom binary from HERMES_CUA_DRIVER_CMD]" if override else ""
+                origin = " [custom binary from JIMMY_CUA_DRIVER_CMD]" if override else ""
                 if version:
                     print(f"cua-driver: installed at {path}{origin} ({version})")
                 else:
@@ -13164,28 +13181,28 @@ def main():
                     )
                     if override:
                         print(
-                            "    Update the binary selected by HERMES_CUA_DRIVER_CMD, or unset "
-                            "the override and run: hermes computer-use install --upgrade"
+                            "    Update the binary selected by JIMMY_CUA_DRIVER_CMD, or unset "
+                            "the override and run: jimmy computer-use install --upgrade"
                         )
                     else:
-                        print("    Run: hermes computer-use install")
+                        print("    Run: jimmy computer-use install")
                     return 1
                 try:
                     st = cua_driver_update_check()
                     if st and st.get("update_available"):
                         latest = st.get("latest_version") or "?"
                         print(f"  ⬆ Update available: cua-driver {latest}.")
-                        print("    Run: hermes computer-use install --upgrade")
+                        print("    Run: jimmy computer-use install --upgrade")
                     elif st:
                         print("  ✓ Up to date.")
                     else:
                         # Older driver (no check-update verb) or offline.
-                        print("  Refresh to latest: hermes computer-use install --upgrade")
+                        print("  Refresh to latest: jimmy computer-use install --upgrade")
                 except Exception:
-                    print("  Refresh to latest: hermes computer-use install --upgrade")
+                    print("  Refresh to latest: jimmy computer-use install --upgrade")
                 return 0
             print("cua-driver: not installed")
-            print("  Run: hermes computer-use install")
+            print("  Run: jimmy computer-use install")
             return 1
         if action == "doctor":
             from tools.computer_use.doctor import run_doctor
@@ -13211,7 +13228,7 @@ def main():
                     print(f"Computer Use is not supported on {st['platform']}.")
                     sys.exit(1)
                 if not st["installed"]:
-                    print("cua-driver: not installed. Run: hermes computer-use install")
+                    print("cua-driver: not installed. Run: jimmy computer-use install")
                     sys.exit(1)
                 glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")  # noqa: E731
                 print(f"cua-driver: {st['version'] or 'installed'} ({st['platform']})")
@@ -13219,7 +13236,7 @@ def main():
                     print(f"  {glyph(st['accessibility'])} Accessibility")
                     print(f"  {glyph(st['screen_recording'])} Screen Recording")
                     if not st["ready"]:
-                        print("  Grant: hermes computer-use permissions grant")
+                        print("  Grant: jimmy computer-use permissions grant")
                 else:  # no TCC model — readiness is driver health
                     print(f"  {glyph(st['ready'])} driver health (no permission toggles on {st['platform']})")
                 for c in st["checks"]:
@@ -13235,7 +13252,7 @@ def main():
 
     computer_use_parser.set_defaults(func=cmd_computer_use)
     # =========================================================================
-    # mcp command  (parser built in hermes_cli/subcommands/mcp.py)
+    # mcp command  (parser built in jimmy_cli/subcommands/mcp.py)
     # =========================================================================
     build_mcp_parser(subparsers, cmd_mcp=cmd_mcp)
 
@@ -13306,7 +13323,7 @@ def main():
         p.add_argument(
             "--model",
             help="Only match sessions whose model name contains this substring "
-            "(e.g. 'sonnet', 'gpt-5', 'hermes')",
+            "(e.g. 'sonnet', 'gpt-5', 'jimmy')",
         )
         p.add_argument(
             "--provider",
@@ -13368,7 +13385,7 @@ def main():
         nargs="?",
         help=(
             "Output path. JSONL: file path (use - for stdout, required). "
-            "md/qmd: output directory (default: <hermes home>/session-exports)"
+            "md/qmd: output directory (default: <jimmy home>/session-exports)"
         ),
     )
     sessions_export.add_argument(
@@ -13724,11 +13741,11 @@ def main():
 
     sessions_import = sessions_subparsers.add_parser(
         "import",
-        help="Import a Claude Code or Codex CLI session into Hermes",
+        help="Import a Claude Code or Codex CLI session into Jimmy",
         description=(
             "Pull a conversation started in Claude Code (~/.claude/projects) "
-            "or Codex CLI (~/.codex/sessions) into the Hermes session store "
-            "so it can be resumed with 'hermes --resume <id>'. The foreign "
+            "or Codex CLI (~/.codex/sessions) into the Jimmy session store "
+            "so it can be resumed with 'jimmy --resume <id>'. The foreign "
             "files are only read, never modified."
         ),
     )
@@ -13745,48 +13762,48 @@ def main():
     )
 
 
-    # cmd_sessions lives in hermes_cli/sessions_cmd.py (main.py decomposition).
+    # cmd_sessions lives in jimmy_cli/sessions_cmd.py (main.py decomposition).
     # sessions_parser is threaded in via functools.partial because the
     # fallthrough branch calls sessions_parser.print_help() (formerly a
     # closure capture of this main()-local). The indirection through _self()
     # keeps the sessions_cmd import lazy until the subcommand actually runs
-    # and lets monkeypatches on hermes_cli.main.cmd_sessions keep working.
+    # and lets monkeypatches on jimmy_cli.main.cmd_sessions keep working.
     def _dispatch_sessions(_args, *, sessions_parser=sessions_parser):
         return _self().cmd_sessions(_args, sessions_parser=sessions_parser)
 
     sessions_parser.set_defaults(func=_dispatch_sessions)
 
     # =========================================================================
-    # insights command  (parser built in hermes_cli/subcommands/insights.py)
+    # insights command  (parser built in jimmy_cli/subcommands/insights.py)
     # =========================================================================
     build_insights_parser(subparsers, cmd_insights=cmd_insights)
     build_monitoring_parser(subparsers, cmd_monitoring=cmd_monitoring)
 
     # =========================================================================
-    # claw command  (parser built in hermes_cli/subcommands/claw.py)
+    # claw command  (parser built in jimmy_cli/subcommands/claw.py)
     # =========================================================================
     build_claw_parser(subparsers, cmd_claw=cmd_claw)
 
-    # NOTE: the `hermes version` subcommand was removed — `hermes --version`
+    # NOTE: the `jimmy version` subcommand was removed — `jimmy --version`
     # / `-V` now carries the full output including update status.
 
     # =========================================================================
-    # update command  (parser built in hermes_cli/subcommands/update.py)
+    # update command  (parser built in jimmy_cli/subcommands/update.py)
     # =========================================================================
     build_update_parser(subparsers, cmd_update=cmd_update)
 
     # =========================================================================
-    # uninstall command  (parser built in hermes_cli/subcommands/uninstall.py)
+    # uninstall command  (parser built in jimmy_cli/subcommands/uninstall.py)
     # =========================================================================
     build_uninstall_parser(subparsers, cmd_uninstall=cmd_uninstall)
 
     # =========================================================================
-    # acp command  (parser built in hermes_cli/subcommands/acp.py)
+    # acp command  (parser built in jimmy_cli/subcommands/acp.py)
     # =========================================================================
     build_acp_parser(subparsers, cmd_acp=cmd_acp)
 
     # =========================================================================
-    # profile command  (parser built in hermes_cli/subcommands/profile.py)
+    # profile command  (parser built in jimmy_cli/subcommands/profile.py)
     # =========================================================================
     build_profile_parser(subparsers, cmd_profile=cmd_profile)
 
@@ -13807,7 +13824,7 @@ def main():
     completion_parser.set_defaults(func=lambda args: cmd_completion(args, parser))
 
     # =========================================================================
-    # dashboard command  (parser built in hermes_cli/subcommands/dashboard.py)
+    # dashboard command  (parser built in jimmy_cli/subcommands/dashboard.py)
     # =========================================================================
     build_dashboard_parser(
         subparsers,
@@ -13820,37 +13837,47 @@ def main():
     # desktop (a.k.a. gui) command
     #
     # The canonical name is "desktop"; "gui" is kept as a deprecated alias
-    # for one release. The Hermes-Setup.exe success screen tells users to
-    # run `hermes desktop` from a terminal, so the canonical name needs
+    # for one release. The Jimmy-Setup.exe success screen tells users to
+    # run `jimmy desktop` from a terminal, so the canonical name needs
     # to be the one that appears in --help (argparse promotes the primary
     # name; aliases stay hidden).
     # =========================================================================
-    # gui command  (parser built in hermes_cli/subcommands/gui.py)
+    # gui command  (parser built in jimmy_cli/subcommands/gui.py)
     # =========================================================================
     build_gui_parser(subparsers, cmd_gui=cmd_gui)
 
     # =========================================================================
-    # logs command  (parser built in hermes_cli/subcommands/logs.py)
+    # logs command  (parser built in jimmy_cli/subcommands/logs.py)
     # =========================================================================
     build_logs_parser(subparsers, cmd_logs=cmd_logs)
 
     # =========================================================================
-    # prompt-size command  (parser built in hermes_cli/subcommands/prompt_size.py)
+    # prompt-size command  (parser built in jimmy_cli/subcommands/prompt_size.py)
     # =========================================================================
     build_prompt_size_parser(subparsers, cmd_prompt_size=cmd_prompt_size)
+
+    # =========================================================================
+    # optimize command  (parser built in jimmy_cli/subcommands/optimize.py)
+    # =========================================================================
+    build_optimize_parser(subparsers, cmd_optimize=cmd_optimize)
+
+    # =========================================================================
+    # command-center (Jimmy orchestration over openclaw / munder-difflin / ECC)
+    # =========================================================================
+    build_command_center_parser(subparsers, cmd_command_center=cmd_command_center)
 
     # =========================================================================
     # Parse and execute
     # =========================================================================
     # Pre-process argv so unquoted multi-word session names after -c / -r
     # are merged into a single token before argparse sees them.
-    # e.g. ``hermes -c Pokemon Agent Dev`` → ``hermes -c 'Pokemon Agent Dev'``
+    # e.g. ``jimmy -c Pokemon Agent Dev`` → ``jimmy -c 'Pokemon Agent Dev'``
     # ── Container-aware routing ────────────────────────────────────────
     # When NixOS container mode is active, route ALL subcommands into
     # the managed container.  This MUST run before parse_args() so that
     # --help, unrecognised flags, and every subcommand are forwarded
     # transparently instead of being intercepted by argparse on the host.
-    from hermes_cli.config import get_container_exec_info
+    from jimmy_cli.config import get_container_exec_info
 
     container_info = get_container_exec_info()
     if container_info:
@@ -13869,7 +13896,7 @@ def main():
     #
     # Fix: when argv contains a token matching a known subcommand, set
     # subparsers.required=True to force deterministic routing.  If that
-    # fails (e.g. 'hermes -c model' where 'model' is consumed as the
+    # fails (e.g. 'jimmy -c model' where 'model' is consumed as the
     # session name for --continue), fall back to the default behaviour.
     import io as _io
 
@@ -13907,18 +13934,18 @@ def main():
         cmd_version(args)
         return
 
-    # --yolo: set HERMES_YOLO_MODE *before* plugin discovery.  The call to
+    # --yolo: set JIMMY_YOLO_MODE *before* plugin discovery.  The call to
     # _prepare_agent_startup() below triggers discover_plugins() → tool
     # imports, and tools.approval freezes _YOLO_MODE_FROZEN at module
     # import time (PR #7994, security hardening against prompt-injection).
     # If the env var is set only later (e.g. inside cmd_chat), the frozen
     # value is already False and --yolo silently does nothing.
     if getattr(args, "yolo", False):
-        os.environ["HERMES_YOLO_MODE"] = "1"
+        os.environ["JIMMY_YOLO_MODE"] = "1"
 
     # Discover Python plugins and register shell hooks once, before any
     # command that can fire lifecycle hooks.  Both are idempotent; gated
-    # so introspection/management commands (hermes hooks list, cron
+    # so introspection/management commands (jimmy hooks list, cron
     # list, gateway status, mcp add, ...) don't pay discovery cost or
     # trigger consent prompts for hooks the user is still inspecting.
     _prepare_agent_startup(args)
@@ -13971,7 +13998,7 @@ def main():
 
     # Execute the command.  Propagate the handler's return code as the
     # process exit code so subcommands that signal failure (e.g.
-    # ``hermes egress start`` refusing when credential_source=bitwarden
+    # ``jimmy egress start`` refusing when credential_source=bitwarden
     # is misconfigured) actually exit non-zero.  Handlers that return
     # None are treated as success (exit 0).
     if hasattr(args, "func"):

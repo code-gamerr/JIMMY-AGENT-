@@ -1,4 +1,4 @@
-"""Tests for ``hermes doctor --live`` — opt-in bounded real-call tool-backend probes.
+"""Tests for ``jimmy doctor --live`` — opt-in bounded real-call tool-backend probes.
 
 All probes are mocked at the HTTP/client layer; no real network calls are made.
 """
@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from hermes_cli import doctor_live
-from hermes_cli.doctor_live import (
+from jimmy_cli import doctor_live
+from jimmy_cli.doctor_live import (
     ProbeResult,
     maybe_run_live_checks,
     run_live_checks,
@@ -40,7 +40,7 @@ def _clean_env(monkeypatch):
 
 class TestLiveFlagGating:
     def test_parser_has_live_flag_default_false(self):
-        from hermes_cli.subcommands.doctor import build_doctor_parser
+        from jimmy_cli.subcommands.doctor import build_doctor_parser
 
         parser = argparse.ArgumentParser()
         sub = parser.add_subparsers(dest="command")
@@ -193,12 +193,12 @@ class TestConfiguredOnlySelection:
 class TestBrowserAvailableNpxRung:
     """agent-browser resolves lazily via npx on the default install (#43564),
     invisible to the bare PATH/node_modules probes _browser_available starts
-    with. It must fall through to the same cascade `hermes doctor` uses."""
+    with. It must fall through to the same cascade `jimmy doctor` uses."""
 
     def _block_path_and_node_modules_checks(self, monkeypatch, tmp_path):
         monkeypatch.setattr("shutil.which", lambda *a, **k: None)
-        monkeypatch.setattr("hermes_cli.doctor.HERMES_HOME", tmp_path / "home")
-        monkeypatch.setattr("hermes_cli.doctor.PROJECT_ROOT", tmp_path / "root")
+        monkeypatch.setattr("jimmy_cli.doctor.JIMMY_HOME", tmp_path / "home")
+        monkeypatch.setattr("jimmy_cli.doctor.PROJECT_ROOT", tmp_path / "root")
 
     def test_true_when_npx_resolves_agent_browser(self, monkeypatch, tmp_path):
         self._block_path_and_node_modules_checks(monkeypatch, tmp_path)

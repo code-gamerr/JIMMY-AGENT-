@@ -16,15 +16,15 @@ import pytest
 
 @pytest.fixture()
 def isolated_kanban_home_with_profiles(monkeypatch):
-    """Spin up a fresh HERMES_HOME with kanban DB + alpha/beta profiles."""
+    """Spin up a fresh JIMMY_HOME with kanban DB + alpha/beta profiles."""
     test_home = tempfile.mkdtemp(prefix="kanban_per_profile_cap_test_")
     for prof in ("alpha", "beta", "default"):
         os.makedirs(os.path.join(test_home, "profiles", prof), exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", test_home)
+    monkeypatch.setenv("JIMMY_HOME", test_home)
     for mod in list(sys.modules.keys()):
-        if mod.startswith("hermes_cli") or mod.startswith("hermes_state") or mod == "hermes_constants":
+        if mod.startswith("jimmy_cli") or mod.startswith("jimmy_state") or mod == "jimmy_constants":
             del sys.modules[mod]
-    from hermes_cli import kanban_db
+    from jimmy_cli import kanban_db
     yield kanban_db
 
 

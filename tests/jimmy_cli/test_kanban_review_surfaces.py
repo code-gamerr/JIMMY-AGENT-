@@ -7,26 +7,26 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban as kc
-from hermes_cli import kanban_db as kb
+from jimmy_cli import kanban as kc
+from jimmy_cli import kanban_db as kb
 
 
 @pytest.fixture
 def review_worker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> str:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    monkeypatch.setenv("HERMES_PROFILE", "builder")
-    monkeypatch.delenv("HERMES_DELEGATED_CHILD_CONTEXT", raising=False)
+    monkeypatch.setenv("JIMMY_PROFILE", "builder")
+    monkeypatch.delenv("JIMMY_DELEGATED_CHILD_CONTEXT", raising=False)
     kb._INITIALIZED_PATHS.clear()
     kb.init_db()
     with kb.connect() as conn:
         task_id = kb.create_task(conn, title="Review tool contract", assignee="builder")
         task = kb.claim_task(conn, task_id, claimer="builder:1")
         assert task is not None
-    monkeypatch.setenv("HERMES_KANBAN_TASK", task_id)
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(task.current_run_id))
+    monkeypatch.setenv("JIMMY_KANBAN_TASK", task_id)
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(task.current_run_id))
     return task_id
 
 
@@ -58,8 +58,8 @@ def test_review_tools_redact_handoff_and_route_changes(
         review = kb.claim_review_task(conn, review_worker, claimer="reviewer:1")
         assert review is not None
 
-    monkeypatch.setenv("HERMES_PROFILE", "reviewer")
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(review.current_run_id))
+    monkeypatch.setenv("JIMMY_PROFILE", "reviewer")
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(review.current_run_id))
     change_secret = "sk-" + "B" * 32
     changed = json.loads(
         tools._handle_request_changes({
@@ -95,7 +95,7 @@ def test_review_tools_are_gated_and_visible_to_kanban_workers(
 
     invalidate_check_fn_cache()
     definitions = registry.get_definitions(
-        set(resolve_toolset("hermes-cli")), quiet=True
+        set(resolve_toolset("jimmy-cli")), quiet=True
     )
     names = {
         definition["function"]["name"]
@@ -106,7 +106,7 @@ def test_review_tools_are_gated_and_visible_to_kanban_workers(
     assert "kanban_request_changes" in names
 
     from acp_adapter.tools import _POLISHED_TOOLS
-    from agent.transports.hermes_tools_mcp_server import EXPOSED_TOOLS
+    from agent.transports.jimmy_tools_mcp_server import EXPOSED_TOOLS
 
     assert "kanban_request_changes" in _POLISHED_TOOLS
     assert "kanban_request_changes" in EXPOSED_TOOLS
@@ -117,9 +117,9 @@ def test_review_cli_round_trip_preserves_handoff(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb._INITIALIZED_PATHS.clear()
     kb.init_db()
@@ -128,8 +128,8 @@ def test_review_cli_round_trip_preserves_handoff(
         task_id = kb.create_task(conn, title="CLI review", assignee="builder")
         implementation = kb.claim_task(conn, task_id, claimer="builder:1")
         assert implementation is not None
-    monkeypatch.setenv("HERMES_KANBAN_TASK", task_id)
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(implementation.current_run_id))
+    monkeypatch.setenv("JIMMY_KANBAN_TASK", task_id)
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(implementation.current_run_id))
 
     output = kc.run_slash(
         f"request-review {task_id} --summary 'ready for review' "
@@ -146,7 +146,7 @@ def test_review_cli_round_trip_preserves_handoff(
         assert handoff.metadata == {"tests_run": 3}
         review = kb.claim_review_task(conn, task_id, claimer="reviewer:1")
         assert review is not None
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(review.current_run_id))
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(review.current_run_id))
 
     output = kc.run_slash(
         f"request-changes {task_id} 'cover the malformed payload case'"
@@ -163,9 +163,9 @@ def test_domain_and_cli_review_handoffs_redact_before_persistence(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     secret = "ghp_" + "R" * 40
 
     with kb.connect() as conn:
@@ -227,7 +227,7 @@ def test_domain_and_cli_review_handoffs_redact_before_persistence(
 
 def test_worker_guidance_distinguishes_same_card_and_downstream_review() -> None:
     from agent.prompt_builder import KANBAN_GUIDANCE
-    from hermes_cli.config_defaults import DEFAULT_CONFIG
+    from jimmy_cli.config_defaults import DEFAULT_CONFIG
 
     assert "lists child IDs" in KANBAN_GUIDANCE
     assert "inspect those cards" in KANBAN_GUIDANCE
@@ -252,9 +252,9 @@ def test_cli_reopen_review_is_transition_first_and_redacts_reason(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     secret = "ghp_" + "Q" * 40
     with kb.connect() as conn:
         invalid_id = kb.create_task(conn, title="not review", assignee="builder")
@@ -286,9 +286,9 @@ def test_goal_mode_review_handoff_cannot_bypass_judge(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb._INITIALIZED_PATHS.clear()
     kb.init_db()
@@ -302,8 +302,8 @@ def test_goal_mode_review_handoff_cannot_bypass_judge(
         )
         claimed = kb.claim_task(conn, tool_task, claimer="builder:1")
         assert claimed is not None
-    monkeypatch.setenv("HERMES_KANBAN_TASK", tool_task)
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(claimed.current_run_id))
+    monkeypatch.setenv("JIMMY_KANBAN_TASK", tool_task)
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(claimed.current_run_id))
 
     from tools import kanban_tools as tools
 
@@ -337,11 +337,11 @@ def test_goal_mode_review_handoff_cannot_bypass_judge(
         )
         cli_claimed = kb.claim_task(conn, cli_task, claimer="builder:2")
         assert cli_claimed is not None
-    monkeypatch.setenv("HERMES_KANBAN_TASK", cli_task)
-    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", str(cli_claimed.current_run_id))
+    monkeypatch.setenv("JIMMY_KANBAN_TASK", cli_task)
+    monkeypatch.setenv("JIMMY_KANBAN_RUN_ID", str(cli_claimed.current_run_id))
 
     import agent.auxiliary_client as auxiliary_client
-    from hermes_cli import goals
+    from jimmy_cli import goals
 
     monkeypatch.setattr(
         auxiliary_client,
@@ -364,7 +364,7 @@ def test_goal_mode_review_handoff_cannot_bypass_judge(
 def test_goal_loop_stops_after_reviewer_requests_changes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from hermes_cli import goals
+    from jimmy_cli import goals
 
     monkeypatch.setattr(
         goals,
@@ -389,9 +389,9 @@ def test_cli_and_dashboard_receive_graph_aware_deadlock_diagnostic(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb._INITIALIZED_PATHS.clear()
     kb.init_db()

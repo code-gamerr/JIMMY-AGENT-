@@ -1,4 +1,4 @@
-"""Regression tests: `hermes sessions` error paths return non-zero (SES-04).
+"""Regression tests: `jimmy sessions` error paths return non-zero (SES-04).
 
 Before this, delete/rename not-found, prune bad-arg, blank rename, and import
 of a missing file all printed an error and returned exit 0 — a scripting/CI
@@ -11,7 +11,7 @@ from argparse import Namespace
 
 import pytest
 
-import hermes_cli.sessions_cmd as sc
+import jimmy_cli.sessions_cmd as sc
 
 
 def _args(action, **kw):
@@ -26,8 +26,8 @@ def _args(action, **kw):
 
 
 def test_delete_missing_returns_1(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    from hermes_state import SessionDB
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+    from jimmy_state import SessionDB
     SessionDB(tmp_path / "state.db")  # initialize an empty store
     rc = sc.cmd_sessions(_args("delete", session_id="nope_xyz"))
     assert rc == 1
@@ -35,15 +35,15 @@ def test_delete_missing_returns_1(tmp_path, monkeypatch, capsys):
 
 
 def test_rename_missing_returns_1(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    from hermes_state import SessionDB
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+    from jimmy_state import SessionDB
     SessionDB(tmp_path / "state.db")
     rc = sc.cmd_sessions(_args("rename", session_id="nope_xyz", title=["New"]))
     assert rc == 1
 
 
 def test_import_missing_file_returns_1(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     rc = sc.cmd_sessions(_args("import", path=str(tmp_path / "nope.jsonl")))
     assert rc == 1
     assert "file not found" in capsys.readouterr().out.lower()

@@ -1,4 +1,4 @@
-"""Regression tests for hermes_cli._ensure_utf8().
+"""Regression tests for jimmy_cli._ensure_utf8().
 
 Covers the crash class where the setup wizard (and other banner-printing
 commands) emit box-drawing characters and the ⚕ glyph, which raise
@@ -7,7 +7,7 @@ UnicodeEncodeError when stdout/stderr are bound to a non-UTF-8 codec.
 Historically the repair was gated on ``sys.platform == "win32"`` and only
 caught the Windows cp1252 case. Linux hosts with a latin-1 / C / POSIX locale
 (common on minimal Debian installs and Raspberry Pi) hit the identical crash
-in ``hermes setup`` because the repair returned early. See the Raspberry Pi
+in ``jimmy setup`` because the repair returned early. See the Raspberry Pi
 report: latin-1 locale → UnicodeEncodeError before the wizard could start.
 """
 
@@ -15,11 +15,11 @@ import io
 import os
 import sys
 
-import hermes_cli
+import jimmy_cli
 
 
 # The exact glyphs the setup wizard / banners print (setup.py ~line 2962+).
-_BANNER = "┌─────┐\n│ ⚕ Hermes │\n└─────┘"
+_BANNER = "┌─────┐\n│ ⚕ Jimmy │\n└─────┘"
 
 
 class _FakeStream:
@@ -57,7 +57,7 @@ class _FakeStream:
 def _run_with_streams(monkeypatch, out, err):
     monkeypatch.setattr(sys, "stdout", out, raising=False)
     monkeypatch.setattr(sys, "stderr", err, raising=False)
-    hermes_cli._ensure_utf8()
+    jimmy_cli._ensure_utf8()
 
 
 
@@ -101,7 +101,7 @@ def test_fallback_when_reconfigure_unavailable(monkeypatch, tmp_path):
     stream = _NoReconfigure()
     monkeypatch.setattr(sys, "stdout", stream, raising=False)
     monkeypatch.setattr(sys, "stderr", stream, raising=False)
-    hermes_cli._ensure_utf8()
+    jimmy_cli._ensure_utf8()
 
     # Replaced with a new UTF-8 stream object (not reconfigured in place).
     assert sys.stdout is not stream

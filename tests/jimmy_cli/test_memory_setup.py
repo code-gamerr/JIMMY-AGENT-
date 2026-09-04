@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import hermes_cli.memory_setup as memory_setup
-from hermes_cli.memory_setup import _CANCELLED, _curses_select
+import jimmy_cli.memory_setup as memory_setup
+from jimmy_cli.memory_setup import _CANCELLED, _curses_select
 
 
 
@@ -32,9 +32,9 @@ def test_cmd_setup_generic_choice_cancel_writes_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(memory_setup, "_get_available_providers", lambda: [("fake", "local", provider)])
     monkeypatch.setattr(memory_setup, "_curses_select", lambda *args, **kwargs: next(selections))
     monkeypatch.setattr(memory_setup, "_install_dependencies", install_dependencies)
-    monkeypatch.setattr(memory_setup, "get_hermes_home", lambda: tmp_path)
-    monkeypatch.setattr("hermes_cli.config.load_config", lambda: {"memory": {}})
-    monkeypatch.setattr("hermes_cli.config.save_config", save_config)
+    monkeypatch.setattr(memory_setup, "get_jimmy_home", lambda: tmp_path)
+    monkeypatch.setattr("jimmy_cli.config.load_config", lambda: {"memory": {}})
+    monkeypatch.setattr("jimmy_cli.config.save_config", save_config)
 
     memory_setup.cmd_setup(SimpleNamespace())
 
@@ -72,7 +72,7 @@ def test_write_env_vars_strips_line_separators_and_nul(tmp_path):
 
 def test_install_dependencies_force_reinstalls_versioned_specs(tmp_path, monkeypatch):
     """force=True hands every declared spec (version ranges intact) to pip,
-    so a downgraded/stripped bridge package is restored on hermes update."""
+    so a downgraded/stripped bridge package is restored on jimmy update."""
     import yaml as _yaml
 
     plugin_dir = tmp_path / "mem0"
@@ -101,10 +101,10 @@ def test_install_dependencies_force_reinstalls_versioned_specs(tmp_path, monkeyp
 def test_cmd_status_memory_tool_gate_disabled(capsys, monkeypatch):
     """When both memory stores are disabled, Memory status reports memory tool as disabled."""
     _cfg = {"memory": {"memory_enabled": False, "user_profile_enabled": False}}
-    monkeypatch.setattr("hermes_cli.config.load_config", lambda: _cfg)
+    monkeypatch.setattr("jimmy_cli.config.load_config", lambda: _cfg)
     # check_memory_requirements() reads the readonly loader, not load_config.
     monkeypatch.setattr(
-        "hermes_cli.config.load_config_readonly", lambda: _cfg, raising=False
+        "jimmy_cli.config.load_config_readonly", lambda: _cfg, raising=False
     )
     monkeypatch.setattr(memory_setup, "_get_available_providers", lambda: [])
 
@@ -119,9 +119,9 @@ def test_cmd_status_memory_tool_gate_disabled(capsys, monkeypatch):
 def test_cmd_status_memory_tool_gate_enabled(capsys, monkeypatch):
     """When at least one memory store is enabled, Memory status reports memory tool as enabled."""
     _cfg = {"memory": {"memory_enabled": True, "user_profile_enabled": False}}
-    monkeypatch.setattr("hermes_cli.config.load_config", lambda: _cfg)
+    monkeypatch.setattr("jimmy_cli.config.load_config", lambda: _cfg)
     monkeypatch.setattr(
-        "hermes_cli.config.load_config_readonly", lambda: _cfg, raising=False
+        "jimmy_cli.config.load_config_readonly", lambda: _cfg, raising=False
     )
     monkeypatch.setattr(memory_setup, "_get_available_providers", lambda: [])
 

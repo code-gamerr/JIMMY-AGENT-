@@ -1,6 +1,6 @@
 # Graphy Codebase Analysis
 
-## Project: c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main
+## Project: c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main
 
 ### File Structure Summary
 - Total Files: 9871
@@ -202,7 +202,7 @@
    │  │  ├── codex_app_server.py
    │  │  ├── codex_app_server_session.py
    │  │  ├── codex_event_projector.py
-   │  │  ├── hermes_tools_mcp_server.py
+   │  │  ├── jimmy_tools_mcp_server.py
    │  │  ├── types.py
    │  │  └── __init__.py
    │  ├── tts_provider.py
@@ -259,7 +259,7 @@
    │  │  │  ├── capabilities
    │  │  │  │  └── default.json
    │  │  │  ├── Cargo.toml
-   │  │  │  ├── hermes-setup.manifest
+   │  │  │  ├── jimmy-setup.manifest
    │  │  │  ├── icons
    │  │  │  │  ├── 128x128.png
    │  │  │  │  ├── 128x128@2x.png
@@ -525,8 +525,8 @@
    │  │  │  ├── window-state.ts
    │  │  │  ├── windows-child-options.test.ts
    │  │  │  ├── windows-child-options.ts
-   │  │  │  ├── windows-hermes-path.test.ts
-   │  │  │  ├── windows-hermes-path.ts
+   │  │  │  ├── windows-jimmy-path.test.ts
+   │  │  │  ├── windows-jimmy-path.ts
    │  │  │  ├── windows-remote-lifecycle.test.ts
    │  │  │  ├── windows-remote-lifecycle.ts
    │  │  │  ├── windows-remote-live.test.ts
@@ -555,17 +555,17 @@
    │  │  │  ├── apple-touch-icon.png
    │  │  │  ├── ds-assets
    │  │  │  │  └── filler-bg0.jpg
-   │  │  │  ├── hermes-frames
-   │  │  │  │  ├── hermes-frame-0.png
-   │  │  │  │  ├── hermes-frame-1.png
-   │  │  │  │  ├── hermes-frame-2.png
-   │  │  │  │  ├── hermes-frame-3.png
-   │  │  │  │  ├── hermes-frame-4.png
-   │  │  │  │  ├── hermes-frame-5.png
-   │  │  │  │  ├── hermes-frame-6.png
-   │  │  │  │  └── hermes-frame-7.png
-   │  │  │  ├── hermes-sprite.png
-   │  │  │  ├── hermes.png
+   │  │  │  ├── jimmy-frames
+   │  │  │  │  ├── jimmy-frame-0.png
+   │  │  │  │  ├── jimmy-frame-1.png
+   │  │  │  │  ├── jimmy-frame-2.png
+   │  │  │  │  ├── jimmy-frame-3.png
+   │  │  │  │  ├── jimmy-frame-4.png
+   │  │  │  │  ├── jimmy-frame-5.png
+   │  │  │  │  ├── jimmy-frame-6.png
+   │  │  │  │  └── jimmy-frame-7.png
+   │  │  │  ├── jimmy-sprite.png
+   │  │  │  ├── jimmy.png
    │  │  │  └── nous-girl.jpg
    │  │  ├── README.md
    │  │  ├── scripts
@@ -1099,8 +1099,8 @@
    │  │  │  │  │  │  ├── use-context-suggestions.ts
    │  │  │  │  │  │  ├── use-cwd-actions.test.tsx
    │  │  │  │  │  │  ├── use-cwd-actions.ts
-   │  │  │  │  │  │  ├── use-hermes-config.test.ts
-   │  │  │  │  │  │  ├── use-hermes-config.ts
+   │  │  │  │  │  │  ├── use-jimmy-config.test.ts
+   │  │  │  │  │  │  ├── use-jimmy-config.ts
    │  │  │  │  │  │  ├── use-message-stream
    │  │  │  │  │  │  │  ├── agent-init-error.test.tsx
    │  │  │  │  │  │  │  ├── approval-mode-event.test.tsx
@@ -1733,12 +1733,12 @@
    │  │  │  │  ├── JetBrainsMono-Italic.woff2
    │  │  │  │  └── JetBrainsMono-Regular.woff2
    │  │  │  ├── global.d.ts
-   │  │  │  ├── hermes-capability-scope.test.ts
-   │  │  │  ├── hermes-cron-scope.test.ts
-   │  │  │  ├── hermes-parity.test.ts
-   │  │  │  ├── hermes-profile-scope.test.ts
-   │  │  │  ├── hermes.test.ts
-   │  │  │  ├── hermes.ts
+   │  │  │  ├── jimmy-capability-scope.test.ts
+   │  │  │  ├── jimmy-cron-scope.test.ts
+   │  │  │  ├── jimmy-parity.test.ts
+   │  │  │  ├── jimmy-profile-scope.test.ts
+   │  │  │  ├── jimmy.test.ts
+   │  │  │  ├── jimmy.ts
    │  │  │  ├── hooks
    │  │  │  │  ├── use-delayed-true.ts
    │  │  │  │  ├── use-grab-scroll.ts
@@ -1834,8 +1834,8 @@
    │  │  │  │  ├── generated-images.ts
    │  │  │  │  ├── guest-pointer-guard.ts
    │  │  │  │  ├── haptics.ts
-   │  │  │  │  ├── hermes-open-target.test.ts
-   │  │  │  │  ├── hermes-open-target.ts
+   │  │  │  │  ├── jimmy-open-target.test.ts
+   │  │  │  │  ├── jimmy-open-target.ts
    │  │  │  │  ├── icons.ts
    │  │  │  │  ├── image-resize.test.ts
    │  │  │  │  ├── image-resize.ts
@@ -2028,7 +2028,7 @@
    │  │  │  │  │  └── plugin.tsx
    │  │  │  │  ├── hello-runtime
    │  │  │  │  │  └── plugin.runtime.js
-   │  │  │  │  ├── hermes-bots
+   │  │  │  │  ├── jimmy-bots
    │  │  │  │  │  ├── LICENSE
    │  │  │  │  │  ├── plugin.js
    │  │  │  │  │  └── tests
@@ -2359,7 +2359,7 @@
    │  │  │  │  ├── vscode.test.ts
    │  │  │  │  └── vscode.ts
    │  │  │  ├── types
-   │  │  │  │  └── hermes.ts
+   │  │  │  │  └── jimmy.ts
    │  │  │  ├── vite-env.d.ts
    │  │  │  └── webhooks-rest.test.ts
    │  │  ├── tsconfig.e2e.json
@@ -2452,7 +2452,7 @@
    │  │  ├── adybag14@gmail.com
    │  │  ├── afgl_mk93@icloud.com
    │  │  ├── afournier@nvidia.com
-   │  │  ├── agent@hermes.dev
+   │  │  ├── agent@jimmy.dev
    │  │  ├── agent@openclaw.local
    │  │  ├── agents@joinsensie.com
    │  │  ├── ahamoudhy@gmail.com
@@ -2533,7 +2533,7 @@
    │  │  ├── checo520@outlook.com
    │  │  ├── chelsealong@126.com
    │  │  ├── chengxizhou6@gmail.com
-   │  │  ├── chenjin@hermes.local
+   │  │  ├── chenjin@jimmy.local
    │  │  ├── chenyang.yl@alibaba-inc.com
    │  │  ├── chris@scalelean.com
    │  │  ├── cicav@users.noreply.github.com
@@ -2678,12 +2678,12 @@
    │  │  ├── hellofrommorgan@users.noreply.github.com
    │  │  ├── henrino3@gmail.com
    │  │  ├── hereicq@users.noreply.github.com
-   │  │  ├── hermes-agent@nous.local
-   │  │  ├── hermes-agent@nousresearch.com
-   │  │  ├── hermes-agent@users.noreply.local
-   │  │  ├── hermes@kortify.local
-   │  │  ├── hermes@server.local
-   │  │  ├── hermesagent424@gmail.com
+   │  │  ├── jimmy-agent@nous.local
+   │  │  ├── jimmy-agent@jimmy-agent.com
+   │  │  ├── jimmy-agent@users.noreply.local
+   │  │  ├── jimmy@kortify.local
+   │  │  ├── jimmy@server.local
+   │  │  ├── jimmyagent424@gmail.com
    │  │  ├── hfsearcy@gmail.com
    │  │  ├── hi@tairasim.com
    │  │  ├── hill.chitsanupong@gmail.com
@@ -2720,7 +2720,7 @@
    │  │  ├── jeff.mettel@gmail.com
    │  │  ├── jeffrey.ying86@live.com
    │  │  ├── jerry.ytp@gmail.com
-   │  │  ├── jerry@hermes.local
+   │  │  ├── jerry@jimmy.local
    │  │  ├── jesse.casco@gmail.com
    │  │  ├── jethachan@gmail.com
    │  │  ├── jevin@jevin.org
@@ -2800,7 +2800,7 @@
    │  │  ├── lucaskvasir@duck.com
    │  │  ├── lucasxavier926@gmail.com
    │  │  ├── lumina@douno.it
-   │  │  ├── luna@hermes.local
+   │  │  ├── luna@jimmy.local
    │  │  ├── luoxiao6645@gmail.com
    │  │  ├── ly-wang19@users.noreply.github.com
    │  │  ├── m.varnskuehler@gmail.com
@@ -2826,7 +2826,7 @@
    │  │  ├── matvey.sakhnenko03@icloud.com
    │  │  ├── MaxFreedomPollard@users.noreply.github.com
    │  │  ├── mbrooks@slack-corp.com
-   │  │  ├── mchermes@edu.dreamcatcher.ai
+   │  │  ├── mcjimmy@edu.dreamcatcher.ai
    │  │  ├── mcjoys@users.noreply.github.com
    │  │  ├── megusta52@proton.me
    │  │  ├── mehmet.kar@std.yildiz.edu.tr
@@ -2877,7 +2877,7 @@
    │  │  ├── normanking@me.com
    │  │  ├── nsovipgl@gmail.com
    │  │  ├── nwadwa@gmail.com
-   │  │  ├── nyaruko@hermes
+   │  │  ├── nyaruko@jimmy
    │  │  ├── nypyouxiang@163.com
    │  │  ├── ohs2251@naver.com
    │  │  ├── ojassharma16@gmail.com
@@ -2898,7 +2898,7 @@
    │  │  ├── phixxation@gmail.com
    │  │  ├── phm543@gmail.com
    │  │  ├── phull@phullcutz.de
-   │  │  ├── pink@macmini-hermes.local
+   │  │  ├── pink@macmini-jimmy.local
    │  │  ├── piyushbag4@gmail.com
    │  │  ├── pooyan6@gmail.com
    │  │  ├── pouya.ataei.7@gmail.com
@@ -2959,7 +2959,7 @@
    │  │  ├── seze@andrew.cmu.edu
    │  │  ├── shag@agentmail.to
    │  │  ├── shellybotmoyer@users.noreply.github.com
-   │  │  ├── shikanga-hermes@shikanga.co.uk
+   │  │  ├── shikanga-jimmy@shikanga.co.uk
    │  │  ├── shiqiming.sqm@taobao.com
    │  │  ├── shubhambc09@gmail.com
    │  │  ├── siage@139.com
@@ -2972,7 +2972,7 @@
    │  │  ├── skywind5487@gmail.com
    │  │  ├── soheil.fakour@gmail.com
    │  │  ├── songotenukraine@gmail.com
-   │  │  ├── sophia@hermes.local
+   │  │  ├── sophia@jimmy.local
    │  │  ├── sora.bluesky.dev@gmail.com
    │  │  ├── soundbrokaz@kakao.com
    │  │  ├── spark@channel.inc
@@ -3028,7 +3028,7 @@
    │  │  ├── vanshgilhotra8885@gmail.com
    │  │  ├── venkatbalaji2004@gmail.com
    │  │  ├── veryverybigdog@gmail.com
-   │  │  ├── victor@nousresearch.com
+   │  │  ├── victor@jimmy-agent.com
    │  │  ├── vikyw89@gmail.com
    │  │  ├── vinoth12940@users.noreply.github.com
    │  │  ├── viteballoons@gmail.com
@@ -3117,7 +3117,7 @@
    │  │  └── 02-reconcile-profiles
    │  ├── entrypoint-dispatch.sh
    │  ├── entrypoint.sh
-   │  ├── hermes-exec-shim.sh
+   │  ├── jimmy-exec-shim.sh
    │  ├── main-wrapper.sh
    │  ├── s6-rc.d
    │  │  ├── dashboard
@@ -3126,7 +3126,7 @@
    │  │  │  ├── finish
    │  │  │  ├── run
    │  │  │  └── type
-   │  │  ├── main-hermes
+   │  │  ├── main-jimmy
    │  │  │  ├── dependencies.d
    │  │  │  │  └── base
    │  │  │  ├── run
@@ -3134,7 +3134,7 @@
    │  │  └── user
    │  │    └── contents.d
    │  │       ├── dashboard
-   │  │       └── main-hermes
+   │  │       └── main-jimmy
    │  ├── SOUL.md
    │  ├── stage2-hook.sh
    │  └── tini-shim.sh
@@ -3149,7 +3149,7 @@
    │  │  ├── kanban-dialogs
    │  │  │  └── index.html
    │  │  └── profile-builder.md
-   │  ├── hermes-kanban-v1-spec.pdf
+   │  ├── jimmy-kanban-v1-spec.pdf
    │  ├── kanban
    │  │  └── multi-gateway.md
    │  ├── micro-compaction.md
@@ -3310,9 +3310,9 @@
    │  ├── wake.py
    │  ├── whatsapp_identity.py
    │  └── __init__.py
-  ├── hermes
-  ├── hermes_bootstrap.py
-  ├── hermes_cli
+  ├── jimmy
+  ├── jimmy_bootstrap.py
+  ├── jimmy_cli
    │  ├── active_sessions.py
    │  ├── agent_import.py
    │  ├── agent_plugins.py
@@ -3441,8 +3441,8 @@
    │  │  ├── relay_runtime.py
    │  │  ├── relay_shared_metrics.py
    │  │  ├── schemas
-   │  │  │  ├── hermes.shared_metrics.v1.schema.json
-   │  │  │  └── hermes.shared_metrics.v2.schema.json
+   │  │  │  ├── jimmy.shared_metrics.v1.schema.json
+   │  │  │  └── jimmy.shared_metrics.v2.schema.json
    │  │  ├── shared_metrics.py
    │  │  ├── shared_metrics_contract.py
    │  │  ├── shared_metrics_subscriber.py
@@ -3612,14 +3612,14 @@
    │  ├── _startup_fast.py
    │  ├── _subprocess_compat.py
    │  └── __init__.py
-  ├── hermes_constants.py
-  ├── hermes_logging.py
-  ├── hermes_state.py
-  ├── hermes_state_common.py
-  ├── hermes_state_portability.py
-  ├── hermes_state_schema.py
-  ├── hermes_state_search.py
-  ├── hermes_time.py
+  ├── jimmy_constants.py
+  ├── jimmy_logging.py
+  ├── jimmy_state.py
+  ├── jimmy_state_common.py
+  ├── jimmy_state_portability.py
+  ├── jimmy_state_schema.py
+  ├── jimmy_state_search.py
+  ├── jimmy_time.py
   ├── LICENSE
   ├── locales
    │  ├── af.yaml
@@ -3662,7 +3662,7 @@
    │  ├── configMergeScript.nix
    │  ├── desktop.nix
    │  ├── devShell.nix
-   │  ├── hermes-agent.nix
+   │  ├── jimmy-agent.nix
    │  ├── homeManagerModules.nix
    │  ├── lib.nix
    │  ├── moduleCommon.nix
@@ -3973,7 +3973,7 @@
    │  │  │  └── SKILL.md
    │  │  ├── docker-management
    │  │  │  └── SKILL.md
-   │  │  ├── hermes-s6-container-supervision
+   │  │  ├── jimmy-s6-container-supervision
    │  │  │  └── SKILL.md
    │  │  ├── inference-sh-cli
    │  │  │  ├── references
@@ -4078,7 +4078,7 @@
    │  │  ├── DESCRIPTION.md
    │  │  └── openclaw-migration
    │  │    ├── scripts
-   │  │     │  └── openclaw_to_hermes.py
+   │  │     │  └── openclaw_to_jimmy.py
    │  │    └── SKILL.md
    │  ├── mlops
    │  │  ├── accelerate
@@ -4601,7 +4601,7 @@
    │  │  ├── SKILL.md
    │  │  ├── tools.py
    │  │  └── __init__.py
-   │  ├── hermes-achievements
+   │  ├── jimmy-achievements
    │  │  ├── dashboard
    │  │  │  ├── dist
    │  │  │  │  ├── index.js
@@ -4646,7 +4646,7 @@
    │  │  │  ├── manifest.json
    │  │  │  └── plugin_api.py
    │  │  └── systemd
-   │  │    └── hermes-kanban-dispatcher.service
+   │  │    └── jimmy-kanban-dispatcher.service
    │  ├── memory
    │  │  ├── byterover
    │  │  │  ├── plugin.yaml
@@ -5051,7 +5051,7 @@
    │  ├── docker_config_migrate.py
    │  ├── docker_rebootstrap_nous_session.py
    │  ├── generate_conformance_vectors.py
-   │  ├── hermes-gateway
+   │  ├── jimmy-gateway
    │  ├── install.cmd
    │  ├── install.ps1
    │  ├── install.sh
@@ -5108,7 +5108,7 @@
    │    └── package.json
   ├── SECURITY.es.md
   ├── SECURITY.md
-  ├── setup-hermes.sh
+  ├── setup-jimmy.sh
   ├── setup.py
   ├── skills
    │  ├── apple
@@ -5129,7 +5129,7 @@
    │  │  ├── computer-use
    │  │  │  └── SKILL.md
    │  │  ├── DESCRIPTION.md
-   │  │  ├── hermes-agent
+   │  │  ├── jimmy-agent
    │  │  │  ├── references
    │  │  │  │  ├── background-systems.md
    │  │  │  │  ├── cli-reference.md
@@ -5565,7 +5565,7 @@
    │  │  │  │  ├── google_api.py
    │  │  │  │  ├── gws_bridge.py
    │  │  │  │  ├── setup.py
-   │  │  │  │  └── _hermes_home.py
+   │  │  │  │  └── _jimmy_home.py
    │  │  │  └── SKILL.md
    │  │  ├── maps
    │  │  │  ├── scripts
@@ -5660,7 +5660,7 @@
    │  │  │  │  └── grounding-rationale.md
    │  │  │  ├── scripts
    │  │  │  │  ├── sources.py
-   │  │  │  │  └── _hermes_home.py
+   │  │  │  │  └── _jimmy_home.py
    │  │  │  └── SKILL.md
    │  │  ├── llm-wiki
    │  │  │  └── SKILL.md
@@ -5744,9 +5744,9 @@
    │     │  ├── SKILL.md
    │     │  └── templates
    │     │    └── dogfood-report-template.md
-   │    ├── hermes-agent-skill-authoring
+   │    ├── jimmy-agent-skill-authoring
    │     │  └── SKILL.md
-   │    ├── inspecting-hermes-desktop-dom
+   │    ├── inspecting-jimmy-desktop-dom
    │     │  └── SKILL.md
    │    ├── node-inspect-debugger
    │     │  └── SKILL.md
@@ -6203,7 +6203,7 @@
    │  │  │  ├── test_codex_app_server_session.py
    │  │  │  ├── test_codex_event_projector.py
    │  │  │  ├── test_codex_transport.py
-   │  │  │  ├── test_hermes_tools_mcp_server.py
+   │  │  │  ├── test_jimmy_tools_mcp_server.py
    │  │  │  ├── test_meta_codex_cache.py
    │  │  │  ├── test_reasoning_effort_sibling_sites.py
    │  │  │  ├── test_transport.py
@@ -7162,7 +7162,7 @@
    │  │  ├── test_yuanbao_media_ssrf.py
    │  │  ├── _plugin_adapter_loader.py
    │  │  └── __init__.py
-   │  ├── hermes_cli
+   │  ├── jimmy_cli
    │  │  ├── conftest.py
    │  │  ├── conftest_dashboard_auth.py
    │  │  ├── fixtures
@@ -7361,8 +7361,8 @@
    │  │  ├── test_early_recovery.py
    │  │  ├── test_ensure_acp_launcher.py
    │  │  ├── test_ensure_gateway_service.py
-   │  │  ├── test_ensure_hermes_home_memo.py
-   │  │  ├── test_ensure_hermes_home_uid_34107.py
+   │  │  ├── test_ensure_jimmy_home_memo.py
+   │  │  ├── test_ensure_jimmy_home_uid_34107.py
    │  │  ├── test_ensure_utf8_locale.py
    │  │  ├── test_env_custom_keys.py
    │  │  ├── test_env_export_line_lifecycle.py
@@ -7542,7 +7542,7 @@
    │  │  ├── test_nous_auth_keepalive.py
    │  │  ├── test_nous_auth_status_cache.py
    │  │  ├── test_nous_billing_request.py
-   │  │  ├── test_nous_hermes_non_agentic.py
+   │  │  ├── test_nous_jimmy_non_agentic.py
    │  │  ├── test_nous_inference_url_validation.py
    │  │  ├── test_nous_portal_staging_allowlist.py
    │  │  ├── test_nous_reasoning_metadata.py
@@ -7686,7 +7686,7 @@
    │  │  ├── test_setup.py
    │  │  ├── test_setup_agent_settings.py
    │  │  ├── test_setup_blank_slate.py
-   │  │  ├── test_setup_hermes_script.py
+   │  │  ├── test_setup_jimmy_script.py
    │  │  ├── test_setup_hidden_env.py
    │  │  ├── test_setup_irc.py
    │  │  ├── test_setup_matrix_e2ee.py
@@ -7848,7 +7848,7 @@
    │  │  ├── test_xiaomi_provider.py
    │  │  ├── test_yolo_startup_order.py
    │  │  └── __init__.py
-   │  ├── hermes_state
+   │  ├── jimmy_state
    │  │  ├── test_append_messages_batch.py
    │  │  ├── test_aux_usage_accounting.py
    │  │  ├── test_conversation_root.py
@@ -8271,7 +8271,7 @@
    │  │  ├── test_google_workspace_setup_deps.py
    │  │  ├── test_grounded_citations_skill.py
    │  │  ├── test_har_derived_api_client_skill.py
-   │  │  ├── test_hermes_agent_skill.py
+   │  │  ├── test_jimmy_agent_skill.py
    │  │  ├── test_hyperliquid_skill.py
    │  │  ├── test_mcp_oauth_remote_gateway_skill.py
    │  │  ├── test_meeting_action_items_skill.py
@@ -8355,15 +8355,15 @@
    │  ├── test_gateway_streaming_nested_config.py
    │  ├── test_get_tool_definitions_cache_isolation.py
    │  ├── test_gitlock.py
-   │  ├── test_hermes_bootstrap.py
-   │  ├── test_hermes_constants.py
-   │  ├── test_hermes_home_profile_warning.py
-   │  ├── test_hermes_logging.py
-   │  ├── test_hermes_state.py
-   │  ├── test_hermes_state_compression_busy_retry.py
-   │  ├── test_hermes_state_compression_locks.py
-   │  ├── test_hermes_state_readonly_preflight.py
-   │  ├── test_hermes_state_wal_fallback.py
+   │  ├── test_jimmy_bootstrap.py
+   │  ├── test_jimmy_constants.py
+   │  ├── test_jimmy_home_profile_warning.py
+   │  ├── test_jimmy_logging.py
+   │  ├── test_jimmy_state.py
+   │  ├── test_jimmy_state_compression_busy_retry.py
+   │  ├── test_jimmy_state_compression_locks.py
+   │  ├── test_jimmy_state_readonly_preflight.py
+   │  ├── test_jimmy_state_wal_fallback.py
    │  ├── test_hermetic_side_effect_guards.py
    │  ├── test_honcho_client_concurrency.py
    │  ├── test_honcho_client_config.py
@@ -8671,7 +8671,7 @@
    │  │  ├── test_gnu_long_option_abbreviation_bypass.py
    │  │  ├── test_hardline_blocklist.py
    │  │  ├── test_heartbeat_stale_thresholds.py
-   │  │  ├── test_hermes_subprocess_env.py
+   │  │  ├── test_jimmy_subprocess_env.py
    │  │  ├── test_hidden_dir_filter.py
    │  │  ├── test_homeassistant_tool.py
    │  │  ├── test_hook_output_spill.py
@@ -9233,8 +9233,8 @@
    │  ├── vision_tools.py
    │  ├── voice_mode.py
    │  ├── wakewords
-   │  │  ├── hey_hermes.onnx
-   │  │  ├── hey_hermes.tflite
+   │  │  ├── hey_jimmy.onnx
+   │  │  ├── hey_jimmy.tflite
    │  │  └── README.md
    │  ├── wake_word.py
    │  ├── website_policy.py
@@ -9281,7 +9281,7 @@
    │  ├── eslint.config.mjs
    │  ├── package.json
    │  ├── packages
-   │  │  └── hermes-ink
+   │  │  └── jimmy-ink
    │  │    ├── ambient.d.ts
    │  │    ├── index.d.ts
    │  │    ├── index.js
@@ -9660,7 +9660,7 @@
    │  │  │  └── userWidgets.ts
    │  │  ├── theme.ts
    │  │  ├── types
-   │  │  │  └── hermes-ink.d.ts
+   │  │  │  └── jimmy-ink.d.ts
    │  │  ├── types.ts
    │  │  └── __tests__
    │  │    ├── activeSessionSwitcher.test.ts
@@ -9814,7 +9814,7 @@
    │  │  │  ├── ChatSidebar.tsx
    │  │  │  ├── ConfirmDialog.tsx
    │  │  │  ├── DeleteConfirmDialog.tsx
-   │  │  │  ├── HermesConsoleModal.tsx
+   │  │  │  ├── JimmyConsoleModal.tsx
    │  │  │  ├── LanguageSwitcher.tsx
    │  │  │  ├── Markdown.tsx
    │  │  │  ├── MemoryPressureBanner.test.tsx
@@ -10052,15 +10052,15 @@
       │  │  ├── operate-teams-meeting-pipeline.md
       │  │  ├── pipe-script-output.md
       │  │  ├── python-library.md
-      │  │  ├── run-hermes-with-nous-portal.md
+      │  │  ├── run-jimmy-with-nous-portal.md
       │  │  ├── run-nemotron-3-ultra-free.md
-      │  │  ├── secure-hermes-on-a-work-machine.md
+      │  │  ├── secure-jimmy-on-a-work-machine.md
       │  │  ├── team-telegram-assistant.md
       │  │  ├── tips.md
       │  │  ├── troubleshooting-agent-quality.md
-      │  │  ├── use-mcp-with-hermes.md
-      │  │  ├── use-soul-with-hermes.md
-      │  │  ├── use-voice-mode-with-hermes.md
+      │  │  ├── use-mcp-with-jimmy.md
+      │  │  ├── use-soul-with-jimmy.md
+      │  │  ├── use-voice-mode-with-jimmy.md
       │  │  ├── webhook-github-pr-review.md
       │  │  ├── work-with-skills.md
       │  │  ├── xai-grok-oauth.md
@@ -10212,7 +10212,7 @@
       │  │  │  │  │  ├── autonomous-ai-agents-claude-code.md
       │  │  │  │  │  ├── autonomous-ai-agents-codex.md
       │  │  │  │  │  ├── autonomous-ai-agents-computer-use.md
-      │  │  │  │  │  ├── autonomous-ai-agents-hermes-agent.md
+      │  │  │  │  │  ├── autonomous-ai-agents-jimmy-agent.md
       │  │  │  │  │  └── autonomous-ai-agents-opencode.md
       │  │  │  │  ├── creative
       │  │  │  │  │  ├── creative-architecture-diagram.md
@@ -10286,8 +10286,8 @@
       │  │  │  │  │  └── social-media-xurl.md
       │  │  │  │  └── software-development
       │  │  │  │    ├── software-development-dogfood.md
-      │  │  │  │    ├── software-development-hermes-agent-skill-authoring.md
-      │  │  │  │    ├── software-development-inspecting-hermes-desktop-dom.md
+      │  │  │  │    ├── software-development-jimmy-agent-skill-authoring.md
+      │  │  │  │    ├── software-development-inspecting-jimmy-desktop-dom.md
       │  │  │  │    ├── software-development-node-inspect-debugger.md
       │  │  │  │    ├── software-development-plan.md
       │  │  │  │    ├── software-development-python-debugpy.md
@@ -10331,7 +10331,7 @@
       │  │  │    ├── devops
       │  │  │     │  ├── devops-actual-setup.md
       │  │  │     │  ├── devops-docker-management.md
-      │  │  │     │  ├── devops-hermes-s6-container-supervision.md
+      │  │  │     │  ├── devops-jimmy-s6-container-supervision.md
       │  │  │     │  ├── devops-inference-sh-cli.md
       │  │  │     │  ├── devops-pinggy-tunnel.md
       │  │  │     │  └── devops-watchers.md
@@ -10501,12 +10501,12 @@
       │           │  ├── operate-teams-meeting-pipeline.md
       │           │  ├── pipe-script-output.md
       │           │  ├── python-library.md
-      │           │  ├── run-hermes-with-nous-portal.md
+      │           │  ├── run-jimmy-with-nous-portal.md
       │           │  ├── team-telegram-assistant.md
       │           │  ├── tips.md
-      │           │  ├── use-mcp-with-hermes.md
-      │           │  ├── use-soul-with-hermes.md
-      │           │  ├── use-voice-mode-with-hermes.md
+      │           │  ├── use-mcp-with-jimmy.md
+      │           │  ├── use-soul-with-jimmy.md
+      │           │  ├── use-voice-mode-with-jimmy.md
       │           │  ├── webhook-github-pr-review.md
       │           │  ├── work-with-skills.md
       │           │  └── xai-grok-oauth.md
@@ -10627,7 +10627,7 @@
       │           │  │  │  ├── autonomous-ai-agents
       │           │  │  │  │  ├── autonomous-ai-agents-claude-code.md
       │           │  │  │  │  ├── autonomous-ai-agents-codex.md
-      │           │  │  │  │  ├── autonomous-ai-agents-hermes-agent.md
+      │           │  │  │  │  ├── autonomous-ai-agents-jimmy-agent.md
       │           │  │  │  │  └── autonomous-ai-agents-opencode.md
       │           │  │  │  ├── creative
       │           │  │  │  │  ├── creative-architecture-diagram.md
@@ -10687,7 +10687,7 @@
       │           │  │  │  │  └── social-media-xurl.md
       │           │  │  │  └── software-development
       │           │  │  │    ├── software-development-dogfood.md
-      │           │  │  │    ├── software-development-hermes-agent-skill-authoring.md
+      │           │  │  │    ├── software-development-jimmy-agent-skill-authoring.md
       │           │  │  │    ├── software-development-node-inspect-debugger.md
       │           │  │  │    ├── software-development-plan.md
       │           │  │  │    ├── software-development-python-debugpy.md
@@ -10864,7 +10864,7 @@
       │  │  ├── favicon-32x32.png
       │  │  ├── favicon.ico
       │  │  ├── favicon.svg
-      │  │  ├── hermes-agent-banner.png
+      │  │  ├── jimmy-agent-banner.png
       │  │  ├── kanban-tutorial
       │  │  │  ├── 01-board-overview.png
       │  │  │  ├── 02-board-flat.png
@@ -10884,25 +10884,25 @@
 ```
 
 ### File List
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\AGENTS.md
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\batch_runner.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\cli-config.yaml.example
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\cli.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\constraints-termux.txt
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\CONTRIBUTING.es.md
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\CONTRIBUTING.md
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\default.tar.gz
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\docker-compose.windows.yml
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\docker-compose.yml
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\Dockerfile
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\eslint.config.shared.mjs
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\flake.lock
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\flake.nix
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes_bootstrap.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes_constants.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes_logging.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes_state.py
-- c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\hermes_state_common.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\AGENTS.md
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\batch_runner.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\cli-config.yaml.example
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\cli.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\constraints-termux.txt
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\CONTRIBUTING.es.md
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\CONTRIBUTING.md
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\default.tar.gz
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\docker-compose.windows.yml
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\docker-compose.yml
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\Dockerfile
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\eslint.config.shared.mjs
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\flake.lock
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\flake.nix
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy_bootstrap.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy_constants.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy_logging.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy_state.py
+- c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\jimmy_state_common.py
 
 ... and 9851 more files

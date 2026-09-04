@@ -133,7 +133,7 @@ def _get_direct_firecrawl_config() -> Optional[tuple]:
     accepts anonymous rate-limited requests). Keyless requires the explicit
     selection so an unconfigured install never silently routes to it.
     """
-    from hermes_cli.config import get_env_value
+    from jimmy_cli.config import get_env_value
 
     api_key = (get_env_value("FIRECRAWL_API_KEY") or "").strip()
     api_url = (get_env_value("FIRECRAWL_API_URL") or "").strip().rstrip("/")
@@ -174,7 +174,7 @@ def _use_keyless_ring() -> bool:
     keyless tier isn't disabled or pinned paid. Keyed/self-hosted setups
     never reach the ring.
     """
-    from hermes_cli.config import get_env_value
+    from jimmy_cli.config import get_env_value
 
     if (get_env_value("FIRECRAWL_API_KEY") or "").strip():
         return False
@@ -232,7 +232,7 @@ def check_firecrawl_api_key() -> bool:
     """Return True when direct Firecrawl (or keyless explicit selection) is usable.
 
     Re-exported by :mod:`tools.web_tools` for backward compatibility with
-    existing tests and the ``hermes tools`` setup flow.
+    existing tests and the ``jimmy tools`` setup flow.
     """
     return _has_direct_firecrawl_config()
 

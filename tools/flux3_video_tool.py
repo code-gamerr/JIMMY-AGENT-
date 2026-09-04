@@ -595,7 +595,7 @@ def _default_directory():
     On a messaging platform the user has no filesystem — the only way they
     ever see the clip is as an attachment — so it goes to the gateway's own
     video cache, which is an unconditionally allowed delivery root. Downloads
-    is not: an operator running HERMES_MEDIA_DELIVERY_STRICT=1 delivers only
+    is not: an operator running JIMMY_MEDIA_DELIVERY_STRICT=1 delivers only
     from the cache roots, so a clip saved to Downloads there is dropped on the
     way out and the user is shown a reply with nothing attached.
     """
@@ -603,9 +603,9 @@ def _default_directory():
 
     if _delivers_as_an_attachment():
         try:
-            from hermes_constants import get_hermes_dir
+            from jimmy_constants import get_jimmy_dir
 
-            return get_hermes_dir("cache/videos", "video_cache")
+            return get_jimmy_dir("cache/videos", "video_cache")
         except Exception:
             logger.debug("Could not resolve the video cache dir; using Downloads", exc_info=True)
     downloads = Path.home() / "Downloads"
@@ -808,7 +808,7 @@ def _has_nous_credential() -> bool:
     if peek_nous_access_token():
         return True
     try:
-        from hermes_cli.auth import get_provider_auth_state
+        from jimmy_cli.auth import get_provider_auth_state
 
         state = get_provider_auth_state("nous") or {}
     except Exception:

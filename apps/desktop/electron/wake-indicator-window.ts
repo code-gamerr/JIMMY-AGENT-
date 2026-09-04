@@ -58,7 +58,7 @@ export function createWakeIndicatorWindowController({
       return
     }
 
-    window.webContents.send('hermes:wake-indicator:state', state)
+    window.webContents.send('jimmy:wake-indicator:state', state)
   }
 
   const spawn = () => {

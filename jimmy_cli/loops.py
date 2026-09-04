@@ -26,7 +26,7 @@ Stop conditions (any of):
 - ``/loop stop`` / ``/loop clear`` — user control.
 - ``loops.max_ticks`` config backstop (default 100, 0 = unlimited).
 
-Design notes / invariants (same contract as ``hermes_cli/goals.py``):
+Design notes / invariants (same contract as ``jimmy_cli/goals.py``):
 
 - A wakeup is just a normal user-role message appended via the surface's
   ordinary input path. No system-prompt mutation, no toolset swap —
@@ -39,7 +39,7 @@ Design notes / invariants (same contract as ``hermes_cli/goals.py``):
   continuation queued (or the goal judge is mid-flight), the /loop tick
   defers to the next interval instead of racing a second synthetic turn.
   Goal-continuation turns never count as loop ticks and vice versa.
-- This module has zero hard dependency on ``cli.HermesCLI``, the gateway
+- This module has zero hard dependency on ``cli.JimmyCLI``, the gateway
   runner, or the TUI gateway — all three drive the same ``LoopManager``.
 """
 
@@ -237,7 +237,7 @@ def format_interval(seconds: float) -> str:
 def _loops_config() -> Dict[str, Any]:
     """Read the ``loops:`` config section (cached load_config underneath)."""
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
 
         cfg = load_config() or {}
         section = cfg.get("loops") or {}
@@ -370,18 +370,18 @@ def _meta_key(session_id: str) -> str:
 
 
 def _get_session_db() -> Optional[Any]:
-    """One SessionDB per HERMES_HOME.
+    """One SessionDB per JIMMY_HOME.
 
     Delegates to the goals module's cached SessionDB so goals, loops,
     and heartbeats share one connection (same pattern as
-    ``hermes_cli/heartbeat.py``). The delegation also inherits the
+    ``jimmy_cli/heartbeat.py``). The delegation also inherits the
     off-loop bootstrap and the window logic: a cold cache on the loop
     thread never runs ``SessionDB()`` inline. The previous copy here
     did, which froze the loop for the init duration and dropped the
     first ``loop:*`` write (the /goal bug class, #88965).
     """
     try:
-        from hermes_cli.goals import _get_session_db as _goals_db
+        from jimmy_cli.goals import _get_session_db as _goals_db
     except Exception as exc:  # pragma: no cover
         logger.debug("LoopManager: SessionDB bootstrap failed (%s)", exc)
         return None
@@ -415,7 +415,7 @@ def save_loop(session_id: str, state: LoopState) -> None:
         return
     db = _get_session_db()
     if db is None:
-        from hermes_cli.goals import _warn_dropped_write
+        from jimmy_cli.goals import _warn_dropped_write
 
         _warn_dropped_write("LoopManager", "loop", session_id)
         return
@@ -749,7 +749,7 @@ class LoopManager:
         # 2. Evidence-based --until judge (reuses the /goal judge; fail-open).
         if s.until and (last_response or "").strip():
             try:
-                from hermes_cli.goals import judge_goal
+                from jimmy_cli.goals import judge_goal
 
                 verdict, reason, _pf, _wait, _tf = judge_goal(s.until, last_response)
             except Exception as exc:
@@ -832,7 +832,7 @@ def goal_blocks_loop_tick(session_id: str) -> bool:
     done does NOT block the loop.
     """
     try:
-        from hermes_cli.goals import GoalManager
+        from jimmy_cli.goals import GoalManager
 
         mgr = GoalManager(session_id=session_id)
         if not mgr.is_active():

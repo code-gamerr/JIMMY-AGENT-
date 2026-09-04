@@ -1,6 +1,6 @@
 """Tests for the HTML session export renderer."""
 
-from hermes_cli.session_export_html import (
+from jimmy_cli.session_export_html import (
     _generate_messages_html,
     generate_html_export,
     generate_multi_session_html_export,
@@ -71,7 +71,7 @@ def test_single_session_untitled_coalesces_none_title_and_model():
     html = generate_html_export(session)
 
     # Browser-tab title falls back to the same default as the <h1> header.
-    assert "<title>Hermes Session</title>" in html
+    assert "<title>Jimmy Session</title>" in html
     assert "<title>None</title>" not in html
     # Model meta falls back instead of rendering the literal "None".
     assert "<strong>Model:</strong> Unknown" in html

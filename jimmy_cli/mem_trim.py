@@ -1,4 +1,4 @@
-"""Rate-limited heap release for long-lived Hermes gateway processes.
+"""Rate-limited heap release for long-lived Jimmy gateway processes.
 
 On Linux/glibc, ``malloc_trim(0)`` can return pages from freed Python/C
 allocations to the OS.  Other platforms and allocators are safe no-ops.
@@ -31,7 +31,7 @@ _trim_call_count = 0
 
 
 def _config_settings() -> tuple[bool, float, int, float]:
-    """Return fail-open settings from the normal Hermes config path."""
+    """Return fail-open settings from the normal Jimmy config path."""
     enabled = True
     cooldown: Any = _DEFAULT_COOLDOWN_SECONDS
     log_every_n: Any = _DEFAULT_LOG_EVERY_N
@@ -42,7 +42,7 @@ def _config_settings() -> tuple[bool, float, int, float]:
         # attempt (before the cooldown check), and generating a full-config
         # deepcopy per attempt is exactly the allocator garbage this module
         # exists to release.
-        from hermes_cli.config import load_config_readonly
+        from jimmy_cli.config import load_config_readonly
 
         config = load_config_readonly() or {}
         context = config.get("context") if isinstance(config, dict) else None

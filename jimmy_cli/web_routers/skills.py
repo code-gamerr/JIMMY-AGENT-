@@ -7,8 +7,8 @@ web_server, the plain skills CRUD ``router`` after it - each is mounted at
 its original registration point.
 
 Handler bodies are byte-identical; web_server-owned helpers are reached via
-the late-binding seam in :mod:`hermes_cli.web_deps` so tests that
-``monkeypatch.setattr(web_server, "_spawn_hermes_action", ...)`` keep
+the late-binding seam in :mod:`jimmy_cli.web_deps` so tests that
+``monkeypatch.setattr(web_server, "_spawn_jimmy_action", ...)`` keep
 working.
 """
 
@@ -18,8 +18,8 @@ from typing import Optional  # noqa: F401
 
 from fastapi import APIRouter, HTTPException  # noqa: F401
 
-from hermes_cli.web_deps import late, LateState
-from hermes_cli.web_models import (
+from jimmy_cli.web_deps import late, LateState
+from jimmy_cli.web_models import (
     SkillContentUpdate,
     SkillCreate,
     SkillInstallRequest,
@@ -29,7 +29,7 @@ from hermes_cli.web_models import (
 )
 
 # Same logger the handlers used before extraction (identical logger object).
-_log = logging.getLogger("hermes_cli.web_server")
+_log = logging.getLogger("jimmy_cli.web_server")
 
 hub_router = APIRouter()
 router = APIRouter()
@@ -43,7 +43,7 @@ _installed_hub_identifiers = late("_installed_hub_identifiers")
 _profile_cli_args = late("_profile_cli_args")
 _profile_scope = late("_profile_scope")
 _skill_meta_to_payload = late("_skill_meta_to_payload")
-_spawn_hermes_action = late("_spawn_hermes_action")
+_spawn_jimmy_action = late("_spawn_jimmy_action")
 load_config = late("load_config")
 
 # Live proxies for web_server-owned module state (mutations/monkeypatches
@@ -62,7 +62,7 @@ async def install_skill_hub(body: SkillInstallRequest, profile: Optional[str] = 
         raise HTTPException(status_code=400, detail="identifier is required")
     name = _hub_action_name("install", identifier)
     try:
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             _profile_cli_args(body.profile or profile)
             + ["skills", "install", identifier, "--yes"],
             name,
@@ -82,7 +82,7 @@ async def uninstall_skill_hub(body: SkillUninstallRequest, profile: Optional[str
         raise HTTPException(status_code=400, detail="name is required")
     action = _hub_action_name("uninstall", name)
     try:
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             _profile_cli_args(body.profile or profile) + ["skills", "uninstall", name, "--yes"],
             action,
         )
@@ -100,7 +100,7 @@ async def update_skills_hub(
 ):
     try:
         effective = (body.profile if body else None) or profile
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             _profile_cli_args(effective) + ["skills", "update"], "skills-update"
         )
     except HTTPException:
@@ -142,7 +142,7 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
                     entry["rate_limited"] = bool(getattr(src, "is_rate_limited", False))
                 except Exception:
                     entry["rate_limited"] = False
-            if sid == "hermes-index":
+            if sid == "jimmy-index":
                 try:
                     index_available = bool(getattr(src, "is_available", False))
                 except Exception:
@@ -252,7 +252,7 @@ async def preview_skill_hub(identifier: str = "", profile: Optional[str] = None)
         raise HTTPException(status_code=400, detail="identifier is required")
 
     def _run():
-        from hermes_cli.skills_hub import _resolve_source_meta_and_bundle
+        from jimmy_cli.skills_hub import _resolve_source_meta_and_bundle
         from tools.skills_hub import create_source_router
 
         with _config_profile_scope(profile):
@@ -320,7 +320,7 @@ async def scan_skill_hub(identifier: str = "", profile: Optional[str] = None):
     def _run():
         import shutil as _shutil
 
-        from hermes_cli.skills_hub import _resolve_source_meta_and_bundle
+        from jimmy_cli.skills_hub import _resolve_source_meta_and_bundle
         from tools.skills_hub import create_source_router, quarantine_bundle
         from tools.skills_guard import scan_skill, should_allow_install
 
@@ -430,7 +430,7 @@ async def scan_skill_hub(identifier: str = "", profile: Optional[str] = None):
 @router.get("/api/skills")
 async def get_skills(profile: Optional[str] = None):
     from tools.skills_tool import _find_all_skills
-    from hermes_cli.skills_config import get_disabled_skills
+    from jimmy_cli.skills_config import get_disabled_skills
     from tools.skill_usage import (
         _read_bundled_manifest_names,
         _read_hub_installed_names,
@@ -464,7 +464,7 @@ async def get_skills(profile: Optional[str] = None):
 
 @router.put("/api/skills/toggle")
 async def toggle_skill(body: SkillToggle, profile: Optional[str] = None):
-    from hermes_cli.skills_config import get_disabled_skills, save_disabled_skills
+    from jimmy_cli.skills_config import get_disabled_skills, save_disabled_skills
 
     def _run():
         with _profile_scope(body.profile or profile):

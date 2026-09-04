@@ -1,7 +1,7 @@
 """Tests for the community plugin index (#64181).
 
 Covers: index parsing, fuzzy search, cache TTL + fallback chain
-(remote → cache → seed), `hermes plugins search --json`, and install-time
+(remote → cache → seed), `jimmy plugins search --json`, and install-time
 name resolution (unique / ambiguous / passthrough of owner/repo).
 No live network — every remote fetch is mocked.
 """
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import plugin_index
-from hermes_cli.plugin_index import (
+from jimmy_cli import plugin_index
+from jimmy_cli.plugin_index import (
     PluginIndexEntry,
     _parse_entries,
     load_index,
@@ -35,28 +35,28 @@ def _index_doc(entries):
 SAMPLE = _index_doc(
     [
         {
-            "name": "hermes-media-studio",
+            "name": "jimmy-media-studio",
             "description": "Generative media workspace plugin.",
-            "author": "NousResearch",
+            "author": "Jimmy",
             "tags": ["media", "image-gen"],
-            "repo": "NousResearch/hermes-media-studio",
+            "repo": "Jimmy/jimmy-media-studio",
             "ref": "e" * 40,
         },
         {
-            "name": "hermes-telegram-business",
+            "name": "jimmy-telegram-business",
             "description": "Telegram secretary bot with owner approval.",
-            "author": "NousResearch",
+            "author": "Jimmy",
             "tags": ["telegram", "gateway"],
-            "repo": "NousResearch/hermes-telegram-business",
+            "repo": "Jimmy/jimmy-telegram-business",
             "ref": "f" * 40,
             "capabilities": ["platform"],
         },
         {
             "name": "plugin-llm-example",
             "description": "Reference plugin for structured LLM access.",
-            "author": "NousResearch",
+            "author": "Jimmy",
             "tags": ["example", "llm"],
-            "repo": "NousResearch/hermes-example-plugins",
+            "repo": "Jimmy/jimmy-example-plugins",
             "subdir": "plugin-llm-example",
             "ref": "a" * 40,
             "capabilities": ["commands", "llm"],
@@ -66,9 +66,9 @@ SAMPLE = _index_doc(
 
 
 @pytest.fixture()
-def hermes_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    monkeypatch.setattr(plugin_index, "get_hermes_home", lambda: tmp_path)
+def jimmy_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+    monkeypatch.setattr(plugin_index, "get_jimmy_home", lambda: tmp_path)
     return tmp_path
 
 
@@ -93,15 +93,15 @@ class TestParsing:
     def test_parses_object_form(self):
         entries = _parse_entries(SAMPLE)
         assert [e.name for e in entries] == [
-            "hermes-media-studio",
-            "hermes-telegram-business",
+            "jimmy-media-studio",
+            "jimmy-telegram-business",
             "plugin-llm-example",
         ]
         assert entries[2].subdir == "plugin-llm-example"
         assert entries[2].install_identifier == (
-            "NousResearch/hermes-example-plugins/plugin-llm-example"
+            "Jimmy/jimmy-example-plugins/plugin-llm-example"
         )
-        assert entries[0].install_identifier == "NousResearch/hermes-media-studio"
+        assert entries[0].install_identifier == "Jimmy/jimmy-media-studio"
 
     def test_parses_bare_list_form(self):
         entries = _parse_entries(SAMPLE["plugins"])
@@ -144,20 +144,20 @@ class TestSearch:
     entries = _parse_entries(SAMPLE)
 
     def test_exact_name_ranks_first(self):
-        results = search_index(self.entries, "hermes-media-studio")
-        assert results[0].name == "hermes-media-studio"
+        results = search_index(self.entries, "jimmy-media-studio")
+        assert results[0].name == "jimmy-media-studio"
 
     def test_matches_tags(self):
         results = search_index(self.entries, "telegram")
-        assert results and results[0].name == "hermes-telegram-business"
+        assert results and results[0].name == "jimmy-telegram-business"
 
     def test_matches_description(self):
         results = search_index(self.entries, "secretary")
-        assert [e.name for e in results] == ["hermes-telegram-business"]
+        assert [e.name for e in results] == ["jimmy-telegram-business"]
 
     def test_fuzzy_typo_tolerance(self):
-        results = search_index(self.entries, "hermes-media-studo")
-        assert results and results[0].name == "hermes-media-studio"
+        results = search_index(self.entries, "jimmy-media-studo")
+        assert results and results[0].name == "jimmy-media-studio"
 
     def test_no_match(self):
         assert search_index(self.entries, "zzzzqqqq") == []
@@ -168,7 +168,7 @@ class TestSearch:
 
     def test_capability_filter(self):
         results = search_index(self.entries, "", capability="platform")
-        assert [e.name for e in results] == ["hermes-telegram-business"]
+        assert [e.name for e in results] == ["jimmy-telegram-business"]
 
     def test_capability_filter_with_term(self):
         results = search_index(self.entries, "llm", capability="commands")
@@ -181,8 +181,8 @@ class TestSearch:
 
 
 class TestLoadIndex:
-    def test_fresh_cache_wins_without_network(self, hermes_home, monkeypatch):
-        _write_cache(hermes_home, SAMPLE)
+    def test_fresh_cache_wins_without_network(self, jimmy_home, monkeypatch):
+        _write_cache(jimmy_home, SAMPLE)
 
         def boom():  # pragma: no cover - must not be called
             raise AssertionError("network hit despite fresh cache")
@@ -192,8 +192,8 @@ class TestLoadIndex:
         assert source == "cache"
         assert len(entries) == 3
 
-    def test_expired_cache_triggers_remote(self, hermes_home, monkeypatch):
-        _write_cache(hermes_home, SAMPLE, age_seconds=plugin_index.INDEX_CACHE_TTL + 60)
+    def test_expired_cache_triggers_remote(self, jimmy_home, monkeypatch):
+        _write_cache(jimmy_home, SAMPLE, age_seconds=plugin_index.INDEX_CACHE_TTL + 60)
         remote_doc = _index_doc([{"name": "fresh-plugin", "repo": "o/r", "ref": "b" * 40}])
         monkeypatch.setattr(
             plugin_index, "_fetch_remote", lambda: _parse_entries(remote_doc)
@@ -202,21 +202,21 @@ class TestLoadIndex:
         assert source == "remote"
         assert [e.name for e in entries] == ["fresh-plugin"]
 
-    def test_remote_failure_falls_back_to_stale_cache(self, hermes_home, monkeypatch):
-        _write_cache(hermes_home, SAMPLE, age_seconds=plugin_index.INDEX_CACHE_TTL + 60)
+    def test_remote_failure_falls_back_to_stale_cache(self, jimmy_home, monkeypatch):
+        _write_cache(jimmy_home, SAMPLE, age_seconds=plugin_index.INDEX_CACHE_TTL + 60)
         monkeypatch.setattr(plugin_index, "_fetch_remote", lambda: None)
         entries, source = load_index()
         assert source == "cache"
         assert len(entries) == 3
 
-    def test_no_cache_no_remote_falls_back_to_seed(self, hermes_home, monkeypatch):
+    def test_no_cache_no_remote_falls_back_to_seed(self, jimmy_home, monkeypatch):
         monkeypatch.setattr(plugin_index, "_fetch_remote", lambda: None)
         entries, source = load_index()
         assert source == "seed"
         assert len(entries) >= 3
 
-    def test_refresh_bypasses_fresh_cache(self, hermes_home, monkeypatch):
-        _write_cache(hermes_home, SAMPLE)
+    def test_refresh_bypasses_fresh_cache(self, jimmy_home, monkeypatch):
+        _write_cache(jimmy_home, SAMPLE)
         remote_doc = _index_doc([{"name": "newer", "repo": "o/r", "ref": "c" * 40}])
         monkeypatch.setattr(
             plugin_index, "_fetch_remote", lambda: _parse_entries(remote_doc)
@@ -225,7 +225,7 @@ class TestLoadIndex:
         assert source == "remote"
         assert [e.name for e in entries] == ["newer"]
 
-    def test_offline_skips_network(self, hermes_home, monkeypatch):
+    def test_offline_skips_network(self, jimmy_home, monkeypatch):
         def boom():  # pragma: no cover
             raise AssertionError("network hit in offline mode")
 
@@ -233,15 +233,15 @@ class TestLoadIndex:
         entries, source = load_index(offline=True)
         assert source == "seed"
 
-    def test_corrupt_cache_ignored(self, hermes_home, monkeypatch):
-        cache = hermes_home / "cache" / "plugin_index.json"
+    def test_corrupt_cache_ignored(self, jimmy_home, monkeypatch):
+        cache = jimmy_home / "cache" / "plugin_index.json"
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text("{not json", encoding="utf-8")
         monkeypatch.setattr(plugin_index, "_fetch_remote", lambda: None)
         entries, source = load_index()
         assert source == "seed"
 
-    def test_remote_fetch_writes_cache(self, hermes_home, monkeypatch):
+    def test_remote_fetch_writes_cache(self, jimmy_home, monkeypatch):
         payload = json.dumps(SAMPLE)
 
         class FakeResponse:
@@ -255,7 +255,7 @@ class TestLoadIndex:
         monkeypatch.setattr(httpx, "get", lambda *a, **k: FakeResponse())
         entries, source = load_index()
         assert source == "remote"
-        cache = hermes_home / "cache" / "plugin_index.json"
+        cache = jimmy_home / "cache" / "plugin_index.json"
         assert cache.is_file()
         assert json.loads(cache.read_text(encoding="utf-8")) == SAMPLE
 
@@ -265,7 +265,7 @@ class TestLoadIndex:
             "get_index_url",
             plugin_index.get_index_url,  # keep real fn, patch config below
         )
-        from hermes_cli import config as config_mod
+        from jimmy_cli import config as config_mod
 
         monkeypatch.setattr(
             config_mod,
@@ -284,19 +284,19 @@ class TestResolveName:
     entries = _parse_entries(SAMPLE)
 
     def test_exact_unique(self):
-        entry, candidates = resolve_name(self.entries, "hermes-media-studio")
-        assert entry is not None and entry.repo == "NousResearch/hermes-media-studio"
+        entry, candidates = resolve_name(self.entries, "jimmy-media-studio")
+        assert entry is not None and entry.repo == "Jimmy/jimmy-media-studio"
 
     def test_case_insensitive(self):
-        entry, _ = resolve_name(self.entries, "Hermes-Media-Studio")
+        entry, _ = resolve_name(self.entries, "Jimmy-Media-Studio")
         assert entry is not None
 
     def test_unique_partial(self):
         entry, _ = resolve_name(self.entries, "telegram")
-        assert entry is not None and entry.name == "hermes-telegram-business"
+        assert entry is not None and entry.name == "jimmy-telegram-business"
 
     def test_ambiguous_partial(self):
-        entry, candidates = resolve_name(self.entries, "hermes")
+        entry, candidates = resolve_name(self.entries, "jimmy")
         assert entry is None
         assert len(candidates) == 2
 
@@ -312,17 +312,17 @@ class TestResolveName:
 
 class TestInstallResolution:
     def test_bare_name_detection(self):
-        from hermes_cli.plugins_cmd import _looks_like_bare_index_name
+        from jimmy_cli.plugins_cmd import _looks_like_bare_index_name
 
-        assert _looks_like_bare_index_name("hermes-media-studio")
+        assert _looks_like_bare_index_name("jimmy-media-studio")
         assert not _looks_like_bare_index_name("owner/repo")
         assert not _looks_like_bare_index_name("https://github.com/o/r.git")
         assert not _looks_like_bare_index_name("git@github.com:o/r.git")
         assert not _looks_like_bare_index_name("ssh://git@github.com/o/r.git")
         assert not _looks_like_bare_index_name("file:///tmp/x")
 
-    def test_install_resolves_name_and_pins_ref(self, hermes_home, monkeypatch):
-        from hermes_cli import plugins_cmd
+    def test_install_resolves_name_and_pins_ref(self, jimmy_home, monkeypatch):
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -336,12 +336,12 @@ class TestInstallResolution:
 
         monkeypatch.setattr(plugins_cmd, "_install_plugin_core", fake_core)
         with pytest.raises(SystemExit):
-            plugins_cmd.cmd_install("hermes-media-studio", enable=False)
-        assert captured["identifier"] == "NousResearch/hermes-media-studio"
+            plugins_cmd.cmd_install("jimmy-media-studio", enable=False)
+        assert captured["identifier"] == "Jimmy/jimmy-media-studio"
         assert captured["ref"] == "e" * 40
 
-    def test_install_explicit_ref_beats_index_pin(self, hermes_home, monkeypatch):
-        from hermes_cli import plugins_cmd
+    def test_install_explicit_ref_beats_index_pin(self, jimmy_home, monkeypatch):
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -354,13 +354,13 @@ class TestInstallResolution:
 
         monkeypatch.setattr(plugins_cmd, "_install_plugin_core", fake_core)
         with pytest.raises(SystemExit):
-            plugins_cmd.cmd_install("hermes-media-studio", enable=False, ref="d" * 40)
+            plugins_cmd.cmd_install("jimmy-media-studio", enable=False, ref="d" * 40)
         assert captured["ref"] == "d" * 40
 
     def test_install_ambiguous_name_lists_candidates_and_exits(
-        self, hermes_home, monkeypatch, capsys
+        self, jimmy_home, monkeypatch, capsys
     ):
-        from hermes_cli import plugins_cmd
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -372,16 +372,16 @@ class TestInstallResolution:
             lambda *a, **k: called.append(1),
         )
         with pytest.raises(SystemExit) as exc:
-            plugins_cmd.cmd_install("hermes", enable=False)
+            plugins_cmd.cmd_install("jimmy", enable=False)
         assert exc.value.code == 1
         assert not called
         out = capsys.readouterr().out
         assert "ambiguous" in out
-        assert "hermes-media-studio" in out
-        assert "hermes-telegram-business" in out
+        assert "jimmy-media-studio" in out
+        assert "jimmy-telegram-business" in out
 
-    def test_install_unknown_name_exits(self, hermes_home, monkeypatch, capsys):
-        from hermes_cli import plugins_cmd
+    def test_install_unknown_name_exits(self, jimmy_home, monkeypatch, capsys):
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -391,9 +391,9 @@ class TestInstallResolution:
         assert exc.value.code == 1
         assert "not found" in capsys.readouterr().out
 
-    def test_owner_repo_passthrough_skips_index(self, hermes_home, monkeypatch):
+    def test_owner_repo_passthrough_skips_index(self, jimmy_home, monkeypatch):
         """Explicit owner/repo installs never consult the index."""
-        from hermes_cli import plugins_cmd
+        from jimmy_cli import plugins_cmd
 
         def boom(**kw):  # pragma: no cover
             raise AssertionError("index consulted for owner/repo identifier")
@@ -419,8 +419,8 @@ class TestInstallResolution:
 
 
 class TestCmdSearch:
-    def test_json_output(self, hermes_home, monkeypatch, capsys):
-        from hermes_cli import plugins_cmd
+    def test_json_output(self, jimmy_home, monkeypatch, capsys):
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -429,26 +429,26 @@ class TestCmdSearch:
         payload = json.loads(capsys.readouterr().out)
         assert payload["source"] == "seed"
         assert payload["query"] == "telegram"
-        assert payload["results"][0]["name"] == "hermes-telegram-business"
-        assert payload["results"][0]["repo"] == "NousResearch/hermes-telegram-business"
+        assert payload["results"][0]["name"] == "jimmy-telegram-business"
+        assert payload["results"][0]["repo"] == "Jimmy/jimmy-telegram-business"
         assert payload["results"][0]["ref"] == "f" * 40
         assert "audited" in payload["note"]
 
     def test_table_output_includes_security_footer(
-        self, hermes_home, monkeypatch, capsys
+        self, jimmy_home, monkeypatch, capsys
     ):
-        from hermes_cli import plugins_cmd
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
         )
         plugins_cmd.cmd_search("media")
         out = capsys.readouterr().out
-        assert "hermes-media-studio" in out
+        assert "jimmy-media-studio" in out
         assert "audited" in out
 
-    def test_no_results_message(self, hermes_home, monkeypatch, capsys):
-        from hermes_cli import plugins_cmd
+    def test_no_results_message(self, jimmy_home, monkeypatch, capsys):
+        from jimmy_cli import plugins_cmd
 
         monkeypatch.setattr(
             plugin_index, "load_index", lambda **kw: (_parse_entries(SAMPLE), "seed")
@@ -459,7 +459,7 @@ class TestCmdSearch:
     def test_parser_accepts_search(self):
         import argparse
 
-        from hermes_cli.subcommands.plugins import build_plugins_parser
+        from jimmy_cli.subcommands.plugins import build_plugins_parser
 
         parser = argparse.ArgumentParser()
         sub = parser.add_subparsers(dest="command")
@@ -473,8 +473,8 @@ class TestCmdSearch:
         assert args.capability == "tools"
         assert args.refresh is True
 
-    def test_dispatch_routes_search(self, hermes_home, monkeypatch):
-        from hermes_cli import plugins_cmd
+    def test_dispatch_routes_search(self, jimmy_home, monkeypatch):
+        from jimmy_cli import plugins_cmd
 
         captured = {}
 

@@ -1,1 +1,1 @@
-# Hermes plugins package
+# Jimmy plugins package

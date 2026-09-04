@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 
 def test_format_banner_version_label_on_upstream_main():
-    from hermes_cli import banner
+    from jimmy_cli import banner
 
     with patch.object(
         banner,
@@ -18,7 +18,7 @@ def test_format_banner_version_label_on_upstream_main():
 
 
 def test_get_git_banner_state_reads_origin_and_head(tmp_path):
-    from hermes_cli import banner
+    from jimmy_cli import banner
 
     repo_dir = tmp_path / "repo"
     (repo_dir / ".git").mkdir(parents=True)
@@ -35,7 +35,7 @@ def test_get_git_banner_state_reads_origin_and_head(tmp_path):
             raise AssertionError(f"unexpected command: {cmd}")
         return results[key]
 
-    with patch("hermes_cli.banner.subprocess.run", side_effect=fake_run):
+    with patch("jimmy_cli.banner.subprocess.run", side_effect=fake_run):
         state = banner.get_git_banner_state(repo_dir)
 
     assert state == {"upstream": "b2f477a3", "local": "af8aad31", "ahead": 3}
@@ -46,18 +46,18 @@ def test_check_via_local_git_ssh_fastpath_ahead_not_behind(tmp_path):
 
     A carried local commit means tip SHAs differ, but the fresh upstream tip
     is an ancestor of HEAD — that is "ahead", and reporting it as behind
-    nudges the user into `hermes update`, which can wipe the carried work.
+    nudges the user into `jimmy update`, which can wipe the carried work.
     """
     from unittest.mock import MagicMock
 
-    from hermes_cli import banner
+    from jimmy_cli import banner
 
     repo_dir = tmp_path / "repo"
     (repo_dir / ".git").mkdir(parents=True)
 
     def fake_git_stdout(args, *, cwd, timeout=5):
         if args == ["remote", "get-url", "origin"]:
-            return "git@github.com:NousResearch/hermes-agent.git"
+            return "git@github.com:Jimmy/jimmy-agent.git"
         if args == ["rev-parse", "HEAD"]:
             return "b" * 40  # carried commit, differs from upstream tip
         raise AssertionError(f"unexpected git call: {args}")
@@ -77,14 +77,14 @@ def test_check_via_local_git_ssh_fastpath_genuinely_behind(tmp_path):
     """SSH fast path reports the exact count (compare API) when behind."""
     from unittest.mock import MagicMock
 
-    from hermes_cli import banner
+    from jimmy_cli import banner
 
     repo_dir = tmp_path / "repo"
     (repo_dir / ".git").mkdir(parents=True)
 
     def fake_git_stdout(args, *, cwd, timeout=5):
         if args == ["remote", "get-url", "origin"]:
-            return "git@github.com:NousResearch/hermes-agent.git"
+            return "git@github.com:Jimmy/jimmy-agent.git"
         if args == ["rev-parse", "HEAD"]:
             return "b" * 40
         raise AssertionError(f"unexpected git call: {args}")
@@ -105,14 +105,14 @@ def test_check_via_local_git_ssh_fastpath_offline_keeps_sentinel(tmp_path):
     """Behind + compare API unreachable = honest no-count sentinel, never 1."""
     from unittest.mock import MagicMock
 
-    from hermes_cli import banner
+    from jimmy_cli import banner
 
     repo_dir = tmp_path / "repo"
     (repo_dir / ".git").mkdir(parents=True)
 
     def fake_git_stdout(args, *, cwd, timeout=5):
         if args == ["remote", "get-url", "origin"]:
-            return "git@github.com:NousResearch/hermes-agent.git"
+            return "git@github.com:Jimmy/jimmy-agent.git"
         if args == ["rev-parse", "HEAD"]:
             return "b" * 40
         raise AssertionError(f"unexpected git call: {args}")

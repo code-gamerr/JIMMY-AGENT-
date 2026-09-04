@@ -2,8 +2,8 @@
 
 Bash-compatible .env files commonly prefix lines with ``export `` (users
 copy-paste from shell profiles, cloud provider docs, tutorials). The three
-hand-rolled parsers — ``hermes_cli.config.load_env``,
-``hermes_cli.main._has_any_provider_configured``, and
+hand-rolled parsers — ``jimmy_cli.config.load_env``,
+``jimmy_cli.main._has_any_provider_configured``, and
 ``tools.skills_tool.load_env`` — split on ``line.partition("=")`` and must
 strip the ``export `` prefix first, otherwise ``export API_KEY=sk-...`` is
 stored under the wrong key ``"export API_KEY"`` and the real key is lost
@@ -26,7 +26,7 @@ def _write_env(path: Path, contents: str) -> None:
 
 
 def test_config_load_env_strips_export_prefix(tmp_path):
-    from hermes_cli.config import invalidate_env_cache, load_env
+    from jimmy_cli.config import invalidate_env_cache, load_env
 
     env_path = tmp_path / ".env"
     _write_env(
@@ -37,7 +37,7 @@ def test_config_load_env_strips_export_prefix(tmp_path):
     )
     invalidate_env_cache()
     try:
-        with patch("hermes_cli.config.get_env_path", return_value=env_path):
+        with patch("jimmy_cli.config.get_env_path", return_value=env_path):
             env = load_env()
     finally:
         invalidate_env_cache()
@@ -50,18 +50,18 @@ def test_config_load_env_strips_export_prefix(tmp_path):
 
 
 def test_skills_tool_load_env_strips_export_prefix(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     (tmp_path / ".env").write_text(
         "export SOME_SKILL_KEY=skillval\nPLAIN=plainval\n", encoding="utf-8"
     )
 
-    # skills_tool.load_env reads get_hermes_home()/.env directly.
+    # skills_tool.load_env reads get_jimmy_home()/.env directly.
     import importlib
 
     import tools.skills_tool as skills_tool
 
     importlib.reload(skills_tool)
-    with patch.object(skills_tool, "get_hermes_home", return_value=tmp_path):
+    with patch.object(skills_tool, "get_jimmy_home", return_value=tmp_path):
         env = skills_tool.load_env()
 
     assert env["SOME_SKILL_KEY"] == "skillval"
@@ -83,17 +83,17 @@ def test_has_any_provider_configured_with_export_prefix(tmp_path, monkeypatch):
     for key in list(__import__("os").environ):
         if key.endswith(("_API_KEY", "_TOKEN")) and key != "BWS_ACCESS_TOKEN":
             monkeypatch.delenv(key, raising=False)
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     (tmp_path / ".env").write_text(
         "export OPENAI_API_KEY=sk-export-only-123\n", encoding="utf-8"
     )
 
-    import hermes_cli.main as hmain
+    import jimmy_cli.main as hmain
 
     importlib.reload(hmain)
-    # get_env_path() derives from HERMES_HOME (set above) → tmp_path/.env, so
+    # get_env_path() derives from JIMMY_HOME (set above) → tmp_path/.env, so
     # no patching is needed. Re-clear os.environ provider keys that
-    # load_hermes_dotenv may have populated at import/reload time, forcing the
+    # load_jimmy_dotenv may have populated at import/reload time, forcing the
     # function down its .env-reading branch.
     for key in list(__import__("os").environ):
         if key.endswith(("_API_KEY", "_TOKEN")) and key != "BWS_ACCESS_TOKEN":

@@ -14,4 +14,4 @@ ui-tui/node_modules
 web/node_modules
 **/__pycache__
 **/.pytest_cache
-hermes_cli/web_dist
+jimmy_cli/web_dist

@@ -5,8 +5,8 @@ Provides a FastAPI backend serving the Vite/React frontend and REST API
 endpoints for managing configuration, environment variables, and sessions.
 
 Usage:
-    python -m hermes_cli.main web          # Start on http://127.0.0.1:9119
-    python -m hermes_cli.main web --port 8080
+    python -m jimmy_cli.main web          # Start on http://127.0.0.1:9119
+    python -m jimmy_cli.main web --port 8080
 """
 
 import contextlib
@@ -45,7 +45,7 @@ import urllib.error
 import urllib.parse
 import zipfile
 
-from hermes_cli._subprocess_compat import windows_detach_flags, windows_hide_flags
+from jimmy_cli._subprocess_compat import windows_detach_flags, windows_hide_flags
 import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -56,8 +56,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from hermes_cli import __version__, __release_date__
-from hermes_cli.config import (
+from jimmy_cli import __version__, __release_date__
+from jimmy_cli.config import (
     build_cron_model_impact,
     cfg_get,
     DEFAULT_CONFIG,
@@ -65,8 +65,8 @@ from hermes_cli.config import (
     clear_model_endpoint_credentials,
     get_config_path,
     get_env_path,
-    get_hermes_home,
-    get_process_hermes_home,
+    get_jimmy_home,
+    get_process_jimmy_home,
     load_config,
     load_env,
     read_raw_config,
@@ -115,7 +115,7 @@ try:
     from starlette.concurrency import run_in_threadpool
 except ImportError:
     # First try lazy-installing the dashboard extras. Only the user actually
-    # running `hermes dashboard` needs fastapi+uvicorn; lazy install keeps
+    # running `jimmy dashboard` needs fastapi+uvicorn; lazy install keeps
     # them out of every other install path. After install, re-import.
     try:
         from tools.lazy_deps import ensure as _lazy_ensure
@@ -135,7 +135,7 @@ except ImportError:
             f"Install with: {sys.executable} -m pip install 'fastapi' 'uvicorn[standard]'"
         )
 
-WEB_DIST = Path(os.environ["HERMES_WEB_DIST"]) if "HERMES_WEB_DIST" in os.environ else Path(__file__).parent / "web_dist"
+WEB_DIST = Path(os.environ["JIMMY_WEB_DIST"]) if "JIMMY_WEB_DIST" in os.environ else Path(__file__).parent / "web_dist"
 _log = logging.getLogger(__name__)
 
 
@@ -265,15 +265,15 @@ def _parent_start_markers_match(actual: str, expected: str) -> bool:
 def _start_desktop_cron_ticker(stop_event: "threading.Event", interval: int = 60) -> None:
     """Tick the cron scheduler from inside the desktop dashboard backend.
 
-    The scheduler tick loop normally lives in ``hermes gateway run`` — but the
-    desktop app spawns a ``hermes dashboard`` backend, not a gateway, so a cron
+    The scheduler tick loop normally lives in ``jimmy gateway run`` — but the
+    desktop app spawns a ``jimmy dashboard`` backend, not a gateway, so a cron
     a user creates in the app would never fire. We run the resolved cron
     scheduler provider here (no live adapters; delivery falls back to the
     per-platform send path).
 
     Cross-process safe: the built-in provider's ``cron.scheduler.tick`` takes
     the ``cron/.tick.lock`` file lock, so this never double-fires alongside a
-    real gateway on the same HERMES_HOME — whichever process grabs the lock
+    real gateway on the same JIMMY_HOME — whichever process grabs the lock
     first wins the tick.
     """
     from cron.scheduler_provider import resolve_cron_scheduler
@@ -289,7 +289,7 @@ def _warm_gateway_module() -> None:
     On a cold Windows install, importing these module chains triggers .pyc
     compilation and Defender real-time scans that can stall the event loop
     for 15-30s. The original fix (pre-#60800) only warmed
-    ``hermes_cli.gateway``. But the first WS connection and its initial
+    ``jimmy_cli.gateway``. But the first WS connection and its initial
     RPC burst (``setup.status``, ``setup.runtime_check``,
     ``gateway.ready``→``resolve_skin``) pull in several *other* heavy
     chains that were still imported on the loop thread, contributing to
@@ -297,22 +297,22 @@ def _warm_gateway_module() -> None:
     is paid in a worker thread while the server socket is already open.
     """
     for mod in (
-        "hermes_cli.gateway",
+        "jimmy_cli.gateway",
         # setup.status / setup.runtime_check resolve provider auth state,
         # which imports copilot_auth (→ subprocess module) and scans
         # credential files. First import is noticeably slow on Windows.
-        "hermes_cli.auth",
-        "hermes_cli.copilot_auth",
-        "hermes_cli.runtime_provider",
+        "jimmy_cli.auth",
+        "jimmy_cli.copilot_auth",
+        "jimmy_cli.runtime_provider",
         # resolve_skin() reads config + initialises the skin engine.
         # Even though handle_ws now calls it via asyncio.to_thread
         # (see tui_gateway/ws.py), warming it here avoids the first-call
         # import cost inside that thread.
-        "hermes_cli.skin_engine",
+        "jimmy_cli.skin_engine",
         # model.options / picker context — parses provider catalogs and
         # the models.dev cache on first use.
-        "hermes_cli.inventory",
-        "hermes_cli.model_switch",
+        "jimmy_cli.inventory",
+        "jimmy_cli.model_switch",
     ):
         try:
             __import__(mod)
@@ -322,7 +322,7 @@ def _warm_gateway_module() -> None:
 
 def _resolve_restart_drain_timeout() -> float:
     try:
-        from hermes_cli.gateway import _get_restart_drain_timeout
+        from jimmy_cli.gateway import _get_restart_drain_timeout
         return _get_restart_drain_timeout()
     except ImportError:
         from gateway.restart import DEFAULT_GATEWAY_RESTART_DRAIN_TIMEOUT
@@ -333,14 +333,14 @@ def _eager_reconcile_own_session_db() -> None:
     """One writable open of this process's own state.db at startup.
 
     ``SessionDB.__init__`` runs ``_init_schema`` → ``_reconcile_columns``,
-    bringing a store left behind by `hermes update` current before the
+    bringing a store left behind by `jimmy update` current before the
     dashboard's first session-list poll, with the open-time lock patience
     (jittered retries) absorbing transient contention. Never raises: a
     store this cannot fix is still served through the read-probe heal in
     :func:`_open_session_db_at_path`, which retries on every poll.
     """
     try:
-        from hermes_state import SessionDB, _default_db_path
+        from jimmy_state import SessionDB, _default_db_path
 
         SessionDB(db_path=Path(_default_db_path()), read_only=False).close()
     except Exception as exc:
@@ -364,7 +364,7 @@ async def _lifespan(app: "FastAPI"):
     # Bring this profile's state.db schema current BEFORE the first
     # session-list poll (#79531/#80037). Migrations used to run lazily on
     # the first writable open — typically the user's first new session —
-    # so a store left behind by `hermes update` kept 500ing every
+    # so a store left behind by `jimmy update` kept 500ing every
     # /api/sessions poll (and the read-probe heal, while it retries per
     # poll, can lose repeatedly to lock contention from orphaned sibling
     # backends). One writable open here runs _init_schema →
@@ -378,7 +378,7 @@ async def _lifespan(app: "FastAPI"):
         name="statedb-eager-reconcile",
     ).start()
 
-    # Import hermes_cli.gateway eagerly *before* the lifespan yield so the
+    # Import jimmy_cli.gateway eagerly *before* the lifespan yield so the
     # GIL-heavy .pyc compilation and Defender scan cost is absorbed during
     # backend initialisation — before the server socket accepts probes.
     # On Windows + Python 3.11 the import does not release the GIL, so
@@ -386,12 +386,12 @@ async def _lifespan(app: "FastAPI"):
     # Desktop's 10-second WebSocket ready-probe to time out (GH-73083).
     _warm_gateway_module()
 
-    # Desktop-spawned backends (HERMES_DESKTOP=1) fire cron jobs themselves,
-    # since the app has no gateway running the scheduler. Server `hermes
+    # Desktop-spawned backends (JIMMY_DESKTOP=1) fire cron jobs themselves,
+    # since the app has no gateway running the scheduler. Server `jimmy
     # dashboard` is unaffected — it relies on its own gateway.
     cron_stop: "threading.Event | None" = None
     cron_thread: "threading.Thread | None" = None
-    if os.getenv("HERMES_DESKTOP") == "1":
+    if os.getenv("JIMMY_DESKTOP") == "1":
         # Before forking a fresh gateway, reap any orphan left by a previous
         # serve session. Graceful shutdown reaps the managed child, but an
         # abnormal exit (crash, SIGKILL, power loss, forced update) reparents
@@ -399,7 +399,7 @@ async def _lifespan(app: "FastAPI"):
         # WebSocket, and a newly forked gateway then races the same credential,
         # splitting messages across parallel session trees (#77276).
         try:
-            from hermes_cli.gateway import _reap_unsupervised_gateway_orphans
+            from jimmy_cli.gateway import _reap_unsupervised_gateway_orphans
 
             _reap_unsupervised_gateway_orphans()
         except Exception:
@@ -434,7 +434,7 @@ async def _lifespan(app: "FastAPI"):
         selftest_task.cancel()
         auto_archive_task.cancel()
         await PTY_REGISTRY.close_all()
-        if os.getenv("HERMES_DESKTOP") == "1":
+        if os.getenv("JIMMY_DESKTOP") == "1":
             _terminate_desktop_managed_gateway()
 
 
@@ -482,14 +482,14 @@ app = FastAPI(title="Jimmy", version=__version__, lifespan=_lifespan)
 
 
 # Memory-provider OAuth connect routes live in the memory layer, not here.
-from hermes_cli.memory_oauth import router as _memory_oauth_router  # noqa: E402
+from jimmy_cli.memory_oauth import router as _memory_oauth_router  # noqa: E402
 
 app.include_router(_memory_oauth_router)
 
 # ---------------------------------------------------------------------------
 # Session token for protecting sensitive endpoints (reveal).
 # The desktop shell mints the token and injects it via
-# HERMES_DASHBOARD_SESSION_TOKEN so its main process can authenticate the
+# JIMMY_DASHBOARD_SESSION_TOKEN so its main process can authenticate the
 # /api calls it makes on the user's behalf; otherwise we generate one fresh
 # on every server start. Either way it dies when the process exits and is
 # injected into the SPA HTML so only the legitimate web UI can use it.
@@ -497,11 +497,11 @@ app.include_router(_memory_oauth_router)
 
 
 def _resolve_session_token() -> str:
-    return os.environ.get("HERMES_DASHBOARD_SESSION_TOKEN") or secrets.token_urlsafe(32)
+    return os.environ.get("JIMMY_DASHBOARD_SESSION_TOKEN") or secrets.token_urlsafe(32)
 
 
 _SESSION_TOKEN = _resolve_session_token()
-_SESSION_HEADER_NAME = "X-Hermes-Session-Token"
+_SESSION_HEADER_NAME = "X-Jimmy-Session-Token"
 _SSH_OWNER_NONCE: Optional[str] = None
 
 
@@ -550,7 +550,7 @@ app.add_middleware(
 # Endpoints that do NOT require the session token.  Everything else under
 # /api/ is gated by the auth middleware below.
 #
-# This list is defined in ``hermes_cli.dashboard_auth.public_paths`` so the
+# This list is defined in ``jimmy_cli.dashboard_auth.public_paths`` so the
 # OAuth gate middleware can honour the same allowlist — keeping the two
 # gates in lockstep avoids drift like the wildcard-subdomain regression
 # where ``/api/status`` was public under the legacy gate but 401'd under
@@ -559,7 +559,7 @@ app.add_middleware(
 # Keep the upstream list minimal — only truly non-sensitive, read-only
 # endpoints belong there.
 # ---------------------------------------------------------------------------
-from hermes_cli.dashboard_auth.public_paths import (
+from jimmy_cli.dashboard_auth.public_paths import (
     PUBLIC_API_PATHS as _PUBLIC_API_PATHS,
 )
 
@@ -604,7 +604,7 @@ def _require_token(request: Request) -> None:
 
     * **Loopback / ``--insecure`` mode** (``auth_required`` False): the
       ephemeral ``_SESSION_TOKEN`` is injected into the SPA HTML and echoed
-      back via ``X-Hermes-Session-Token`` (or the legacy ``Bearer`` header).
+      back via ``X-Jimmy-Session-Token`` (or the legacy ``Bearer`` header).
       Validate it here.
     * **Gated / OAuth mode** (``auth_required`` True): ``_SESSION_TOKEN`` is
       NOT injected (the SPA authenticates with a session cookie), so there is
@@ -653,7 +653,7 @@ def should_require_auth(host: str, allow_public: bool = False) -> bool:
     the gate. It is accepted for backward-compat with old launch scripts and
     desktop shells but is ignored: a non-loopback bind ALWAYS requires an auth
     provider (OAuth or the bundled password provider). This closes the
-    unauthenticated-public-dashboard hole behind the June 2026 ``hermes-0day``
+    unauthenticated-public-dashboard hole behind the June 2026 ``jimmy-0day``
     MCP-persistence campaign, where ``--insecure --host 0.0.0.0`` left the
     config/MCP/agent surface open to internet scanners.
     """
@@ -769,7 +769,7 @@ async def _plugin_api_runtime_gate(request: Request, call_next):
                 plugin_name = parts[3]
                 if plugin_name:
                     try:
-                        from hermes_cli.plugins_cmd import (
+                        from jimmy_cli.plugins_cmd import (
                             _get_enabled_set,
                             _get_disabled_set,
                         )
@@ -812,7 +812,7 @@ async def _plugin_api_runtime_gate(request: Request, call_next):
 
 @app.middleware("http")
 async def _dashboard_auth_gate(request: Request, call_next):
-    from hermes_cli.dashboard_auth.middleware import gated_auth_middleware
+    from jimmy_cli.dashboard_auth.middleware import gated_auth_middleware
     return await gated_auth_middleware(request, call_next)
 
 
@@ -850,7 +850,7 @@ async def _token_auth_seam(request: Request, call_next):
     cookie/session gates skip enforcement. Non-token routes pass straight
     through untouched.
     """
-    from hermes_cli.dashboard_auth.token_auth import token_auth_middleware
+    from jimmy_cli.dashboard_auth.token_auth import token_auth_middleware
     return await token_auth_middleware(request, call_next)
 
 
@@ -1061,8 +1061,8 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "proxy.enabled": {
         "type": "boolean",
         "description": (
-            "Docker-only egress credential firewall. Requires `hermes egress setup` "
-            "and `hermes egress start`; Modal/SSH/Daytona are not wired yet."
+            "Docker-only egress credential firewall. Requires `jimmy egress setup` "
+            "and `jimmy egress start`; Modal/SSH/Daytona are not wired yet."
         ),
         "category": "security",
     },
@@ -1162,7 +1162,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "updates.non_interactive_local_changes": {
         "type": "select",
         "description": (
-            "When the chat app / gateway updates Hermes (no terminal prompt), "
+            "When the chat app / gateway updates Jimmy (no terminal prompt), "
             "what to do with uncommitted local source edits. 'stash' keeps them "
             "and re-applies them after the update; 'discard' throws them away. "
             "Terminal updates always ask, regardless of this setting."
@@ -1172,7 +1172,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "updates.refresh_cua_driver": {
         "type": "boolean",
         "description": (
-            "Refresh an already-installed cua-driver during hermes update. "
+            "Refresh an already-installed cua-driver during jimmy update. "
             "Disable this on non-admin macOS accounts where /Applications is "
             "not writable."
         ),
@@ -1494,7 +1494,7 @@ def _schema_with_dynamic_provider_options() -> Dict[str, Dict[str, Any]]:
     return {**CONFIG_SCHEMA, **overlay}
 
 
-from hermes_cli.web_models import (  # noqa: F401
+from jimmy_cli.web_models import (  # noqa: F401
     ConfigUpdate,
     EnvVarUpdate,
     EnvVarDelete,
@@ -1608,7 +1608,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
 
     The Models page has two assignment paths and only one of them was safe:
 
-    - The "Change" picker sends a real Hermes provider slug — fine.
+    - The "Change" picker sends a real Jimmy provider slug — fine.
     - The per-card "Use as → Main model" menu sends ``entry.provider``
       from the analytics rows, falling back to the model's VENDOR prefix
       (``modelVendor("anthropic/claude-opus-4.6") == "anthropic"``) when
@@ -1621,8 +1621,8 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
 
     Two repairs, both at this single chokepoint so every caller inherits:
 
-    1. Vendor-name → Hermes-provider mapping: when the provider string is
-       not a known Hermes provider/alias (e.g. ``moonshotai``, ``x-ai`` is
+    1. Vendor-name → Jimmy-provider mapping: when the provider string is
+       not a known Jimmy provider/alias (e.g. ``moonshotai``, ``x-ai`` is
        known but ``poolside`` isn't) but the model is a vendor-prefixed
        aggregator slug, keep the user's CURRENT aggregator if they're on
        one, else fall back to openrouter.
@@ -1638,10 +1638,10 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
        ``normalize_model_for_provider`` (e.g. ``anthropic/claude-opus-4.6``
        on native anthropic → ``claude-opus-4-6``).
     """
-    from hermes_cli.config import get_compatible_custom_providers
-    from hermes_cli.models import _KNOWN_PROVIDER_NAMES, normalize_provider
-    from hermes_cli.model_normalize import normalize_model_for_provider
-    from hermes_cli.providers import resolve_custom_provider, resolve_user_provider
+    from jimmy_cli.config import get_compatible_custom_providers
+    from jimmy_cli.models import _KNOWN_PROVIDER_NAMES, normalize_provider
+    from jimmy_cli.model_normalize import normalize_model_for_provider
+    from jimmy_cli.providers import resolve_custom_provider, resolve_user_provider
 
     prov_in = (provider or "").strip()
     model_in = (model or "").strip()
@@ -1670,7 +1670,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
 
     # A named custom provider that didn't resolve above (typo, config
     # mismatch, entry missing from custom_providers/providers) must still
-    # not be treated as a stray vendor prefix -- it isn't a known Hermes
+    # not be treated as a stray vendor prefix -- it isn't a known Jimmy
     # provider/alias, but it also isn't the analytics-vendor case this
     # fallback exists for. Match only the durable named-custom syntax
     # (bare "custom" bucket, or "custom:<name>" per
@@ -1694,7 +1694,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
             )
         except Exception:
             cur_provider = ""
-        from hermes_cli.models import _AGGREGATOR_PROVIDERS
+        from jimmy_cli.models import _AGGREGATOR_PROVIDERS
         if cur_provider and normalize_provider(cur_provider) in _AGGREGATOR_PROVIDERS:
             canonical = normalize_provider(cur_provider)
             prov_in = cur_provider
@@ -1859,9 +1859,9 @@ def _count_status_active_sessions() -> int:
     This is best-effort status garnish, not a critical path.  Opens read-only
     (via the shared stale-schema heal, same as every other dashboard read
     path) so /api/status never routinely writes to state.db while another
-    Hermes process is using it.
+    Jimmy process is using it.
     """
-    from hermes_state import _default_db_path
+    from jimmy_state import _default_db_path
 
     # The heal helper bootstraps a missing store; this garnish must not — on
     # a fresh install /api/status polls would otherwise create state.db
@@ -1912,7 +1912,7 @@ _MEDIA_CONTENT_TYPES = {
     ".ico": "image/x-icon",
 }
 _MEDIA_MAX_BYTES = 25 * 1024 * 1024
-_MANAGED_FILES_ROOT_ENV = "HERMES_DASHBOARD_FILES_ROOT"
+_MANAGED_FILES_ROOT_ENV = "JIMMY_DASHBOARD_FILES_ROOT"
 _MANAGED_FILE_MAX_BYTES = 100 * 1024 * 1024
 _STREAMABLE_MEDIA_EXTENSIONS = frozenset(
     {
@@ -1963,7 +1963,7 @@ _FS_READDIR_HIDDEN = {
 # (agent.file_safety.get_read_block_error and
 # gateway.platforms.base._ROOT_CREDENTIAL_FILES) so the dashboard Files tab
 # doesn't lag behind them — an operator can point the managed root at
-# HERMES_HOME itself, at which point every one of these basenames is a live
+# JIMMY_HOME itself, at which point every one of these basenames is a live
 # secret store sitting in the browsable tree.
 _SENSITIVE_MANAGED_FILE_BASENAMES = frozenset({
     "auth.json",
@@ -1989,7 +1989,7 @@ _SENSITIVE_MANAGED_FILE_BASENAMES = frozenset({
 # basename-only guard would still expose e.g. ``mcp-tokens/<server>.json``
 # (live MCP OAuth tokens) and ``pairing/<x>``. We match on ANY path component
 # so these trees are blocked wherever they appear under the browsable root,
-# without needing to resolve them relative to HERMES_HOME.
+# without needing to resolve them relative to JIMMY_HOME.
 _SENSITIVE_MANAGED_DIR_NAMES = frozenset({
     "mcp-tokens",
     "pairing",
@@ -2000,7 +2000,7 @@ def _is_sensitive_filename(name: str) -> bool:
     """Return True for a basename the managed-files API must never expose.
 
     Covers ``.env`` / ``.env.<suffix>`` / ``.envrc`` variants plus the
-    canonical Hermes credential-store basenames (see
+    canonical Jimmy credential-store basenames (see
     ``_SENSITIVE_MANAGED_FILE_BASENAMES`` above).
 
     Case-insensitive so ``.ENV`` / ``.Env.local`` / ``Auth.JSON`` on
@@ -2024,7 +2024,7 @@ def _is_sensitive_path(path: Path) -> bool:
     credential-directory-tree check: a path is sensitive if its own basename
     is sensitive OR any of its path components is a credential directory
     (``mcp-tokens`` / ``pairing``). The component match is case-insensitive
-    and needs no HERMES_HOME resolution, so it blocks these trees wherever
+    and needs no JIMMY_HOME resolution, so it blocks these trees wherever
     they sit under the operator-configured managed root — closing the gap
     the canonical guards cover as directory trees but a basename-only check
     would miss.
@@ -2214,7 +2214,7 @@ def _media_serve_roots() -> list[Path]:
     key or a screenshot outside the cache) merely because the suffix passes the
     allowlist.
     """
-    home = get_hermes_home()
+    home = get_jimmy_home()
     roots = [home / "images", home / "screenshots", home / "cache"]
     out: list[Path] = []
     for root in roots:
@@ -2301,21 +2301,21 @@ def _local_dashboard_request(request: Request) -> bool:
     return host in local_hosts or client_host in local_hosts
 
 
-def _default_hermes_root_is_opt_data() -> bool:
-    raw = os.environ.get("HERMES_HOME", "").strip()
+def _default_jimmy_root_is_opt_data() -> bool:
+    raw = os.environ.get("JIMMY_HOME", "").strip()
     if not raw:
         return False
     try:
-        from hermes_constants import get_default_hermes_root
+        from jimmy_constants import get_default_jimmy_root
 
-        root = get_default_hermes_root().expanduser().resolve(strict=False)
+        root = get_default_jimmy_root().expanduser().resolve(strict=False)
     except (OSError, RuntimeError):
         root = Path(raw).expanduser().resolve(strict=False)
     return root == _HOSTED_MANAGED_FILES_ROOT
 
 
 def _dashboard_local_update_managed_externally() -> bool:
-    """Return true when the dashboard should not offer ``hermes update``.
+    """Return true when the dashboard should not offer ``jimmy update``.
 
     Containerized dashboards are updated by the outer launcher/image, not by an
     in-browser local update action. Keep this dashboard capability separate
@@ -2323,16 +2323,16 @@ def _dashboard_local_update_managed_externally() -> bool:
     still behave like their actual install method in the CLI.
 
     However, when the install method is ``git`` (a bind-mounted checkout inside
-    a container — e.g. the hermes-webui image sharing the Hermes source tree),
-    the dashboard's ``hermes update`` button is the correct update path and
+    a container — e.g. the jimmy-webui image sharing the Jimmy source tree),
+    the dashboard's ``jimmy update`` button is the correct update path and
     should not be suppressed. Other containerized install methods remain
     externally managed unless their apply path is proven safe inside the
     running container filesystem.
     """
-    if _default_hermes_root_is_opt_data():
+    if _default_jimmy_root_is_opt_data():
         return True
     try:
-        from hermes_constants import is_container
+        from jimmy_constants import is_container
 
         if not is_container():
             return False
@@ -2361,9 +2361,9 @@ def _managed_files_policy(request: Request, *, create_root: bool = True) -> Mana
     # Remote/OAuth access does not imply a hosted container. Users can expose a
     # local dashboard through the auth gate (for example a macOS launchd install)
     # and still expect the Files page to browse their local home directory. Lock
-    # to /opt/data only when the installation's Hermes root is actually /opt/data
-    # (the container/hosted layout) or when HERMES_DASHBOARD_FILES_ROOT is set.
-    if _default_hermes_root_is_opt_data():
+    # to /opt/data only when the installation's Jimmy root is actually /opt/data
+    # (the container/hosted layout) or when JIMMY_DASHBOARD_FILES_ROOT is set.
+    if _default_jimmy_root_is_opt_data():
         root = _ensure_managed_root(_HOSTED_MANAGED_FILES_ROOT) if create_root else _HOSTED_MANAGED_FILES_ROOT
         return ManagedFilesPolicy(default_path=root, locked_root=root, can_change_path=False)
 
@@ -2506,17 +2506,17 @@ def _decode_chat_image_upload(payload: ChatImageUpload) -> tuple[bytes, str, str
 async def upload_chat_image(payload: ChatImageUpload, profile: Optional[str] = None):
     """Persist a browser-provided chat image where the embedded TUI can read it.
 
-    The dashboard /chat page runs Hermes inside an xterm.js PTY. Browser
+    The dashboard /chat page runs Jimmy inside an xterm.js PTY. Browser
     clipboard image bytes are not visible to the server-side clipboard, so the
     page uploads them here, then drives the TUI's ``/image <path>`` command
     with the returned gateway-visible path. Files land under
-    ``HERMES_HOME/images/`` — the same directory ``clipboard.paste`` /
+    ``JIMMY_HOME/images/`` — the same directory ``clipboard.paste`` /
     ``image.attach`` already use.
     """
     def _run():
         data, mime_type, ext = _decode_chat_image_upload(payload)
         with _profile_scope(profile) as scoped_home:
-            home = scoped_home or get_hermes_home()
+            home = scoped_home or get_jimmy_home()
             img_dir = Path(home) / "images"
             try:
                 img_dir.mkdir(parents=True, exist_ok=True)
@@ -2898,7 +2898,7 @@ async def fs_read_text(path: str):
 async def fs_write_text(payload: FsWriteText):
     """Overwrite (or create) a UTF-8 text file for the in-app spot editor.
 
-    Mirrors the local Electron ``hermes:fs:writeText`` hardening: the path is
+    Mirrors the local Electron ``jimmy:fs:writeText`` hardening: the path is
     resolved + validated by ``_fs_path``, the parent directory must already
     exist (we never build directory trees), only regular files may be replaced,
     and the payload is size-capped. The write is staged to a sibling temp file
@@ -2927,7 +2927,7 @@ async def fs_write_text(payload: FsWriteText):
     if not target.parent.is_dir():
         raise HTTPException(status_code=400, detail="Parent directory does not exist")
 
-    tmp = target.with_name(f".{target.name}.hermes-tmp-{os.getpid()}")
+    tmp = target.with_name(f".{target.name}.jimmy-tmp-{os.getpid()}")
     try:
         tmp.write_text(text, encoding="utf-8")
         os.replace(tmp, target)
@@ -2990,11 +2990,11 @@ async def fs_default_cwd():
 #
 # The desktop runs these as Electron-local git on the user's machine; over a
 # remote gateway that's the wrong filesystem, so we mirror them here (same auth
-# gate + path hardening as /api/fs). Logic lives in ``hermes_cli.web_git``;
+# gate + path hardening as /api/fs). Logic lives in ``jimmy_cli.web_git``;
 # these are thin, executor-offloaded wrappers (git/gh can block).
 # ---------------------------------------------------------------------------
 
-from hermes_cli import web_git as _web_git  # noqa: E402
+from jimmy_cli import web_git as _web_git  # noqa: E402
 
 
 async def _git_op(fn, *args):
@@ -3010,10 +3010,10 @@ def _git_path(path: str) -> str:
     return str(_fs_path(path))
 
 
-from hermes_cli.web_routers import git as _git_routes  # noqa: E402
+from jimmy_cli.web_routers import git as _git_routes  # noqa: E402
 
 app.include_router(_git_routes.router)
-from hermes_cli.web_routers.git import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.git import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     git_status_route,
     git_worktrees_route,
     git_branches_route,
@@ -3117,7 +3117,7 @@ def _profile_platform_ports(profile_home: Path, runtime: Optional[dict]) -> Dict
     try:
         # Multi-profile probe: load_config() targets the ACTIVE profile's
         # home, so read the probed profile's file via the raw primitive.
-        from hermes_cli.config import read_user_config_raw
+        from jimmy_cli.config import read_user_config_raw
         cfg = read_user_config_raw(profile_home / "config.yaml")
         gateway_cfg = cfg.get("gateway") if isinstance(cfg.get("gateway"), dict) else {}
         # gateway.platforms first, top-level platforms second — later wins,
@@ -3237,7 +3237,7 @@ def _collect_profile_gateway_topology() -> Dict[str, Any]:
       directly.
     """
     try:
-        from hermes_cli.profiles import _check_gateway_running, profiles_to_serve
+        from jimmy_cli.profiles import _check_gateway_running, profiles_to_serve
         from gateway.status import read_runtime_status
         homes = profiles_to_serve(True)
     except Exception:
@@ -3320,8 +3320,8 @@ _TOPOLOGY_CACHE_LOCK = threading.Lock()
 _TOPOLOGY_CACHE_TTL = 10.0
 
 # Stable install identity for /api/status. One random opaque id per physical
-# install, minted on first read and persisted under the ROOT Hermes home
-# (get_default_hermes_root()) — NOT the profile-scoped HERMES_HOME — so every
+# install, minted on first read and persisted under the ROOT Jimmy home
+# (get_default_jimmy_root()) — NOT the profile-scoped JIMMY_HOME — so every
 # profile served by the same install reports the same id. Clients (the desktop
 # connection registry) use it to recognize that two registered addresses
 # (hostname + Tailscale IP, LAN + WAN) are one backend and collapse duplicate
@@ -3336,7 +3336,7 @@ _INSTALL_ID_LOCK = threading.Lock()
 
 
 def _read_or_create_install_id() -> Optional[str]:
-    """Read (or mint + persist) the install id under the root Hermes home.
+    """Read (or mint + persist) the install id under the root Jimmy home.
 
     Returns ``None`` only when the id can neither be read nor persisted (e.g.
     a read-only filesystem) — an unpersisted id would violate the stability
@@ -3344,9 +3344,9 @@ def _read_or_create_install_id() -> Optional[str]:
     """
     import uuid
 
-    from hermes_constants import get_default_hermes_root
+    from jimmy_constants import get_default_jimmy_root
 
-    root = get_default_hermes_root()
+    root = get_default_jimmy_root()
     path = root / _INSTALL_ID_FILENAME
     try:
         existing = path.read_text(encoding="utf-8").strip().lower()
@@ -3461,7 +3461,7 @@ async def get_health():
 
 
 _PROFILE_PLATFORM_STATUS_KEY_RE = re.compile(
-    # Profile segment mirrors hermes_cli.profiles._PROFILE_ID_RE.  Platform
+    # Profile segment mirrors jimmy_cli.profiles._PROFILE_ID_RE.  Platform
     # segment mirrors the Platform enum's normalized values: built-in members
     # plus plugin directory names (lowercased), which allow hyphens as well
     # as underscores (e.g. ``reviewer:foo-bar``).
@@ -3523,7 +3523,7 @@ def _merge_profile_gateway_platforms(
     and existing keys are never overwritten.
     """
     try:
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
         active = get_active_profile_name()
     except Exception:
         active = "default"
@@ -3552,7 +3552,7 @@ async def get_status(profile: Optional[str] = None):
     # Use the config-only (contextvar) scope, NOT _profile_scope: this handler
     # awaits the remote-health probe, and _profile_scope swaps process-global
     # skills-module attributes that a concurrent request would cross-restore
-    # across that await. Status only resolves get_hermes_home() at call time
+    # across that await. Status only resolves get_jimmy_home() at call time
     # (config/env/gateway state), which the task-local contextvar covers.
     profile_dir: Optional[Path] = None
     if requested_profile and requested_profile.lower() != "current":
@@ -3571,7 +3571,7 @@ async def get_status(profile: Optional[str] = None):
         # When ?profile=<name> was given, scope PID and state reads to that
         # profile's directory — gateway identity files (PID, lock, runtime
         # status) are written to the per-profile home, not the process-level
-        # HERMES_HOME (see issue #69143). Plain /api/status keeps the exact
+        # JIMMY_HOME (see issue #69143). Plain /api/status keeps the exact
         # zero-arg call so its behavior (and cache signature) is unchanged.
         #
         # The module-level probe references are handed to the resolver so the
@@ -3725,7 +3725,7 @@ async def get_status(profile: Optional[str] = None):
         )
         # Resolved drain timeout (seconds) so NAS can size its poll deadline
         # without out-of-band knowledge.  Offload to a thread: on a cold
-        # Windows install the first import of hermes_cli.gateway blocks the
+        # Windows install the first import of jimmy_cli.gateway blocks the
         # asyncio event loop for 15-30s (.pyc compilation + Defender scans),
         # exceeding the desktop handshake's 15s socket timeout.  After the
         # first call the module is in sys.modules and run_in_executor returns
@@ -3735,8 +3735,8 @@ async def get_status(profile: Optional[str] = None):
         )
 
         # Dashboard auth gate (Phase 7): surface whether the gate is engaged
-        # and which providers are registered so ``hermes status`` and the
-        # SPA's StatusPage can show "OAuth gate ON via Nous Research" or
+        # and which providers are registered so ``jimmy status`` and the
+        # SPA's StatusPage can show "OAuth gate ON via Jimmy" or
         # "loopback only — no auth gate" with no extra round trips.
         auth_required = bool(getattr(app.state, "auth_required", False))
         auth_providers: list[str] = []
@@ -3753,7 +3753,7 @@ async def get_status(profile: Optional[str] = None):
         # gateway ⇒ desktop falls back automatically.
         auth_flows: list[str] = []
         try:
-            from hermes_cli.dashboard_auth import (
+            from jimmy_cli.dashboard_auth import (
                 list_providers as _list_providers,
                 list_session_providers as _list_session_providers,
             )
@@ -3776,7 +3776,7 @@ async def get_status(profile: Optional[str] = None):
         # never let auth classification break the public liveness probe.
         nous_session_valid = "unknown"
         try:
-            from hermes_cli.auth import get_nous_session_validity
+            from jimmy_cli.auth import get_nous_session_validity
             nous_session_valid = get_nous_session_validity()
         except Exception:
             nous_session_valid = "unknown"
@@ -3790,7 +3790,7 @@ async def get_status(profile: Optional[str] = None):
             "release_date": __release_date__,
             "config_version": current_ver,
             "latest_config_version": latest_ver,
-            "can_update_hermes": not _dashboard_local_update_managed_externally(),
+            "can_update_jimmy": not _dashboard_local_update_managed_externally(),
             "gateway_running": gateway_running,
             "gateway_state": gateway_state,
             "gateway_platforms": gateway_platforms,
@@ -3833,7 +3833,7 @@ async def get_status(profile: Optional[str] = None):
             from gateway.readiness import _probe_state_db
 
             storage_check = await asyncio.get_running_loop().run_in_executor(
-                None, functools.partial(_probe_state_db, get_hermes_home())
+                None, functools.partial(_probe_state_db, get_jimmy_home())
             )
             components["storage"] = {"status": storage_check.get("status", "degraded")}
         except Exception:
@@ -3876,14 +3876,14 @@ async def get_status(profile: Optional[str] = None):
                 None,
                 functools.partial(
                     collect_memory_status,
-                    profile_dir if profile_dir else get_hermes_home(),
+                    profile_dir if profile_dir else get_jimmy_home(),
                 ),
             )
         except Exception:
             status["memory"] = {"pressure": "unknown"}
 
         # Disk-usage rollup (NS-656, same lineage as OOF-2/OOF-107 fleet
-        # disk-exhaustion incidents). One statvfs call on HERMES_HOME's
+        # disk-exhaustion incidents). One statvfs call on JIMMY_HOME's
         # filesystem — coarse MB numbers + enum, same public disclosure
         # class as the memory block, and equally advisory: not folded
         # into components/overall.
@@ -3894,7 +3894,7 @@ async def get_status(profile: Optional[str] = None):
                 None,
                 functools.partial(
                     collect_disk_status,
-                    profile_dir if profile_dir else get_hermes_home(),
+                    profile_dir if profile_dir else get_jimmy_home(),
                 ),
             )
         except Exception:
@@ -3906,8 +3906,8 @@ async def get_status(profile: Optional[str] = None):
         # update. None/absent when no rebuild is pending (the common case).
         # Read-only probe, never blocks startup, never raises.
         try:
-            from hermes_state import SessionDB as _SDB
-            from hermes_constants import get_hermes_home as _ghh
+            from jimmy_state import SessionDB as _SDB
+            from jimmy_constants import get_jimmy_home as _ghh
 
             _db_path = _ghh() / "state.db"
             if _db_path.exists():
@@ -3928,7 +3928,7 @@ async def get_status(profile: Optional[str] = None):
         # process table, so keep it off the event loop.
         #
         # Split by sensitivity: profile NAMES (``profiles``) and the gateway
-        # ``gateway_mode`` are low-sensitivity PRODUCT surface — Hermes Cloud
+        # ``gateway_mode`` are low-sensitivity PRODUCT surface — Jimmy Cloud
         # renders the profile list in the Portal, which reads this endpoint over
         # the network (a gated bind), so they must survive the auth gate. The
         # per-gateway ``gateways[]`` detail carries host ports (deployment
@@ -3952,7 +3952,7 @@ async def get_status(profile: Optional[str] = None):
         # split ``should_require_auth`` draws.
         if not auth_required:
             status.update({
-                "hermes_home": str(get_hermes_home()),
+                "jimmy_home": str(get_jimmy_home()),
                 "config_path": str(get_config_path()),
                 "env_path": str(get_env_path()),
                 "gateway_pid": gateway_pid,
@@ -4015,7 +4015,7 @@ async def get_system_stats():
 
     OS / Python / host identity from stdlib; CPU / memory / disk / uptime from
     psutil when available, with graceful degradation when it isn't.  Read-only
-    and non-sensitive (no env values, no paths beyond the hermes home root).
+    and non-sensitive (no env values, no paths beyond the jimmy home root).
     """
     import platform as _platform
 
@@ -4030,7 +4030,7 @@ async def get_system_stats():
         "hostname": _platform.node(),
         "python_version": _platform.python_version(),
         "python_impl": _platform.python_implementation(),
-        "hermes_version": __version__,
+        "jimmy_version": __version__,
         "cpu_count": os.cpu_count(),
     }
 
@@ -4046,7 +4046,7 @@ async def get_system_stats():
             "percent": vm.percent,
         }
         try:
-            du = psutil.disk_usage(str(get_hermes_home()))
+            du = psutil.disk_usage(str(get_jimmy_home()))
             info["disk"] = {
                 "total": du.total,
                 "used": du.used,
@@ -4095,7 +4095,7 @@ async def get_system_stats():
 #
 # The curator periodically reviews skills (archive stale, prune, pin).  The
 # dashboard surfaces its state and the pause/resume/run-now controls that
-# `hermes curator` exposes.
+# `jimmy curator` exposes.
 # ---------------------------------------------------------------------------
 
 
@@ -4132,7 +4132,7 @@ async def set_curator_paused(body: CuratorPause):
 async def run_curator():
     """Trigger a curator review now (backgrounded; tail via action status)."""
     try:
-        proc = _spawn_hermes_action(["curator", "run"], "curator-run")
+        proc = _spawn_jimmy_action(["curator", "run"], "curator-run")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to run curator: {exc}")
     return {"ok": True, "pid": proc.pid, "name": "curator-run"}
@@ -4232,7 +4232,7 @@ def _get_portal_status_sync():
     cfg = load_config() or {}
     auth: Dict[str, Any] = {}
     try:
-        from hermes_cli.auth import get_nous_auth_status_local
+        from jimmy_cli.auth import get_nous_auth_status_local
 
         # Read-only dashboard endpoint: refresh-free snapshot so polling
         # never performs an OAuth refresh or burns a refresh token.
@@ -4249,7 +4249,7 @@ def _get_portal_status_sync():
         "portal_url": auth.get("portal_base_url"),
         "inference_url": auth.get("inference_base_url"),
         "provider": str((model_cfg or {}).get("provider") or ""),
-        "subscription_url": "https://portal.nousresearch.com/manage-subscription",
+        "subscription_url": "https://portal.jimmy-agent.com/manage-subscription",
         "features": features,
     }
 
@@ -4264,7 +4264,7 @@ def _get_portal_status_sync():
 @app.post("/api/ops/prompt-size")
 async def run_prompt_size():
     try:
-        proc = _spawn_hermes_action(["prompt-size"], "prompt-size")
+        proc = _spawn_jimmy_action(["prompt-size"], "prompt-size")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed: {exc}")
     return {"ok": True, "pid": proc.pid, "name": "prompt-size"}
@@ -4273,7 +4273,7 @@ async def run_prompt_size():
 @app.post("/api/ops/dump")
 async def run_dump():
     try:
-        proc = _spawn_hermes_action(["dump"], "dump")
+        proc = _spawn_jimmy_action(["dump"], "dump")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed: {exc}")
     return {"ok": True, "pid": proc.pid, "name": "dump"}
@@ -4282,7 +4282,7 @@ async def run_dump():
 @app.post("/api/ops/config-migrate")
 async def run_config_migrate():
     try:
-        proc = _spawn_hermes_action(["config", "migrate"], "config-migrate")
+        proc = _spawn_jimmy_action(["config", "migrate"], "config-migrate")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed: {exc}")
     return {"ok": True, "pid": proc.pid, "name": "config-migrate"}
@@ -4299,7 +4299,7 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
     dashboard renders those as real, copyable links instead of scraping a log
     tail. Pastes auto-delete after 6 hours (handled inside the share core).
     """
-    from hermes_cli.debug import build_debug_share
+    from jimmy_cli.debug import build_debug_share
 
     req = body or DebugShareRequest()
     try:
@@ -4330,11 +4330,11 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
 # Both commands are spawned as detached subprocesses so the HTTP request
 # returns immediately.  stdin is closed (``DEVNULL``) so any stray ``input()``
 # calls fail fast with EOF rather than hanging forever.  stdout/stderr are
-# streamed to a per-action log file under ``~/.hermes/logs/<action>.log`` so
+# streamed to a per-action log file under ``~/.jimmy/logs/<action>.log`` so
 # the dashboard can tail them back to the user.
 # ---------------------------------------------------------------------------
 
-_ACTION_LOG_DIR: Path = get_hermes_home() / "logs"
+_ACTION_LOG_DIR: Path = get_jimmy_home() / "logs"
 _ACTION_LOG_TAIL_MAX_BYTES = 256 * 1024
 _ACTION_LOG_TAIL_INITIAL_CHUNK_BYTES = 8 * 1024
 _ACTION_LOG_TAIL_MAX_CHUNK_BYTES = 64 * 1024
@@ -4344,7 +4344,7 @@ _ACTION_LOG_FILES: Dict[str, str] = {
     "gateway-restart": "gateway-restart.log",
     "gateway-start": "gateway-start.log",
     "gateway-stop": "gateway-stop.log",
-    "hermes-update": "hermes-update.log",
+    "jimmy-update": "jimmy-update.log",
     "doctor": "action-doctor.log",
     "security-audit": "action-security-audit.log",
     "backup": "action-backup.log",
@@ -4439,15 +4439,15 @@ def _dashboard_spawn_executable() -> str:
     return sys.executable
 
 
-def _spawn_hermes_action(
+def _spawn_jimmy_action(
     subcommand: List[str],
     name: str,
     *,
     env_overrides: Optional[Dict[str, str]] = None,
 ) -> subprocess.Popen:
-    """Spawn ``hermes <subcommand>`` detached and record the Popen handle.
+    """Spawn ``jimmy <subcommand>`` detached and record the Popen handle.
 
-    Uses the running interpreter's ``hermes_cli.main`` module so the action
+    Uses the running interpreter's ``jimmy_cli.main`` module so the action
     inherits the same venv/PYTHONPATH the web server is using.
     """
     log_file_name = _ACTION_LOG_FILES[name]
@@ -4458,15 +4458,15 @@ def _spawn_hermes_action(
         f"\n=== {name} started {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n".encode()
     )
 
-    cmd = [_dashboard_spawn_executable(), "-m", "hermes_cli.main", *subcommand]
+    cmd = [_dashboard_spawn_executable(), "-m", "jimmy_cli.main", *subcommand]
 
     # The dashboard runs *inside* the gateway process, so os.environ carries
-    # _HERMES_GATEWAY=1. Inheriting it makes a spawned `hermes gateway restart`
+    # _JIMMY_GATEWAY=1. Inheriting it makes a spawned `jimmy gateway restart`
     # trip the in-process restart-loop guard and exit 1 — silently failing the
     # dashboard's auto-restart paths. The gateway's own restart watcher already
     # drops it (gateway/run.py); mirror that here (#52470).
-    action_env = {**os.environ, "HERMES_NONINTERACTIVE": "1"}
-    action_env.pop("_HERMES_GATEWAY", None)
+    action_env = {**os.environ, "JIMMY_NONINTERACTIVE": "1"}
+    action_env.pop("_JIMMY_GATEWAY", None)
 
     popen_kwargs: Dict[str, Any] = {
         "cwd": str(PROJECT_ROOT),
@@ -4488,7 +4488,7 @@ def _spawn_hermes_action(
     _ACTION_RESULTS.pop(name, None)
     _ACTION_COMMANDS[name] = tuple(subcommand)
     _ACTION_PROCS[name] = proc
-    action_id = (env_overrides or {}).get("HERMES_ACTION_ID")
+    action_id = (env_overrides or {}).get("JIMMY_ACTION_ID")
     if action_id:
         _ACTION_IDS[name] = action_id
     else:
@@ -4548,7 +4548,7 @@ def _gateway_subcommand(profile: Optional[str], verb: str) -> List[str]:
 
 
 def _gateway_display_command(profile: Optional[str], verb: str) -> str:
-    return " ".join(["hermes", *_gateway_subcommand(profile, verb)])
+    return " ".join(["jimmy", *_gateway_subcommand(profile, verb)])
 
 
 # Kept in sync with the corresponding frontend validation in ChannelsPage.tsx.
@@ -4608,12 +4608,12 @@ def _validate_messaging_env_value(platform_id: str, key: str, value: str) -> Non
 
 
 def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Popen, bool]:
-    """Spawn ``hermes gateway restart``, reusing an in-flight restart.
+    """Spawn ``jimmy gateway restart``, reusing an in-flight restart.
 
     Multiple dashboard paths can request a restart in quick succession
     (restart button double-click, or a stale cached frontend firing its own
     restart after the server already auto-restarted post-onboarding). Two
-    concurrent ``hermes gateway restart`` children race each other on the
+    concurrent ``jimmy gateway restart`` children race each other on the
     manual kill-and-start path, so reuse the live one instead.
 
     Reusing only the *live* child is not enough. The child exits as soon as
@@ -4632,7 +4632,7 @@ def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Po
     """
     # Reap orphaned gateways before spawning a new one (#77276).
     try:
-        from hermes_cli.gateway import _reap_unsupervised_gateway_orphans
+        from jimmy_cli.gateway import _reap_unsupervised_gateway_orphans
 
         _reap_unsupervised_gateway_orphans()
     except Exception:
@@ -4662,7 +4662,7 @@ def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Po
             )
             return recent_proc, True
 
-    proc = _spawn_hermes_action(subcommand, "gateway-restart")
+    proc = _spawn_jimmy_action(subcommand, "gateway-restart")
     _LAST_GATEWAY_RESTART = (time.monotonic(), proc, tuple(subcommand))
     return proc, False
 
@@ -4691,7 +4691,7 @@ def _restart_gateway_after_webhook_enable(profile: Optional[str] = None) -> dict
 
 @app.post("/api/gateway/restart")
 async def restart_gateway(profile: Optional[str] = None):
-    """Kick off a ``hermes gateway restart`` in the background."""
+    """Kick off a ``jimmy gateway restart`` in the background."""
     try:
         proc, _reused = _spawn_gateway_restart(profile)
     except HTTPException:
@@ -4713,7 +4713,7 @@ async def gateway_drain(request: Request):
     Authenticated by the non-interactive token-auth seam: the
     ``dashboard_auth/drain`` plugin registers this exact path as a token route
     and verifies the ``Authorization`` bearer secret. If that plugin isn't
-    active (no ``HERMES_DASHBOARD_DRAIN_SECRET``), the route is NOT a token
+    active (no ``JIMMY_DASHBOARD_DRAIN_SECRET``), the route is NOT a token
     route, so on a gated bind the cookie gate handles it (a browser session can
     still drive it from the dashboard) and on a loopback bind the legacy
     session-token gate applies — either way it is never unauthenticated on a
@@ -4779,20 +4779,20 @@ async def gateway_drain(request: Request):
     }
 
 
-@app.post("/api/hermes/update")
-async def update_hermes():
-    """Kick off ``hermes update`` in the background."""
+@app.post("/api/jimmy/update")
+async def update_jimmy():
+    """Kick off ``jimmy update`` in the background."""
     if _dashboard_local_update_managed_externally():
         message = (
-            "Hermes updates are managed outside this dashboard in "
+            "Jimmy updates are managed outside this dashboard in "
             "containerized environments. The built-in local updater is "
             "disabled here."
         )
-        _record_completed_action("hermes-update", message, exit_code=1)
+        _record_completed_action("jimmy-update", message, exit_code=1)
         return {
             "ok": False,
             "pid": None,
-            "name": "hermes-update",
+            "name": "jimmy-update",
             "error": "dashboard_update_managed_externally",
             "message": message,
             "update_command": "managed outside dashboard",
@@ -4801,11 +4801,11 @@ async def update_hermes():
     install_method = detect_install_method(PROJECT_ROOT)
     if install_method == "docker":
         message = format_docker_update_message()
-        _record_completed_action("hermes-update", message, exit_code=1)
+        _record_completed_action("jimmy-update", message, exit_code=1)
         return {
             "ok": False,
             "pid": None,
-            "name": "hermes-update",
+            "name": "jimmy-update",
             "error": "docker_update_unsupported",
             "message": message,
             "update_command": recommended_update_command_for_method(install_method),
@@ -4813,11 +4813,11 @@ async def update_hermes():
 
     if is_nix_install_method(install_method) or install_method == "apt":
         message = recommended_update_command_for_method(install_method)
-        _record_completed_action("hermes-update", message, exit_code=1)
+        _record_completed_action("jimmy-update", message, exit_code=1)
         return {
             "ok": False,
             "pid": None,
-            "name": "hermes-update",
+            "name": "jimmy-update",
             "error": (
                 "apt_update_required" if install_method == "apt" else "nix_update_unsupported"
             ),
@@ -4825,33 +4825,33 @@ async def update_hermes():
             "update_command": message,
         }
 
-    existing = _ACTION_PROCS.get("hermes-update")
+    existing = _ACTION_PROCS.get("jimmy-update")
     if existing is not None and existing.poll() is None:
         response = {
             "ok": True,
             "pid": existing.pid,
-            "name": "hermes-update",
+            "name": "jimmy-update",
             "already_running": True,
         }
-        action_id = _ACTION_IDS.get("hermes-update")
+        action_id = _ACTION_IDS.get("jimmy-update")
         if action_id:
             response["action_id"] = action_id
         return response
 
     action_id = secrets.token_hex(16)
     try:
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             ["update"],
-            "hermes-update",
-            env_overrides={"HERMES_ACTION_ID": action_id},
+            "jimmy-update",
+            env_overrides={"JIMMY_ACTION_ID": action_id},
         )
     except Exception as exc:
-        _log.exception("Failed to spawn hermes update")
+        _log.exception("Failed to spawn jimmy update")
         raise HTTPException(status_code=500, detail=f"Failed to start update: {exc}")
     return {
         "ok": True,
         "pid": proc.pid,
-        "name": "hermes-update",
+        "name": "jimmy-update",
         "action_id": action_id,
     }
 
@@ -4910,17 +4910,17 @@ def _recent_upstream_commits(n: int = 20) -> List[Dict[str, Any]]:
         return []
 
 
-@app.get("/api/hermes/update/check")
-async def check_hermes_update(force: bool = False):
-    """Report whether a Hermes update is available, without applying it.
+@app.get("/api/jimmy/update/check")
+async def check_jimmy_update(force: bool = False):
+    """Report whether a Jimmy update is available, without applying it.
 
     Powers the dashboard's "check before you update" flow: the System page
     shows the commit-behind count and asks the user to confirm before
-    ``POST /api/hermes/update`` actually runs ``hermes update``.
+    ``POST /api/jimmy/update`` actually runs ``jimmy update``.
 
     Returns:
         install_method: 'apt' | 'git' | 'docker' | 'nix' | 'nixos' | 'unknown'
-        current_version: installed Hermes version string
+        current_version: installed Jimmy version string
         behind: commits behind upstream (>=1), 0 if up to date,
                 -1 if behind by an unknown count, or null if the
                 check could not run (offline, no remote, etc.)
@@ -4945,7 +4945,7 @@ async def check_hermes_update(force: bool = False):
             "can_apply": False,
             "update_command": "managed outside dashboard",
             "message": (
-                "Hermes updates are managed outside this dashboard in "
+                "Jimmy updates are managed outside this dashboard in "
                 "containerized environments."
             ),
         }
@@ -4968,7 +4968,7 @@ async def check_hermes_update(force: bool = False):
         return payload
     if install_method == "apt":
         payload["message"] = (
-            "Hermes is managed by Termux APT; run `pkg upgrade hermes-agent`."
+            "Jimmy is managed by Termux APT; run `pkg upgrade jimmy-agent`."
         )
         return payload
 
@@ -4976,11 +4976,11 @@ async def check_hermes_update(force: bool = False):
     # caches the result for 6h. ``force`` busts the cache so the "Check now"
     # button reflects reality immediately.
     try:
-        from hermes_cli.banner import check_for_updates
+        from jimmy_cli.banner import check_for_updates
 
         if force:
             try:
-                (get_hermes_home() / ".update_check").unlink()
+                (get_jimmy_home() / ".update_check").unlink()
             except OSError:
                 pass
 
@@ -5045,7 +5045,7 @@ async def transcribe_audio_upload(
     try:
         suffix = _audio_extension_for_mime(mime_type)
         with tempfile.NamedTemporaryFile(
-            prefix="hermes-desktop-voice-",
+            prefix="jimmy-desktop-voice-",
             suffix=suffix,
             delete=False,
         ) as tmp:
@@ -5219,7 +5219,7 @@ async def speak_text(payload: TTSSpeakRequest, profile: Optional[str] = None):
     Used by the desktop voice-conversation mode to play back assistant
     responses without exposing the on-disk file path. Reuses the
     existing TTS provider chain (Edge / OpenAI / ElevenLabs / etc.)
-    configured in ``~/.hermes/config.yaml`` under ``tts.``.
+    configured in ``~/.jimmy/config.yaml`` under ``tts.``.
     """
     text = (payload.text or "").strip()
     if not text:
@@ -5526,18 +5526,18 @@ def _strip_session_list_rows(sessions: List[Dict[str, Any]]) -> List[Dict[str, A
     return sessions
 
 
-from hermes_cli.web_routers import sessions as _sessions_routes  # noqa: E402
+from jimmy_cli.web_routers import sessions as _sessions_routes  # noqa: E402
 
 app.include_router(_sessions_routes.list_router)
-from hermes_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     get_sessions,
 )
 
 
-from hermes_cli.web_routers import profiles as _profiles_routes  # noqa: E402
+from jimmy_cli.web_routers import profiles as _profiles_routes  # noqa: E402
 
 app.include_router(_profiles_routes.sessions_router)
-from hermes_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     get_profiles_sessions,
     get_profiles_sessions_sidebar,
 )
@@ -5546,7 +5546,7 @@ from hermes_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-e
 
 
 app.include_router(_sessions_routes.search_router)
-from hermes_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     search_sessions,
 )
 
@@ -5554,7 +5554,7 @@ from hermes_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-e
 def _normalize_config_for_web(config: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize config for the web UI.
 
-    Hermes supports ``model`` as either a bare string (``"anthropic/claude-sonnet-4"``)
+    Jimmy supports ``model`` as either a bare string (``"anthropic/claude-sonnet-4"``)
     or a dict (``{default: ..., provider: ..., base_url: ...}``).  The schema is built
     from DEFAULT_CONFIG where ``model`` is a string, but user configs often have the
     dict form.  Normalize to the string form so the frontend schema matches.
@@ -5675,7 +5675,7 @@ def _serialize_field_value(field: ProviderField, value: Any) -> str:
 
 
 def _flat_json_path(provider: ProviderConfigSchema) -> Path:
-    return get_hermes_home() / provider.name / "config.json"
+    return get_jimmy_home() / provider.name / "config.json"
 
 
 def _read_flat_json(provider: ProviderConfigSchema) -> Dict[str, Any]:
@@ -6121,9 +6121,9 @@ def _install_memory_provider_pip_dependencies(dependencies: List[str]) -> List[D
     # Route through the lazy-install pipeline (tools.lazy_deps.install_specs)
     # instead of shelling out to pip against sys.executable directly. That
     # pipeline is environment-aware: on hosted/immutable images the agent venv
-    # under /opt/hermes is sealed read-only, and installs must be redirected
+    # under /opt/jimmy is sealed read-only, and installs must be redirected
     # to the writable durable target on the data volume
-    # (HERMES_LAZY_INSTALL_TARGET, e.g. /opt/data/lazy-packages) — the same
+    # (JIMMY_LAZY_INSTALL_TARGET, e.g. /opt/data/lazy-packages) — the same
     # path every lazy backend already uses. A direct `pip install --python
     # sys.executable` on those images fails with a permission error (NS-605).
     # install_specs also activates the target on sys.path post-install so the
@@ -6388,13 +6388,13 @@ def _read_json_file(path: Path) -> Dict[str, Any]:
 def _read_memory_provider_existing_values(name: str) -> Dict[str, Any]:
     """Best-effort read of existing provider config across legacy/native stores."""
 
-    hermes_home = get_hermes_home()
+    jimmy_home = get_jimmy_home()
     values: Dict[str, Any] = {}
 
     # Common native provider stores.
     for path in (
-        hermes_home / f"{name}.json",
-        hermes_home / name / "config.json",
+        jimmy_home / f"{name}.json",
+        jimmy_home / name / "config.json",
     ):
         values.update(_read_json_file(path))
 
@@ -6412,10 +6412,10 @@ def _read_memory_provider_existing_values(name: str) -> Dict[str, Any]:
         if isinstance(legacy_cfg, dict):
             values = {**legacy_cfg, **values}
 
-    # Holographic stores under plugins.hermes-memory-store.
+    # Holographic stores under plugins.jimmy-memory-store.
     plugins_cfg = cfg.get("plugins") if isinstance(cfg, dict) else {}
     if name == "holographic" and isinstance(plugins_cfg, dict):
-        holographic_cfg = plugins_cfg.get("hermes-memory-store")
+        holographic_cfg = plugins_cfg.get("jimmy-memory-store")
         if isinstance(holographic_cfg, dict):
             values.update(holographic_cfg)
 
@@ -6578,10 +6578,10 @@ def _save_memory_provider_native_config(name: str, provider: Any, values: Dict[s
         try:
             from agent.memory_provider import MemoryProvider as _BaseMemoryProvider
         except Exception:
-            provider.save_config(values, str(get_hermes_home()))
+            provider.save_config(values, str(get_jimmy_home()))
             return
         if type(provider).save_config is not _BaseMemoryProvider.save_config:
-            provider.save_config(values, str(get_hermes_home()))
+            provider.save_config(values, str(get_jimmy_home()))
             return
 
     cfg = load_config()
@@ -6859,7 +6859,7 @@ async def get_schema(profile: Optional[str] = None):
 @app.get("/api/egress/status")
 async def get_egress_status():
     """Dashboard/Desktop-readable egress proxy status and remediation text."""
-    from hermes_cli.proxy_cli import format_status_text
+    from jimmy_cli.proxy_cli import format_status_text
 
     return {"text": format_status_text()}
 
@@ -6963,7 +6963,7 @@ def get_model_info(profile: Optional[str] = None):
 # ---------------------------------------------------------------------------
 
 # Canonical auxiliary task slots. Keep in sync with DEFAULT_CONFIG["auxiliary"]
-# in hermes_cli/config.py — listed here for deterministic ordering in the UI.
+# in jimmy_cli/config.py — listed here for deterministic ordering in the UI.
 _AUX_TASK_SLOTS: Tuple[str, ...] = (
     "vision",
     "web_extract",
@@ -7002,7 +7002,7 @@ async def get_model_options(
     Models" control. Normal opens leave it false to stay on the 1h cache.
     """
     try:
-        from hermes_cli.inventory import build_model_options_payload, load_picker_context
+        from jimmy_cli.inventory import build_model_options_payload, load_picker_context
 
         def _build_payload_scoped() -> dict:
             # Keep the profile override inside the worker thread so the full
@@ -7028,7 +7028,7 @@ async def get_model_options(
 def get_recommended_default_model(provider: str = ""):
     """Return the recommended default model for a freshly-authenticated provider.
 
-    Mirrors the model-curation `hermes model` does so GUI onboarding lands on a
+    Mirrors the model-curation `jimmy model` does so GUI onboarding lands on a
     sensible default instead of blindly taking the first curated entry. For
     Nous this honors the user's free/paid tier: free users get a free model,
     paid users get the full curated default. For any other provider it falls
@@ -7042,7 +7042,7 @@ def get_recommended_default_model(provider: str = ""):
 
     if slug == "nous":
         try:
-            from hermes_cli.models import (
+            from jimmy_cli.models import (
                 get_curated_nous_model_ids,
                 get_pricing_for_provider,
                 check_nous_free_tier,
@@ -7051,7 +7051,7 @@ def get_recommended_default_model(provider: str = ""):
                 union_with_portal_free_recommendations,
                 union_with_portal_paid_recommendations,
             )
-            from hermes_cli.auth import get_provider_auth_state
+            from jimmy_cli.auth import get_provider_auth_state
 
             model_ids = get_curated_nous_model_ids()
             pricing = get_pricing_for_provider("nous") or {}
@@ -7087,8 +7087,8 @@ def get_recommended_default_model(provider: str = ""):
     # priciest Anthropic flagship (claude-fable-5), which must never be the
     # model a user lands on without explicitly picking it.
     try:
-        from hermes_cli.inventory import build_models_payload, load_picker_context
-        from hermes_cli.models import pick_silent_default_model
+        from jimmy_cli.inventory import build_models_payload, load_picker_context
+        from jimmy_cli.models import pick_silent_default_model
 
         payload = build_models_payload(load_picker_context())
         for row in payload.get("providers", []):
@@ -7156,7 +7156,7 @@ def get_auxiliary_models(profile: Optional[str] = None):
 def get_moa_models(profile: Optional[str] = None):
     """Return the configured Mixture-of-Agents provider/model slots."""
     try:
-        from hermes_cli.moa_config import normalize_moa_config
+        from jimmy_cli.moa_config import normalize_moa_config
 
         with _profile_scope(profile):
             cfg = load_config()
@@ -7172,7 +7172,7 @@ def get_moa_models(profile: Optional[str] = None):
 def set_moa_models(body: MoaConfigPayload, profile: Optional[str] = None):
     """Persist the Mixture-of-Agents provider/model slots."""
     try:
-        from hermes_cli.moa_config import normalize_moa_config, validate_moa_payload
+        from jimmy_cli.moa_config import normalize_moa_config, validate_moa_payload
 
         def _slot_dict(slot: MoaModelSlot) -> dict:
             # Drop unset optionals so saved slots stay minimal ({provider, model}).
@@ -7246,7 +7246,7 @@ def set_moa_models(body: MoaConfigPayload, profile: Optional[str] = None):
 async def set_model_assignment(body: ModelAssignment, profile: Optional[str] = None):
     """Assign a model to the main slot or an auxiliary task slot.
 
-    Writes to ``~/.hermes/config.yaml`` — applies to **new** sessions only.
+    Writes to ``~/.jimmy/config.yaml`` — applies to **new** sessions only.
     The currently running chat PTY (if any) is not affected; use the
     ``/model`` slash command inside a chat to hot-swap that specific session.
     """
@@ -7267,7 +7267,7 @@ async def set_model_assignment(body: ModelAssignment, profile: Optional[str] = N
         # event-loop thread could cross-restore the module globals).
         if model and not body.confirm_expensive_model:
             try:
-                from hermes_cli.model_selection_guards import combined_selection_warning
+                from jimmy_cli.model_selection_guards import combined_selection_warning
 
                 # Pricing lookup can hit models.dev / a /models endpoint on a
                 # cache miss — keep it off the event loop.
@@ -7335,14 +7335,14 @@ def _apply_model_assignment_sync(
         save_config(cfg)
 
         # Register a named ``custom_providers`` entry for a custom/local
-        # endpoint, mirroring the ``hermes model`` custom flow
+        # endpoint, mirroring the ``jimmy model`` custom flow
         # (_save_custom_provider). Without this the endpoint only lives in
         # ``model.*`` and the picker has no proper ready row for it — the
         # GUI then surfaces a "needs setup" dead-end on the bare ``custom``
         # provider. Dedups by base_url, so re-saving is idempotent.
         if provider.strip().lower() in {"custom", "local"} and base_url:
             try:
-                from hermes_cli.main import _auto_provider_name, _save_custom_provider
+                from jimmy_cli.main import _auto_provider_name, _save_custom_provider
 
                 _save_custom_provider(
                     base_url,
@@ -7494,7 +7494,7 @@ def _infer_provider_on_model_change(model_val: str, prev_provider: str) -> tuple
     if not name:
         return "", name
     try:
-        from hermes_cli.models import (
+        from jimmy_cli.models import (
             _AGGREGATOR_PROVIDERS,
             detect_provider_for_model,
             normalize_provider,
@@ -7628,7 +7628,7 @@ async def update_config(body: ConfigUpdate, profile: Optional[str] = None):
         # REST saves bypass the config.set RPC (which re-emits itself), so
         # refresh live sessions' cached approval/YOLO indicators after a mode
         # change. Own-profile saves only: a profile-scoped save targets a
-        # different HERMES_HOME than this process's gateway sessions.
+        # different JIMMY_HOME than this process's gateway sessions.
         if approvals_mode_changed and not _is_other_profile(body.profile or profile):
             _broadcast_gateway_session_info()
         return {"ok": True}
@@ -7651,7 +7651,7 @@ def _is_other_profile(profile: Optional[str]) -> bool:
         target = _resolve_profile_dir(requested)
     except HTTPException:
         return True
-    return target.resolve() != get_process_hermes_home().resolve()
+    return target.resolve() != get_process_jimmy_home().resolve()
 
 
 def _approval_mode_of(config: Dict[str, Any]) -> str:
@@ -7692,7 +7692,7 @@ def _catalog_provider_env_metadata() -> dict:
 
     Returns ``{env_var: {provider, provider_label, description, url, is_password,
     advanced}}`` for every API-key provider in the unified ``provider_catalog()``
-    (i.e. the ``hermes model`` universe). This is what lets the desktop Keys tab
+    (i.e. the ``jimmy model`` universe). This is what lets the desktop Keys tab
     render a card for a provider even when its env var was never hand-added to
     ``OPTIONAL_ENV_VARS`` — closing the drift where CLI-configurable providers
     (openai-api, kilocode, novita, tencent-tokenhub, copilot, …) were missing
@@ -7702,7 +7702,7 @@ def _catalog_provider_env_metadata() -> dict:
     this only supplies membership + grouping + sensible fallbacks.
     """
     try:
-        from hermes_cli.provider_catalog import provider_catalog
+        from jimmy_cli.provider_catalog import provider_catalog
     except Exception:
         return {}
 
@@ -7711,7 +7711,7 @@ def _catalog_provider_env_metadata() -> dict:
     # promoted into a provider card. Copilot lists GITHUB_TOKEN among its auth
     # aliases, but its provider card uses the provider-owned COPILOT_GITHUB_TOKEN.
     try:
-        from hermes_cli.config import OPTIONAL_ENV_VARS as _OPT
+        from jimmy_cli.config import OPTIONAL_ENV_VARS as _OPT
     except Exception:
         _OPT = {}
     _non_provider_keys = {
@@ -7758,7 +7758,7 @@ def _catalog_provider_env_metadata() -> dict:
         # AWS-SDK providers (Bedrock) authenticate via the AWS credential chain
         # rather than a pasted API key, so they have no api_key_env_vars. Tag
         # their AWS_* settings to the provider card so they still appear on the
-        # Keys tab (otherwise Bedrock — a `hermes model` provider — would be
+        # Keys tab (otherwise Bedrock — a `jimmy model` provider — would be
         # invisible in the desktop app).
         if d.auth_type == "aws_sdk":
             for aws_var in ("AWS_REGION", "AWS_PROFILE"):
@@ -7776,7 +7776,7 @@ def _catalog_provider_env_metadata() -> dict:
         # Vertex AI authenticates via OAuth2 (service-account JSON or ADC), not a
         # pasted API key, so it also has no api_key_env_vars. Tag its credential
         # env var to the provider card so it appears on the Keys tab (otherwise
-        # Vertex — a `hermes model` provider — would be invisible in the desktop
+        # Vertex — a `jimmy model` provider — would be invisible in the desktop
         # app). The value is a filesystem path, not a secret string, so it is
         # not a password field.
         if d.auth_type == "vertex":
@@ -7827,7 +7827,7 @@ def _get_env_vars_sync(profile: Optional[str] = None):
             "channel_managed": var_name in channel_keys,
             # Provider grouping hints derived from the unified provider catalog
             # so the desktop Keys tab groups by the SAME provider identity the
-            # CLI `hermes model` picker uses (not desktop-only prefix guesses).
+            # CLI `jimmy model` picker uses (not desktop-only prefix guesses).
             "provider": cat_meta.get("provider", ""),
             "provider_label": cat_meta.get("provider_label", ""),
             # True when this key exists in the user's .env but is NOT in any
@@ -7872,7 +7872,7 @@ async def set_env_var(body: EnvVarUpdate, profile: Optional[str] = None):
             # (model.api_key / auxiliary.*.api_key / custom_providers[*]),
             # so a rotation can't leave a stale higher-precedence copy that
             # keeps authenticating with the old key (#62269).
-            from hermes_cli.credential_lifecycle import save_provider_env_credential
+            from jimmy_cli.credential_lifecycle import save_provider_env_credential
 
             return save_provider_env_credential(body.key, body.value)
 
@@ -8164,7 +8164,7 @@ def list_custom_endpoints(profile: Optional[str] = None):
     Scoped to the requested profile's config.yaml (issue: custom providers
     only landing in the default profile): the desktop settings UI targets the
     active profile, so read/write must resolve that profile's home rather than
-    the process-level HERMES_HOME. Mirrors ``/api/config``'s profile scoping.
+    the process-level JIMMY_HOME. Mirrors ``/api/config``'s profile scoping.
     """
     try:
         with _config_profile_scope(profile):
@@ -8354,7 +8354,7 @@ async def remove_env_var(body: EnvVarDelete, profile: Optional[str] = None):
             # #51071/#59761), the affected providers' model-cache rows, and
             # value-matched config.yaml api_key mirrors. OAuth/device-code/
             # manual pool entries for the same provider are preserved.
-            from hermes_cli.credential_lifecycle import remove_provider_env_credential
+            from jimmy_cli.credential_lifecycle import remove_provider_env_credential
 
             return remove_provider_env_credential(body.key)
 
@@ -8417,14 +8417,14 @@ async def reveal_env_var(
 _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "telegram": {
         "name": "Telegram",
-        "description": "Run Hermes from Telegram DMs, groups, and topics.",
+        "description": "Run Jimmy from Telegram DMs, groups, and topics.",
         "docs_url": "https://core.telegram.org/bots/features#botfather",
         "env_vars": ("TELEGRAM_BOT_TOKEN", "TELEGRAM_ALLOWED_USERS", "TELEGRAM_PROXY"),
         "required_env": ("TELEGRAM_BOT_TOKEN",),
     },
     "discord": {
         "name": "Discord",
-        "description": "Connect Hermes to Discord DMs, channels, and threads.",
+        "description": "Connect Jimmy to Discord DMs, channels, and threads.",
         "docs_url": "https://discord.com/developers/applications",
         "env_vars": (
             "DISCORD_BOT_TOKEN",
@@ -8434,21 +8434,21 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "slack": {
         "name": "Slack",
-        "description": "Use Hermes from Slack via Socket Mode. Add allowed Slack member IDs so connected bots can respond.",
+        "description": "Use Jimmy from Slack via Socket Mode. Add allowed Slack member IDs so connected bots can respond.",
         "docs_url": "https://api.slack.com/apps",
         "env_vars": ("SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_ALLOWED_USERS"),
         "required_env": ("SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"),
     },
     "mattermost": {
         "name": "Mattermost",
-        "description": "Connect Hermes to Mattermost channels and direct messages.",
+        "description": "Connect Jimmy to Mattermost channels and direct messages.",
         "docs_url": "https://mattermost.com/deploy/",
         "env_vars": ("MATTERMOST_URL", "MATTERMOST_TOKEN", "MATTERMOST_ALLOWED_USERS"),
         "required_env": ("MATTERMOST_URL", "MATTERMOST_TOKEN"),
     },
     "matrix": {
         "name": "Matrix",
-        "description": "Use Hermes in Matrix rooms and direct messages.",
+        "description": "Use Jimmy in Matrix rooms and direct messages.",
         "docs_url": "https://matrix.org/ecosystem/servers/",
         "env_vars": (
             "MATRIX_HOMESERVER",
@@ -8467,7 +8467,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "whatsapp": {
         "name": "WhatsApp",
-        "description": "Use Hermes through the bundled WhatsApp bridge with QR-based auth.",
+        "description": "Use Jimmy through the bundled WhatsApp bridge with QR-based auth.",
         "docs_url": "https://github.com/tulir/whatsmeow",
         "env_vars": (
             "WHATSAPP_ENABLED",
@@ -8479,15 +8479,15 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "homeassistant": {
         "name": "Home Assistant",
-        "description": "Control your smart home from Hermes via Home Assistant.",
+        "description": "Control your smart home from Jimmy via Home Assistant.",
         "docs_url": "https://www.home-assistant.io/docs/authentication/",
         "env_vars": ("HASS_URL", "HASS_TOKEN"),
         "required_env": ("HASS_URL", "HASS_TOKEN"),
     },
     "email": {
         "name": "Email",
-        "description": "Talk to Hermes through an IMAP/SMTP mailbox.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/",
+        "description": "Talk to Jimmy through an IMAP/SMTP mailbox.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/",
         "env_vars": (
             "EMAIL_ADDRESS",
             "EMAIL_PASSWORD",
@@ -8510,14 +8510,14 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "dingtalk": {
         "name": "DingTalk",
-        "description": "Connect Hermes to DingTalk groups (钉钉).",
+        "description": "Connect Jimmy to DingTalk groups (钉钉).",
         "docs_url": "https://open.dingtalk.com/document/orgapp/the-robot-development-process",
         "env_vars": ("DINGTALK_CLIENT_ID", "DINGTALK_CLIENT_SECRET"),
         "required_env": ("DINGTALK_CLIENT_ID", "DINGTALK_CLIENT_SECRET"),
     },
     "feishu": {
         "name": "Feishu / Lark",
-        "description": "Use Hermes inside Feishu / Lark.",
+        "description": "Use Jimmy inside Feishu / Lark.",
         "docs_url": "https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/intro",
         "env_vars": (
             "FEISHU_APP_ID",
@@ -8529,8 +8529,8 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "google_chat": {
         "name": "Google Chat",
-        "description": "Connect Hermes to Google Chat via Cloud Pub/Sub.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/google_chat",
+        "description": "Connect Jimmy to Google Chat via Cloud Pub/Sub.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/google_chat",
     },
     "wecom": {
         "name": "WeCom (group bot)",
@@ -8559,13 +8559,13 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "weixin": {
         "name": "Weixin / WeChat (Personal)",
         "description": "Connect a personal WeChat account through Tencent's iLink Bot API.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/weixin/",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/weixin/",
         "env_vars": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN", "WEIXIN_BASE_URL"),
         "required_env": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN"),
     },
     "bluebubbles": {
         "name": "BlueBubbles (iMessage)",
-        "description": "Use Hermes through iMessage via a BlueBubbles server.",
+        "description": "Use Jimmy through iMessage via a BlueBubbles server.",
         "docs_url": "https://bluebubbles.app/",
         "env_vars": (
             "BLUEBUBBLES_SERVER_URL",
@@ -8576,7 +8576,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "qqbot": {
         "name": "QQ Bot",
-        "description": "Connect Hermes to a QQ Bot from the QQ Open Platform.",
+        "description": "Connect Jimmy to a QQ Bot from the QQ Open Platform.",
         "docs_url": "https://q.qq.com",
         "env_vars": ("QQ_APP_ID", "QQ_CLIENT_SECRET", "QQ_ALLOWED_USERS"),
         "required_env": ("QQ_APP_ID", "QQ_CLIENT_SECRET"),
@@ -8585,46 +8585,46 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     # plugin registry. Only the docs link needs an override here so the
     # Channels page can point at the Microsoft Teams setup guide.
     "teams": {
-        "description": "Connect Hermes to Microsoft Teams chats via the Bot Framework.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams",
+        "description": "Connect Jimmy to Microsoft Teams chats via the Bot Framework.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/teams",
     },
     # Bundled platform plugins: name comes from the plugin registry label;
     # give each a human description (the registry's install_hint is a
     # dependency note, not a description) and a docs link.
     "irc": {
-        "description": "Relay messages between an IRC channel (or DMs) and Hermes.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/irc",
+        "description": "Relay messages between an IRC channel (or DMs) and Jimmy.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/irc",
     },
     "line": {
-        "description": "Use Hermes from LINE via the LINE Messaging API webhook.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/line",
+        "description": "Use Jimmy from LINE via the LINE Messaging API webhook.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/line",
     },
     "ntfy": {
-        "description": "Chat with Hermes over ntfy push topics (ntfy.sh or self-hosted).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/ntfy",
+        "description": "Chat with Jimmy over ntfy push topics (ntfy.sh or self-hosted).",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/ntfy",
     },
     "photon": {
-        "description": "Use Hermes through iMessage via Photon's managed Spectrum platform.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/photon",
+        "description": "Use Jimmy through iMessage via Photon's managed Spectrum platform.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/photon",
     },
     "raft": {
         "description": "Join a Raft workspace as an external agent.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/raft",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/raft",
     },
     "simplex": {
-        "description": "Talk to Hermes over SimpleX Chat via a local simplex-chat daemon.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/simplex",
+        "description": "Talk to Jimmy over SimpleX Chat via a local simplex-chat daemon.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/simplex",
     },
     "yuanbao": {
         "name": "Yuanbao (元宝)",
-        "description": "Connect Hermes to Tencent Yuanbao.",
+        "description": "Connect Jimmy to Tencent Yuanbao.",
         "docs_url": "",
         "required_env": (),
     },
     "api_server": {
         "name": "API server",
-        "description": "Expose Hermes as an OpenAI-compatible HTTP API for tools like Open WebUI.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/",
+        "description": "Expose Jimmy as an OpenAI-compatible HTTP API for tools like Open WebUI.",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/",
         "env_vars": (
             "API_SERVER_ENABLED",
             "API_SERVER_KEY",
@@ -8637,24 +8637,24 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "webhook": {
         "name": "Webhooks",
         "description": "Receive events from GitHub, GitLab, and other webhook sources.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks/",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/webhooks/",
         "env_vars": ("WEBHOOK_ENABLED", "WEBHOOK_PORT", "WEBHOOK_SECRET"),
         "required_env": (),
     },
     "msgraph_webhook": {
         "name": "Microsoft Graph Webhook",
         "description": "Receive Microsoft Graph change notifications (Teams meetings, Outlook, …).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/msgraph-webhook",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/msgraph-webhook",
         "required_env": (),
     },
     "whatsapp_cloud": {
         "name": "WhatsApp Cloud API",
-        "description": "Use Hermes via Meta's hosted WhatsApp Cloud API (no local bridge).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud",
+        "description": "Use Jimmy via Meta's hosted WhatsApp Cloud API (no local bridge).",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/whatsapp-cloud",
     },
     "relay": {
         "name": "Relay (experimental)",
-        "description": "Generic relay adapter fronted by the Hermes Relay connector.",
+        "description": "Generic relay adapter fronted by the Jimmy Relay connector.",
         "docs_url": "",
         "required_env": (),
     },
@@ -8787,11 +8787,11 @@ _MESSAGING_ENV_FALLBACKS: dict[str, dict[str, Any]] = {
         "password": True,
     },
     "WEIXIN_ACCOUNT_ID": {
-        "description": "iLink Bot account ID obtained through QR login in hermes gateway setup",
+        "description": "iLink Bot account ID obtained through QR login in jimmy gateway setup",
         "prompt": "iLink Bot account ID",
     },
     "WEIXIN_TOKEN": {
-        "description": "iLink Bot token obtained through QR login in hermes gateway setup",
+        "description": "iLink Bot token obtained through QR login in jimmy gateway setup",
         "prompt": "iLink Bot token",
         "password": True,
     },
@@ -8851,7 +8851,7 @@ def _messaging_platform_catalog() -> tuple[dict[str, Any], ...]:
         # model_tools; this server process doesn't do that, so trigger it
         # explicitly (idempotent) or plugin_entries() is empty here and
         # every plugin platform renders nameless.
-        from hermes_cli.plugins import discover_plugins
+        from jimmy_cli.plugins import discover_plugins
 
         discover_plugins()
         from gateway.platform_registry import platform_registry
@@ -8932,9 +8932,9 @@ def _platform_env_prefixes(platform_id: str) -> tuple[str, ...]:
 
 
 # Which per-platform knobs the setup UI hides, and why: see
-# hermes_cli/setup_hidden_env.py. Shared with the `hermes setup gateway`
+# jimmy_cli/setup_hidden_env.py. Shared with the `jimmy setup gateway`
 # wizard so the surfaces ask for the same things.
-from hermes_cli.setup_hidden_env import (  # noqa: E402
+from jimmy_cli.setup_hidden_env import (  # noqa: E402
     is_setup_hidden_env as _is_setup_hidden_env,
 )
 
@@ -9064,7 +9064,7 @@ def _messaging_platform_payload(
     #
     # profile_home is passed when the request was scoped to a named profile:
     # gateway/status readers resolve process-level paths and do NOT follow the
-    # HERMES_HOME contextvar override (#56986 / #69143), so the profile's
+    # JIMMY_HOME contextvar override (#56986 / #69143), so the profile's
     # directory has to be handed over explicitly or messaging silently reports
     # another profile's gateway (#71211).
     liveness = resolve_gateway_liveness(
@@ -9259,9 +9259,9 @@ def _normalize_whatsapp_allowed_users(value: Any) -> str:
 
 
 def _whatsapp_session_path() -> Path:
-    from hermes_constants import get_hermes_dir
+    from jimmy_constants import get_jimmy_dir
 
-    return get_hermes_dir("platforms/whatsapp/session", "whatsapp/session")
+    return get_jimmy_dir("platforms/whatsapp/session", "whatsapp/session")
 
 
 def _whatsapp_phone_from_identifier(value: Any) -> str | None:
@@ -9311,7 +9311,7 @@ def _ensure_whatsapp_bridge_dependencies(bridge_dir: Path) -> None:
     if (bridge_dir / "node_modules").exists():
         return
 
-    from hermes_constants import find_node_executable, with_hermes_node_path
+    from jimmy_constants import find_node_executable, with_jimmy_node_path
     from utils import env_int
 
     npm = find_node_executable("npm")
@@ -9333,7 +9333,7 @@ def _ensure_whatsapp_bridge_dependencies(bridge_dir: Path) -> None:
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
-            env=with_hermes_node_path(),
+            env=with_jimmy_node_path(),
             creationflags=windows_hide_flags(),
         )
     except subprocess.TimeoutExpired as exc:
@@ -9359,7 +9359,7 @@ def _ensure_whatsapp_bridge_dependencies(bridge_dir: Path) -> None:
 
 def _spawn_whatsapp_pairing_process(session_path: Path, mode: str) -> subprocess.Popen:
     from gateway.platforms.whatsapp_common import resolve_whatsapp_bridge_dir
-    from hermes_constants import find_node_executable, with_hermes_node_path
+    from jimmy_constants import find_node_executable, with_jimmy_node_path
 
     bridge_dir = resolve_whatsapp_bridge_dir()
     bridge_script = bridge_dir / "bridge.js"
@@ -9378,7 +9378,7 @@ def _spawn_whatsapp_pairing_process(session_path: Path, mode: str) -> subprocess
     _ensure_whatsapp_bridge_dependencies(bridge_dir)
     session_path.mkdir(parents=True, exist_ok=True)
 
-    env = with_hermes_node_path()
+    env = with_jimmy_node_path()
     env["WHATSAPP_MODE"] = mode
     env["WHATSAPP_DM_POLICY"] = "pairing"
     return subprocess.Popen(
@@ -9709,8 +9709,8 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
     return {"ok": True}
 
 
-_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hermes-agent.nousresearch.com"
-_TELEGRAM_ONBOARDING_USER_AGENT = f"HermesDashboard/{__version__}"
+_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.jimmy-agent.jimmy-agent.com"
+_TELEGRAM_ONBOARDING_USER_AGENT = f"JimmyDashboard/{__version__}"
 @dataclass
 class _TelegramOnboardingPairing:
     poll_token: str
@@ -9975,7 +9975,7 @@ def _restart_gateway_after_telegram_onboarding(profile: Optional[str] = None) ->
     """Best-effort gateway restart after saving Telegram QR onboarding.
 
     The QR flow naturally pulls users into Telegram on another device. If the
-    saved token waits on a separate dashboard restart click, Hermes appears
+    saved token waits on a separate dashboard restart click, Jimmy appears
     broken from the chat side. Keep the config save authoritative, but report
     restart failures so the UI can fall back to the existing manual banner.
     """
@@ -10083,7 +10083,7 @@ async def cancel_telegram_onboarding(pairing_id: str):
 async def get_messaging_platforms(profile: Optional[str] = None):
     # Profile-scoped so the dashboard's global profile switcher shows the
     # TARGET profile's channel credentials/state, not the root install's.
-    # load_env() honors the HERMES_HOME contextvar override; the gateway
+    # load_env() honors the JIMMY_HOME contextvar override; the gateway
     # status readers do NOT (they resolve process-level paths), so the
     # profile directory is passed explicitly for those (#71211).
     def _run():
@@ -10135,9 +10135,9 @@ def _multiplex_port_binding_conflict(
 
     requested = (requested_profile or "").strip()
     if not requested or requested.lower() == "current":
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
 
-        # The dashboard's own profile. "custom" (an unrecognized HERMES_HOME)
+        # The dashboard's own profile. "custom" (an unrecognized JIMMY_HOME)
         # is outside the profiles tree, so a multiplexed gateway never serves
         # it — nothing to guard.
         target = get_active_profile_name()
@@ -10307,7 +10307,7 @@ async def test_messaging_platform(platform_id: str, profile: Optional[str] = Non
 # connected, plus a disconnect button. The actual login flow (PKCE for
 # Anthropic, device-code for Nous/Codex) still runs in the CLI for now;
 # Phase 2 will add in-browser flows. For unconnected providers we return
-# the canonical ``hermes auth add <provider>`` command so the dashboard
+# the canonical ``jimmy auth add <provider>`` command so the dashboard
 # can surface a one-click copy.
 
 
@@ -10340,12 +10340,12 @@ def _anthropic_oauth_status() -> Dict[str, Any]:
     """Status for the "Anthropic API Key" catalog entry.
 
     Two sources, in priority order:
-    1. ``~/.hermes/.anthropic_oauth.json`` — Hermes-managed PKCE flow (what
+    1. ``~/.jimmy/.anthropic_oauth.json`` — Jimmy-managed PKCE flow (what
        this entry's Connect button writes)
     2. ``ANTHROPIC_API_KEY`` → ``ANTHROPIC_TOKEN`` → ``CLAUDE_CODE_OAUTH_TOKEN``
        env vars (registry order) — from ``.env``, the shell, or an external
        secret source like Bitwarden (whose keys are injected into the process
-       env during ``load_hermes_dotenv()``, so the same check covers them)
+       env during ``load_jimmy_dotenv()``, so the same check covers them)
 
     Claude Code's ``~/.claude/.credentials.json`` is deliberately NOT read
     here — it has its own dedicated catalog entry (``claude-code`` →
@@ -10354,43 +10354,43 @@ def _anthropic_oauth_status() -> Dict[str, Any]:
     """
     try:
         from agent.anthropic_adapter import (
-            read_hermes_oauth_credentials,
-            _get_hermes_oauth_file,
+            read_jimmy_oauth_credentials,
+            _get_jimmy_oauth_file,
         )
     except ImportError:
-        read_hermes_oauth_credentials = None  # type: ignore
-        _get_hermes_oauth_file = None  # type: ignore
+        read_jimmy_oauth_credentials = None  # type: ignore
+        _get_jimmy_oauth_file = None  # type: ignore
 
-    hermes_creds = None
-    if read_hermes_oauth_credentials:
+    jimmy_creds = None
+    if read_jimmy_oauth_credentials:
         try:
-            hermes_creds = read_hermes_oauth_credentials()
+            jimmy_creds = read_jimmy_oauth_credentials()
         except Exception:
-            hermes_creds = None
-    if hermes_creds and hermes_creds.get("accessToken"):
+            jimmy_creds = None
+    if jimmy_creds and jimmy_creds.get("accessToken"):
         return {
             "logged_in": True,
-            "source": "hermes_pkce",
-            "source_label": f"Hermes PKCE ({_get_hermes_oauth_file() if _get_hermes_oauth_file else None})",
-            "token_preview": _truncate_token(hermes_creds.get("accessToken")),
-            "expires_at": hermes_creds.get("expiresAt"),
-            "has_refresh_token": bool(hermes_creds.get("refreshToken")),
+            "source": "jimmy_pkce",
+            "source_label": f"Jimmy PKCE ({_get_jimmy_oauth_file() if _get_jimmy_oauth_file else None})",
+            "token_preview": _truncate_token(jimmy_creds.get("accessToken")),
+            "expires_at": jimmy_creds.get("expiresAt"),
+            "has_refresh_token": bool(jimmy_creds.get("refreshToken")),
         }
 
     # Env-var / secret-source path. ``get_env_value`` checks the process
     # environment first (where Bitwarden-sourced secrets land) then .env.
     env_var_order: tuple = ("ANTHROPIC_API_KEY", "ANTHROPIC_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN")
     try:
-        from hermes_cli.auth import PROVIDER_REGISTRY
+        from jimmy_cli.auth import PROVIDER_REGISTRY
         env_var_order = PROVIDER_REGISTRY["anthropic"].api_key_env_vars
     except (ImportError, KeyError):
         pass
     try:
-        from hermes_cli.config import get_env_value
+        from jimmy_cli.config import get_env_value
     except ImportError:
         get_env_value = None  # type: ignore
     try:
-        from hermes_cli.env_loader import format_secret_source_suffix
+        from jimmy_cli.env_loader import format_secret_source_suffix
     except ImportError:
         format_secret_source_suffix = None  # type: ignore
 
@@ -10414,8 +10414,8 @@ def _claude_code_only_status() -> Dict[str, Any]:
     """Surface Claude Code CLI credentials as their own provider entry.
 
     Independent of the Anthropic entry above so users can see whether their
-    Claude Code subscription tokens are actively flowing into Hermes even
-    when they also have a separate Hermes-managed PKCE login.
+    Claude Code subscription tokens are actively flowing into Jimmy even
+    when they also have a separate Jimmy-managed PKCE login.
     """
     try:
         from agent.anthropic_adapter import read_claude_code_credentials
@@ -10439,7 +10439,7 @@ def _copilot_acp_status() -> Dict[str, Any]:
 
     There is no cheap programmatic credential probe for the ACP subprocess, so
     this is a read-only "managed by the Copilot CLI" card (like claude-code):
-    Hermes never claims a login state it can't verify.
+    Jimmy never claims a login state it can't verify.
     """
     return {
         "logged_in": False,
@@ -10469,15 +10469,15 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         "id": "nous",
         "name": "Nous Portal",
         "flow": "device_code",
-        "cli_command": "hermes auth add nous",
-        "docs_url": "https://portal.nousresearch.com",
+        "cli_command": "jimmy auth add nous",
+        "docs_url": "https://portal.jimmy-agent.com",
         "status_fn": None,  # dispatched via auth.get_nous_auth_status
     },
     {
         "id": "openai-codex",
         "name": "ChatGPT or Codex Subscription",
         "flow": "device_code",
-        "cli_command": "hermes auth add openai-codex",
+        "cli_command": "jimmy auth add openai-codex",
         "docs_url": "https://platform.openai.com/docs",
         "status_fn": None,  # dispatched via auth.get_codex_auth_status
     },
@@ -10485,7 +10485,7 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         "id": "qwen-oauth",
         "name": "Qwen (via Qwen CLI)",
         "flow": "external",
-        "cli_command": "hermes auth add qwen-oauth",
+        "cli_command": "jimmy auth add qwen-oauth",
         "docs_url": "https://github.com/QwenLM/qwen-code",
         "status_fn": None,  # dispatched via auth.get_qwen_auth_status
     },
@@ -10498,7 +10498,7 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         # as Nous's device-code flow; the PKCE bit is a security
         # extension that doesn't change the operator experience.
         "flow": "device_code",
-        "cli_command": "hermes auth add minimax-oauth",
+        "cli_command": "jimmy auth add minimax-oauth",
         "docs_url": "https://www.minimax.io",
         "status_fn": None,  # dispatched via auth.get_minimax_oauth_auth_status
     },
@@ -10509,8 +10509,8 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         # containers, and desktop installs without requiring a reachable
         # 127.0.0.1 callback.
         "flow": "device_code",
-        "cli_command": "hermes auth add xai-oauth",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/guides/xai-grok-oauth",
+        "cli_command": "jimmy auth add xai-oauth",
+        "docs_url": "https://jimmy-agent.jimmy-agent.com/docs/guides/xai-grok-oauth",
         "status_fn": None,  # dispatched via auth.get_xai_oauth_auth_status
     },
     {
@@ -10528,7 +10528,7 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         "id": "anthropic",
         "name": "Anthropic API Key",
         "flow": "pkce",
-        "cli_command": "hermes auth add anthropic",
+        "cli_command": "jimmy auth add anthropic",
         "docs_url": "https://docs.claude.com/en/api/getting-started",
         "status_fn": _anthropic_oauth_status,
     },
@@ -10551,7 +10551,7 @@ def _resolve_provider_status(provider_id: str, status_fn) -> Dict[str, Any]:
         except Exception as e:
             return {"logged_in": False, "error": str(e)}
     try:
-        from hermes_cli import auth as hauth
+        from jimmy_cli import auth as hauth
         if provider_id == "nous":
             # Read-only accounts-tab card: refresh-free snapshot so listing
             # providers never performs an OAuth refresh.
@@ -10642,11 +10642,11 @@ def _resolve_provider_status(provider_id: str, status_fn) -> Dict[str, Any]:
 def _oauth_provider_disconnect_command(provider: Dict[str, Any]) -> Optional[str]:
     """Shell command that clears an external provider's credentials.
 
-    External providers store their credentials outside Hermes, so the disconnect
+    External providers store their credentials outside Jimmy, so the disconnect
     API deliberately refuses them (we never delete files another CLI owns on the
     user's behalf via a silent API call). For the ones we know how to clear we
     instead hand the GUI a command it can *run in the embedded terminal* — the
-    user sees exactly what executes, and Hermes then stops resolving the token.
+    user sees exactly what executes, and Jimmy then stops resolving the token.
 
     Claude Code has no scriptable logout (only the interactive ``/logout``), so
     we remove the credential the same way logout does: the macOS Keychain entry
@@ -10670,7 +10670,7 @@ def _oauth_provider_disconnect_hint(provider: Dict[str, Any], status: Dict[str, 
         if _oauth_provider_disconnect_command(provider):
             # The GUI offers a one-click "run in terminal" path; this hint is the
             # fallback wording for surfaces that only show text.
-            return "Managed outside Hermes — run the disconnect command to remove it."
+            return "Managed outside Jimmy — run the disconnect command to remove it."
         return "Managed by that provider's CLI; remove it there."
     if status.get("source") == "env_var":
         return "Remove the API key from Settings → Keys instead."
@@ -10686,14 +10686,14 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
          PKCE card and the synthetic claude-code subscription row, which are not
          catalog providers), and
       2. every accounts-tab provider in the unified ``provider_catalog()`` (the
-         ``hermes model`` universe) — so any OAuth/external provider added as a
+         ``jimmy model`` universe) — so any OAuth/external provider added as a
          plugin appears automatically, with sensible defaults, even if no
          explicit card was written for it.
 
     The explicit catalog wins on metadata; the unified catalog guarantees we
     never silently drop a provider the CLI picker offers. Order: explicit cards
     first (their curated order), then any catalog-only providers appended in
-    ``hermes model`` order.
+    ``jimmy model`` order.
     """
     rows: list[Dict[str, Any]] = []
     seen: set[str] = set()
@@ -10706,9 +10706,9 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
         rows.append(dict(entry))
 
     # 2. Catalog accounts-providers not already covered — keeps the Accounts tab
-    #    in lockstep with the `hermes model` universe (zero-edit for new plugins).
+    #    in lockstep with the `jimmy model` universe (zero-edit for new plugins).
     try:
-        from hermes_cli.provider_catalog import provider_catalog
+        from jimmy_cli.provider_catalog import provider_catalog
         for d in provider_catalog():
             if d.tab != "accounts" or d.slug in seen:
                 continue
@@ -10717,7 +10717,7 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
                 "id": d.slug,
                 "name": d.label,
                 "flow": "external",
-                "cli_command": f"hermes auth add {d.slug}",
+                "cli_command": f"jimmy auth add {d.slug}",
                 "docs_url": d.signup_url or "",
                 "status_fn": None,
             })
@@ -10741,14 +10741,14 @@ async def list_oauth_providers(profile: Optional[str] = None):
         docs_url        external docs/portal link for the "Learn more" link
         status:
           logged_in        bool — currently has usable creds
-          source           short slug ("hermes_pkce", "claude_code", ...)
+          source           short slug ("jimmy_pkce", "claude_code", ...)
           source_label     human-readable origin (file path, env var name)
           token_preview    last N chars of the token, never the full token
           expires_at       ISO timestamp string or null
           has_refresh_token bool
 
     Membership is derived from the unified provider_catalog() so this stays in
-    sync with the `hermes model` picker; _OAUTH_OVERRIDES supplies per-provider
+    sync with the `jimmy model` picker; _OAUTH_OVERRIDES supplies per-provider
     flow/status/cli metadata.
     """
     def _run():
@@ -10808,14 +10808,14 @@ async def disconnect_oauth_provider(
                     detail=f"{provider['name']} cannot be disconnected automatically. {disconnect_hint}",
                 )
 
-            # Anthropic clears only the Hermes-managed PKCE file and auth-store entry.
+            # Anthropic clears only the Jimmy-managed PKCE file and auth-store entry.
             # The separate claude-code catalog row is external/read-only and rejected
             # above so we never pretend to remove ~/.claude/* credentials owned by the CLI.
             if provider_id == "anthropic":
                 cleared = False
                 try:
-                    from agent.anthropic_adapter import _get_hermes_oauth_file
-                    oauth_file = _get_hermes_oauth_file()
+                    from agent.anthropic_adapter import _get_jimmy_oauth_file
+                    oauth_file = _get_jimmy_oauth_file()
                     if oauth_file.exists():
                         oauth_file.unlink()
                         cleared = True
@@ -10823,7 +10823,7 @@ async def disconnect_oauth_provider(
                     pass
                 # Also clear the credential pool entry if present.
                 try:
-                    from hermes_cli.auth import clear_provider_auth
+                    from jimmy_cli.auth import clear_provider_auth
                     cleared = clear_provider_auth("anthropic") or cleared
                 except Exception:
                     pass
@@ -10831,7 +10831,7 @@ async def disconnect_oauth_provider(
                 return {"ok": bool(cleared), "provider": provider_id}
 
             try:
-                from hermes_cli.auth import clear_provider_auth, invalidate_nous_auth_status_cache
+                from jimmy_cli.auth import clear_provider_auth, invalidate_nous_auth_status_cache
                 cleared = clear_provider_auth(provider_id)
                 if provider_id == "nous":
                     invalidate_nous_auth_status_cache()
@@ -10858,7 +10858,7 @@ async def disconnect_oauth_provider(
 #     2. UI opens auth_url in a new tab. User authorizes, copies code.
 #     3. POST /api/providers/oauth/anthropic/submit { session_id, code }
 #          → server exchanges (code + verifier) → tokens at console.anthropic.com
-#          → persists to ~/.hermes/.anthropic_oauth.json AND credential pool
+#          → persists to ~/.jimmy/.anthropic_oauth.json AND credential pool
 #          → returns { ok: true, status: "approved" }
 #
 #   Device code (Nous, OpenAI Codex):
@@ -10885,7 +10885,7 @@ _oauth_sessions: Dict[str, Dict[str, Any]] = {}
 _oauth_sessions_lock = threading.Lock()
 
 # Import OAuth constants from canonical source instead of duplicating.
-# Guarded so hermes web still starts if anthropic_adapter is unavailable;
+# Guarded so jimmy web still starts if anthropic_adapter is unavailable;
 # Phase 2 endpoints will return 501 in that case.
 try:
     from agent.anthropic_adapter import (
@@ -10958,13 +10958,13 @@ def _oauth_session_profile(
 
 
 def _save_anthropic_oauth_creds(access_token: str, refresh_token: str, expires_at_ms: int) -> None:
-    """Persist Anthropic PKCE creds to both Hermes file AND credential pool.
+    """Persist Anthropic PKCE creds to both Jimmy file AND credential pool.
 
     Mirrors what auth_commands.add_command does so the dashboard flow leaves
-    the system in the same state as ``hermes auth add anthropic``.
+    the system in the same state as ``jimmy auth add anthropic``.
     """
-    from agent.anthropic_adapter import _get_hermes_oauth_file
-    oauth_file = _get_hermes_oauth_file()
+    from agent.anthropic_adapter import _get_jimmy_oauth_file
+    oauth_file = _get_jimmy_oauth_file()
     payload = {
         "accessToken": access_token,
         "refreshToken": refresh_token,
@@ -11080,7 +11080,7 @@ def _submit_anthropic_pkce(
             data=exchange_data,
             headers={
                 "Content-Type": "application/json",
-                "User-Agent": "hermes-dashboard/1.0",
+                "User-Agent": "jimmy-dashboard/1.0",
             },
             method="POST",
         )
@@ -11132,14 +11132,14 @@ async def _start_device_code_flow(
     so the UI can render the verification page link + user code.
     """
     if provider_id == "nous":
-        from hermes_cli.auth import (
+        from jimmy_cli.auth import (
             _request_device_code,
             PROVIDER_REGISTRY,
         )
         import httpx
         pconfig = PROVIDER_REGISTRY["nous"]
         portal_base_url = (
-            os.getenv("HERMES_PORTAL_BASE_URL")
+            os.getenv("JIMMY_PORTAL_BASE_URL")
             or os.getenv("NOUS_PORTAL_BASE_URL")
             or pconfig.portal_base_url
         ).rstrip("/")
@@ -11225,7 +11225,7 @@ async def _start_device_code_flow(
         # flow; the PKCE bit (verifier + challenge from
         # _minimax_pkce_pair) is a security extension that binds the
         # token exchange to the original session.
-        from hermes_cli.auth import (
+        from jimmy_cli.auth import (
             _minimax_pkce_pair,
             _minimax_request_user_code,
             MINIMAX_OAUTH_CLIENT_ID,
@@ -11295,7 +11295,7 @@ async def _start_device_code_flow(
         }
 
     if provider_id == "xai-oauth":
-        from hermes_cli.auth import _xai_oauth_request_device_code
+        from jimmy_cli.auth import _xai_oauth_request_device_code
         import httpx
 
         def _do_xai_device_request():
@@ -11335,7 +11335,7 @@ async def _start_device_code_flow(
 
 def _nous_poller(session_id: str) -> None:
     """Background poller that drives a Nous device-code flow to completion."""
-    from hermes_cli.auth import (
+    from jimmy_cli.auth import (
         _poll_for_token,
         refresh_nous_oauth_from_state,
     )
@@ -11385,7 +11385,7 @@ def _nous_poller(session_id: str) -> None:
                 timeout_seconds=15.0,
                 force_refresh=False,
             )
-            from hermes_cli.auth import persist_nous_credentials
+            from jimmy_cli.auth import persist_nous_credentials
             persist_nous_credentials(full_state)
         with _oauth_sessions_lock:
             sess["status"] = "approved"
@@ -11406,9 +11406,9 @@ def _minimax_poller(session_id: str) -> None:
     auth_state dict that ``_minimax_oauth_login`` (the CLI flow) builds
     and persists via ``_minimax_save_auth_state`` — so the dashboard
     path leaves the system in the same state as
-    ``hermes auth add minimax-oauth``.
+    ``jimmy auth add minimax-oauth``.
     """
-    from hermes_cli.auth import (
+    from jimmy_cli.auth import (
         _minimax_poll_token,
         _minimax_resolve_token_expiry_unix,
         _minimax_save_auth_state,
@@ -11484,7 +11484,7 @@ def _minimax_poller(session_id: str) -> None:
 def _xai_device_poller(session_id: str) -> None:
     """Background poller for xAI's OAuth device-code flow."""
     import httpx
-    from hermes_cli.auth import (
+    from jimmy_cli.auth import (
         _save_xai_oauth_tokens,
         _xai_oauth_discovery,
         _xai_oauth_poll_device_token,
@@ -11529,7 +11529,7 @@ def _xai_device_poller(session_id: str) -> None:
                 # chat provider.
                 set_active=False,
             )
-            # Mirror `hermes auth add xai-oauth`: first credential may become
+            # Mirror `jimmy auth add xai-oauth`: first credential may become
             # active when none is set yet; never overwrite an existing choice.
             mark_provider_active_if_unset("xai-oauth")
             # The singleton write above is the single source of truth: the
@@ -11539,8 +11539,8 @@ def _xai_device_poller(session_id: str) -> None:
             # entries and triggers rotation churn / ``refresh_token_reused``.
             # An interactive dashboard login is also an explicit re-enable
             # signal, so clear any ``device_code`` suppression left by a
-            # prior ``hermes auth remove xai-oauth`` (mirrors auth_add_command
-            # and the ``hermes model`` re-login path in _login_xai_oauth).
+            # prior ``jimmy auth remove xai-oauth`` (mirrors auth_add_command
+            # and the ``jimmy model`` re-login path in _login_xai_oauth).
             unsuppress_credential_source("xai-oauth", "device_code")
         with _oauth_sessions_lock:
             sess["status"] = "approved"
@@ -11586,7 +11586,7 @@ def _codex_device_code_start_error(resp: Any) -> str:
     if "device" in lower and ("authori" in lower or "enable" in lower):
         message = (
             "OpenAI rejected the device-code login request. Your OpenAI "
-            "account may need device-code authorization enabled before Hermes "
+            "account may need device-code authorization enabled before Jimmy "
             "can start this dashboard login. Enable device-code authorization "
             "in OpenAI, then return here and click Login again."
         )
@@ -11617,7 +11617,7 @@ def _codex_full_login_worker(session_id: str) -> None:
     """
     try:
         import httpx
-        from hermes_cli.auth import (
+        from jimmy_cli.auth import (
             CODEX_OAUTH_CLIENT_ID,
             CODEX_OAUTH_TOKEN_URL,
         )
@@ -11713,7 +11713,7 @@ def _codex_full_login_worker(session_id: str) -> None:
         if not access_token:
             raise RuntimeError("token exchange did not return access_token")
 
-        from hermes_cli.auth import _save_codex_tokens
+        from jimmy_cli.auth import _save_codex_tokens
 
         # The cancellation check and the save must be one atomic critical
         # section under the same lock cancel_oauth_session() uses. Checking
@@ -11969,7 +11969,7 @@ def _import_sessions_for_profile(profile: Optional[str], sessions: List[Dict[str
 
 
 app.include_router(_sessions_routes.manage_router)
-from hermes_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.sessions import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     bulk_delete_sessions_endpoint,
     import_sessions_endpoint,
     count_empty_sessions_endpoint,
@@ -12009,9 +12009,9 @@ def _session_db_read_probe_statements() -> tuple:
     added there is probed here automatically — the previous hand-written
     probe listed four columns and went stale the first time a new column
     (sessions.last_activity_at) shipped, leaving the desktop sidebar empty
-    after `hermes update` until the first message forced a writable open.
+    after `jimmy update` until the first message forced a writable open.
     """
-    from hermes_state_schema import schema_read_probe_statements
+    from jimmy_state_schema import schema_read_probe_statements
 
     return schema_read_probe_statements()
 
@@ -12047,7 +12047,7 @@ def _open_session_db_at_path(db_path: Path, *, read_only: bool):
     """
     import sqlite3
 
-    from hermes_state import SessionDB, is_malformed_db_error
+    from jimmy_state import SessionDB, is_malformed_db_error
 
     if not read_only:
         return SessionDB(db_path=db_path, read_only=False)
@@ -12118,7 +12118,7 @@ def _open_session_db_for_profile(profile: Optional[str], *, read_only: bool):
     profile opens that profile's on-disk store directly. Access-mode
     semantics are documented on :func:`_open_session_db_at_path`.
     """
-    from hermes_state import _default_db_path
+    from jimmy_state import _default_db_path
 
     if profile:
         _name, home = _cron_profile_home(profile)
@@ -12139,7 +12139,7 @@ _last_auto_archive_check: Dict[str, float] = {}
 def _maybe_auto_archive_for_profile(profile: Optional[str]) -> None:
     """Run the config-gated stale-session auto-archive for ``profile``.
 
-    The Desktop backend is spawned as ``hermes serve`` — it runs neither the
+    The Desktop backend is spawned as ``jimmy serve`` — it runs neither the
     interactive CLI nor the messaging gateway, so neither of those startup
     hooks fire for Desktop users. Triggering the (double-throttled, config-off
     by default) sweep from the session-list path is what makes
@@ -12153,7 +12153,7 @@ def _maybe_auto_archive_for_profile(profile: Optional[str]) -> None:
             return
         _last_auto_archive_check[key] = now
 
-        from hermes_cli.config import load_config as _load_full_config
+        from jimmy_cli.config import load_config as _load_full_config
         cfg = (_load_full_config().get("sessions") or {})
         if not cfg.get("auto_archive", False):
             return
@@ -12206,7 +12206,7 @@ async def _auto_archive_ticker_loop(
 
 
 def _prune_sessions(body: SessionPrune):
-    """Delete ended sessions matching filters (mirrors `hermes sessions prune`)."""
+    """Delete ended sessions matching filters (mirrors `jimmy sessions prune`)."""
     has_window = (
         body.started_before is not None or body.started_after is not None
     )
@@ -12229,7 +12229,7 @@ def _prune_sessions(body: SessionPrune):
     _effective_older_than = body.older_than_days
     if has_window or (_attr_filters_set and not _older_than_explicit):
         _effective_older_than = None
-    profile_home = _cron_profile_home(body.profile)[1] if body.profile else get_hermes_home()
+    profile_home = _cron_profile_home(body.profile)[1] if body.profile else get_jimmy_home()
     db = _open_session_db_for_profile(body.profile, read_only=False)
     try:
         filters = dict(
@@ -12311,17 +12311,17 @@ async def get_logs(
     component: Optional[str] = None,
     search: Optional[str] = None,
 ):
-    from hermes_cli.logs import _read_tail, LOG_FILES
+    from jimmy_cli.logs import _read_tail, LOG_FILES
 
     log_name = LOG_FILES.get(file)
     if not log_name:
         raise HTTPException(status_code=400, detail=f"Unknown log file: {file}")
-    log_path = get_hermes_home() / "logs" / log_name
+    log_path = get_jimmy_home() / "logs" / log_name
     if not log_path.exists():
         return {"file": file, "lines": []}
 
     try:
-        from hermes_logging import COMPONENT_PREFIXES
+        from jimmy_logging import COMPONENT_PREFIXES
     except ImportError:
         COMPONENT_PREFIXES = {}
 
@@ -12490,7 +12490,7 @@ def _cron_profile_dicts() -> List[Dict[str, Any]]:
     for every profile; polling cron jobs through that path creates avoidable
     GIL pressure on large profile pools.
     """
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         return [
             {
@@ -12508,16 +12508,16 @@ def _cron_profile_dicts() -> List[Dict[str, Any]]:
 def _cron_default_profile() -> str:
     """Profile to target when a cron request carries no explicit ``profile``.
 
-    A desktop pool backend runs one process per profile (HERMES_HOME already
+    A desktop pool backend runs one process per profile (JIMMY_HOME already
     scoped), but these cron endpoints deliberately route storage through the
     profiles tree via ``_cron_profile_home`` — so a hardcoded ``"default"``
-    fallback would write a non-default profile's job into ``~/.hermes``.
+    fallback would write a non-default profile's job into ``~/.jimmy``.
     Resolve the process's own profile instead. ``custom`` (an unrecognized
-    HERMES_HOME outside the profiles tree) has no profile-dir equivalent, so
+    JIMMY_HOME outside the profiles tree) has no profile-dir equivalent, so
     it keeps the legacy ``default`` fallback.
     """
     try:
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
 
         name = get_active_profile_name()
     except Exception:
@@ -12526,8 +12526,8 @@ def _cron_default_profile() -> str:
 
 
 def _cron_profile_home(profile: Optional[str]) -> Tuple[str, Path]:
-    """Resolve a profile query value to (profile_name, HERMES_HOME)."""
-    from hermes_cli import profiles as profiles_mod
+    """Resolve a profile query value to (profile_name, JIMMY_HOME)."""
+    from jimmy_cli import profiles as profiles_mod
 
     raw = (profile or _cron_default_profile()).strip() or "default"
     try:
@@ -12544,7 +12544,7 @@ def _annotate_cron_job(job: Dict[str, Any], profile: str, home: Path) -> Dict[st
     annotated = dict(job)
     annotated["profile"] = profile
     annotated["profile_name"] = profile
-    annotated["hermes_home"] = str(home)
+    annotated["jimmy_home"] = str(home)
     annotated["is_default_profile"] = profile == "default"
     return annotated
 
@@ -12558,12 +12558,12 @@ def _call_cron_for_profile(target_profile: Optional[str], func_name: str, *args,
     """
     profile_name, home = _cron_profile_home(target_profile)
     from cron import jobs as cron_jobs
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
-    token = set_hermes_home_override(str(home))
+    token = set_jimmy_home_override(str(home))
     try:
         with cron_jobs.use_cron_store(home):
             if func_name == "create_job":
@@ -12573,7 +12573,7 @@ def _call_cron_for_profile(target_profile: Optional[str], func_name: str, *args,
             else:
                 result = getattr(cron_jobs, func_name)(*args, **kwargs)
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
     if isinstance(result, list):
         return [_annotate_cron_job(j, profile_name, home) for j in result]
@@ -12603,12 +12603,12 @@ def _notify_cron_provider_for_profile(target_profile: Optional[str]) -> None:
             InProcessCronScheduler,
             resolve_cron_scheduler,
         )
-        from hermes_constants import (
-            reset_hermes_home_override,
-            set_hermes_home_override,
+        from jimmy_constants import (
+            reset_jimmy_home_override,
+            set_jimmy_home_override,
         )
 
-        token = set_hermes_home_override(str(home))
+        token = set_jimmy_home_override(str(home))
         try:
             with cron_jobs.use_cron_store(home):
                 provider = resolve_cron_scheduler()
@@ -12630,7 +12630,7 @@ def _notify_cron_provider_for_profile(target_profile: Optional[str]) -> None:
                         return
                 provider.on_jobs_changed()
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
     except Exception:
         _log.debug(
             "Cron provider reconciliation failed for profile %s",
@@ -12700,10 +12700,10 @@ def _raise_if_cron_registration_error(e: Exception) -> None:
         raise HTTPException(status_code=424, detail=e.to_dict()) from e
 
 
-from hermes_cli.web_routers import cron as _cron_routes  # noqa: E402
+from jimmy_cli.web_routers import cron as _cron_routes  # noqa: E402
 
 app.include_router(_cron_routes.router)
-from hermes_cli.web_routers.cron import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.cron import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     list_cron_jobs,
     get_cron_job,
     list_cron_job_runs,
@@ -12959,12 +12959,12 @@ def _fire_cron_job_for_profile(
         provider_supports_force_fire,
         resolve_cron_scheduler,
     )
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
-    token = set_hermes_home_override(str(home))
+    token = set_jimmy_home_override(str(home))
     try:
         with cron_jobs.use_cron_store(home):
             provider = resolve_cron_scheduler()
@@ -12982,7 +12982,7 @@ def _fire_cron_job_for_profile(
                 )
             return bool(provider.fire_due(job_id, adapters=None, loop=None))
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
 
 def _profile_env_value(home: Path, key: str) -> str:
@@ -13026,20 +13026,20 @@ def _gateway_fire_endpoint(profile: str, home: Path) -> str:
     try:
         # Profile-scoped read through the CANONICAL loader (managed-scope
         # overlay, ${ENV_VAR} expansion, profile pathing) — never a raw
-        # yaml.safe_load of config.yaml (tests/hermes_cli/
-        # test_config_read_guard.py). The HERMES_HOME override scopes
+        # yaml.safe_load of config.yaml (tests/jimmy_cli/
+        # test_config_read_guard.py). The JIMMY_HOME override scopes
         # get_config_path() to the TARGET profile, same pattern the
         # deprecated _fire_cron_job_for_profile used for its store scope.
-        from hermes_constants import (
-            reset_hermes_home_override,
-            set_hermes_home_override,
+        from jimmy_constants import (
+            reset_jimmy_home_override,
+            set_jimmy_home_override,
         )
 
-        token = set_hermes_home_override(str(home))
+        token = set_jimmy_home_override(str(home))
         try:
             profile_cfg = load_config()
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
         raw = cfg_get(
             profile_cfg, "platforms", "api_server", "extra", "port", default=None
         )
@@ -13131,7 +13131,7 @@ def _gateway_intentionally_stopped(profile: Optional[str]) -> bool:
 
     Reads the durable ``desired_state`` field of the profile's
     ``gateway_state.json`` — written exclusively by the s6 lifecycle
-    commands (``hermes gateway stop`` persists ``"stopped"``; start and
+    commands (``jimmy gateway stop`` persists ``"stopped"``; start and
     restart persist ``"running"``, see service_manager's
     ``_write_gateway_desired_state``). This is the same operator-intent
     signal container-boot reconciliation trusts, and it is precisely NOT
@@ -13177,8 +13177,8 @@ def _gateway_intentionally_stopped(profile: Optional[str]) -> bool:
 # ---------------------------------------------------------------------------
 # MCP server endpoints — list / add / remove / test.
 #
-# Wraps the same config data layer the CLI uses (hermes_cli.mcp_config), so
-# servers managed here show up under `hermes mcp list` and vice versa.  Secrets
+# Wraps the same config data layer the CLI uses (jimmy_cli.mcp_config), so
+# servers managed here show up under `jimmy mcp list` and vice versa.  Secrets
 # in stdio `env` blocks are redacted on read; the agent picks them up from
 # config.yaml at session start exactly as with CLI-added servers.
 # ---------------------------------------------------------------------------
@@ -13195,11 +13195,11 @@ def _normalize_mcp_server_create(
     standalone MCP page and the Profile Builder enforce the same
     transport/auth contract.
     """
-    from hermes_cli.mcp_config import (
+    from jimmy_cli.mcp_config import (
         _bearer_auth_headers,
         _strip_bearer_prefix,
     )
-    from hermes_cli.mcp_security import validate_mcp_server_entry
+    from jimmy_cli.mcp_security import validate_mcp_server_entry
 
     name = (body.name or "").strip()
     if not name:
@@ -13288,10 +13288,10 @@ def _mcp_server_summary(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-from hermes_cli.web_routers import mcp as _mcp_routes  # noqa: E402
+from jimmy_cli.web_routers import mcp as _mcp_routes  # noqa: E402
 
 app.include_router(_mcp_routes.router)
-from hermes_cli.web_routers.mcp import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.mcp import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     list_mcp_servers,
     add_mcp_server,
     replace_mcp_servers,
@@ -13344,7 +13344,7 @@ def _mcp_oauth_callback_url(request: Request, server_name: str) -> str:
     """Build the externally reachable callback URL for a dashboard flow."""
     from urllib.parse import urlparse, urlunparse
 
-    from hermes_cli.dashboard_auth.prefix import prefix_from_request, resolve_public_url
+    from jimmy_cli.dashboard_auth.prefix import prefix_from_request, resolve_public_url
 
     from urllib.parse import quote
 
@@ -13358,14 +13358,14 @@ def _mcp_oauth_callback_url(request: Request, server_name: str) -> str:
 
 
 def _mcp_oauth_transaction(flow) -> threading.Lock:
-    key = (flow.hermes_home, flow.server_name)
+    key = (flow.jimmy_home, flow.server_name)
     with _mcp_oauth_transactions_lock:
         return _mcp_oauth_transactions.setdefault(key, threading.Lock())
 
 
 def _run_dashboard_mcp_oauth(flow, cfg: dict) -> None:
     """Run the normal MCP probe with dashboard redirect/callback handlers."""
-    from hermes_cli.mcp_config import (
+    from jimmy_cli.mcp_config import (
         _oauth_tokens_present,
         _probe_single_server,
         _save_mcp_server,
@@ -13376,24 +13376,24 @@ def _run_dashboard_mcp_oauth(flow, cfg: dict) -> None:
             reset_secret_scope,
             set_secret_scope,
         )
-        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+        from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
         from tools.mcp_dashboard_oauth import dashboard_oauth_flow
-        from tools.mcp_oauth import HermesTokenStorage, force_interactive_oauth
+        from tools.mcp_oauth import JimmyTokenStorage, force_interactive_oauth
         from tools.mcp_oauth_manager import get_manager
 
-        home_token = set_hermes_home_override(flow.hermes_home)
-        secret_token = set_secret_scope(build_profile_secret_scope(Path(flow.hermes_home)))
+        home_token = set_jimmy_home_override(flow.jimmy_home)
+        secret_token = set_secret_scope(build_profile_secret_scope(Path(flow.jimmy_home)))
         try:
             transaction = _mcp_oauth_transaction(flow)
             with transaction, force_interactive_oauth(), dashboard_oauth_flow(flow):
                 manager = get_manager()
-                storage = HermesTokenStorage(flow.server_name)
+                storage = JimmyTokenStorage(flow.server_name)
                 backup = storage.snapshot()
                 previous_entry = None
                 try:
                     previous_entry = manager.remove(
                         flow.server_name,
-                        hermes_home=flow.hermes_home,
+                        jimmy_home=flow.jimmy_home,
                     )
                     tools = _probe_single_server(
                         flow.server_name,
@@ -13417,12 +13417,12 @@ def _run_dashboard_mcp_oauth(flow, cfg: dict) -> None:
                     manager.restore_entry(
                         flow.server_name,
                         previous_entry,
-                        hermes_home=flow.hermes_home,
+                        jimmy_home=flow.jimmy_home,
                     )
                     raise
         finally:
             reset_secret_scope(secret_token)
-            reset_hermes_home_override(home_token)
+            reset_jimmy_home_override(home_token)
     except Exception as exc:
         msg = str(exc)
         # Providers that gate RFC 7591 registration to pre-approved clients
@@ -13573,7 +13573,7 @@ async def clear_pending_pairing(profile: Optional[str] = None):
 # ---------------------------------------------------------------------------
 # Webhook subscription endpoints — list / subscribe / remove.
 #
-# Wraps the same JSON store the CLI uses (hermes_cli.webhook); the webhook
+# Wraps the same JSON store the CLI uses (jimmy_cli.webhook); the webhook
 # adapter hot-reloads it without a gateway restart.  Per-route HMAC secrets
 # are redacted on read and surfaced once on create.
 # ---------------------------------------------------------------------------
@@ -13600,7 +13600,7 @@ def _webhook_route_summary(name: str, route: Dict[str, Any], base_url: str) -> D
 
 @app.get("/api/webhooks")
 async def list_webhooks():
-    import hermes_cli.webhook as wh
+    import jimmy_cli.webhook as wh
 
     base_url = wh._get_webhook_base_url()
     subs = wh._load_subscriptions()
@@ -13640,7 +13640,7 @@ async def create_webhook(body: WebhookCreate):
     import re as _re
     import secrets as _secrets
     import time as _time
-    import hermes_cli.webhook as wh
+    import jimmy_cli.webhook as wh
 
     if not wh._is_webhook_enabled():
         raise HTTPException(
@@ -13691,7 +13691,7 @@ async def create_webhook(body: WebhookCreate):
 
 @app.delete("/api/webhooks/{name}")
 async def delete_webhook(name: str):
-    import hermes_cli.webhook as wh
+    import jimmy_cli.webhook as wh
 
     key = (name or "").strip().lower()
     subs = wh._load_subscriptions()
@@ -13711,7 +13711,7 @@ async def set_webhook_enabled(name: str, body: WebhookEnabledToggle):
     gateway hot-reloads the subscriptions file, so this takes effect on the
     next event without a restart.
     """
-    import hermes_cli.webhook as wh
+    import jimmy_cli.webhook as wh
 
     key = (name or "").strip().lower()
     subs = wh._load_subscriptions()
@@ -13727,7 +13727,7 @@ async def set_webhook_enabled(name: str, body: WebhookEnabledToggle):
 #
 # restart + update already exist above; these complete the lifecycle so a
 # remote admin can bring the gateway up or down without shell access.  Both
-# spawn the real `hermes gateway <verb>` so behaviour matches the CLI exactly.
+# spawn the real `jimmy gateway <verb>` so behaviour matches the CLI exactly.
 # Status is already surfaced by /api/status (gateway_running/state/platforms).
 # ---------------------------------------------------------------------------
 
@@ -13735,7 +13735,7 @@ async def set_webhook_enabled(name: str, body: WebhookEnabledToggle):
 @app.post("/api/gateway/start")
 async def start_gateway(profile: Optional[str] = None):
     try:
-        proc = _spawn_hermes_action(_gateway_subcommand(profile, "start"), "gateway-start")
+        proc = _spawn_jimmy_action(_gateway_subcommand(profile, "start"), "gateway-start")
     except HTTPException:
         raise
     except Exception as exc:
@@ -13747,7 +13747,7 @@ async def start_gateway(profile: Optional[str] = None):
 @app.post("/api/gateway/stop")
 async def stop_gateway(profile: Optional[str] = None):
     try:
-        proc = _spawn_hermes_action(_gateway_subcommand(profile, "stop"), "gateway-stop")
+        proc = _spawn_jimmy_action(_gateway_subcommand(profile, "stop"), "gateway-stop")
     except HTTPException:
         raise
     except Exception as exc:
@@ -13788,7 +13788,7 @@ def _pool_entry_summary(entry: Any, index: int) -> Dict[str, Any]:
 @app.get("/api/credentials/pool")
 async def list_credential_pool():
     from agent.credential_pool import load_pool
-    from hermes_cli.auth import read_credential_pool
+    from jimmy_cli.auth import read_credential_pool
 
     providers = []
     # read_credential_pool(None) lists every provider that has pooled entries;
@@ -13843,11 +13843,11 @@ async def add_credential_pool_entry(body: CredentialPoolAdd):
         pool.add_entry(entry)
         # Re-adding a credential is an explicit re-engagement signal: lift
         # every suppression for this provider so a source deleted earlier
-        # (via DELETE below or `hermes auth remove`) can seed again.
-        # Mirrors the `hermes auth add` behaviour in auth_commands.py.
+        # (via DELETE below or `jimmy auth remove`) can seed again.
+        # Mirrors the `jimmy auth add` behaviour in auth_commands.py.
         if not provider.startswith(CUSTOM_POOL_PREFIX):
             try:
-                from hermes_cli.auth import (
+                from jimmy_cli.auth import (
                     _load_auth_store,
                     unsuppress_credential_source,
                 )
@@ -13872,14 +13872,14 @@ async def remove_credential_pool_entry(provider: str, index: int):
     their backing source (.env var, OAuth singleton file, custom-provider
     config) on every call, so deleting only the pool row silently reverts on
     the next dashboard refresh.  We dispatch through the same RemovalStep
-    registry the CLI ``hermes auth remove`` uses: each source cleans up its
+    registry the CLI ``jimmy auth remove`` uses: each source cleans up its
     external state and suppresses ``(provider, source)`` so the seeders skip
     it.  Manual entries have no registered step — nothing external to clean,
     no suppression needed (they aren't re-seeded).
     """
     from agent.credential_pool import load_pool
     from agent.credential_sources import find_removal_step
-    from hermes_cli.auth import suppress_credential_source
+    from jimmy_cli.auth import suppress_credential_source
 
     provider = (provider or "").strip().lower()
     try:
@@ -13943,7 +13943,7 @@ async def get_memory_status():
             active = _normalize_memory_provider_name(mem.get("provider"))
 
         # Built-in memory file sizes (so the UI can show what a reset would erase).
-        mem_dir = get_hermes_home() / "memories"
+        mem_dir = get_jimmy_home() / "memories"
         files = {}
         for fname, key in (("MEMORY.md", "memory"), ("USER.md", "user")):
             path = mem_dir / fname
@@ -13982,7 +13982,7 @@ async def reset_memory(body: MemoryReset):
     if target not in {"all", "memory", "user"}:
         raise HTTPException(status_code=400, detail="target must be all, memory, or user")
 
-    mem_dir = get_hermes_home() / "memories"
+    mem_dir = get_jimmy_home() / "memories"
     deleted = []
     targets = []
     if target in {"all", "memory"}:
@@ -14016,7 +14016,7 @@ async def reset_memory(body: MemoryReset):
 @app.post("/api/ops/doctor")
 async def run_doctor():
     try:
-        proc = _spawn_hermes_action(["doctor"], "doctor")
+        proc = _spawn_jimmy_action(["doctor"], "doctor")
     except Exception as exc:
         _log.exception("Failed to spawn doctor")
         raise HTTPException(status_code=500, detail=f"Failed to run doctor: {exc}")
@@ -14026,7 +14026,7 @@ async def run_doctor():
 @app.post("/api/ops/security-audit")
 async def run_security_audit():
     try:
-        proc = _spawn_hermes_action(["security", "audit"], "security-audit")
+        proc = _spawn_jimmy_action(["security", "audit"], "security-audit")
     except Exception as exc:
         _log.exception("Failed to spawn security audit")
         raise HTTPException(status_code=500, detail=f"Failed to run security audit: {exc}")
@@ -14034,12 +14034,12 @@ async def run_security_audit():
 
 
 def _dashboard_backup_dir() -> Path:
-    return get_hermes_home() / "backups"
+    return get_jimmy_home() / "backups"
 
 
 def _new_dashboard_backup_path() -> Path:
     stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    return _dashboard_backup_dir() / f"hermes-backup-{stamp}-{secrets.token_hex(4)}.zip"
+    return _dashboard_backup_dir() / f"jimmy-backup-{stamp}-{secrets.token_hex(4)}.zip"
 
 
 @app.post("/api/ops/backup")
@@ -14060,7 +14060,7 @@ async def run_backup(body: BackupRequest):
             )
         args.extend(["-o", str(archive)])
     try:
-        proc = _spawn_hermes_action(args, "backup")
+        proc = _spawn_jimmy_action(args, "backup")
     except Exception as exc:
         _log.exception("Failed to spawn backup")
         raise HTTPException(status_code=500, detail=f"Failed to run backup: {exc}")
@@ -14104,7 +14104,7 @@ async def run_import(body: ImportRequest):
     if body.force:
         args.append("--force")
     try:
-        proc = _spawn_hermes_action(args, "import")
+        proc = _spawn_jimmy_action(args, "import")
     except Exception as exc:
         _log.exception("Failed to spawn import")
         raise HTTPException(status_code=500, detail=f"Failed to run import: {exc}")
@@ -14186,7 +14186,7 @@ async def run_import_upload(
     if force:
         args.append("--force")
     try:
-        proc = _spawn_hermes_action(args, "import")
+        proc = _spawn_jimmy_action(args, "import")
     except Exception as exc:
         _log.exception("Failed to spawn import")
         raise HTTPException(status_code=500, detail=f"Failed to run import: {exc}")
@@ -14208,11 +14208,11 @@ async def list_hooks():
     form can offer them.
     """
     def _run():
-        from hermes_cli.config import load_config as _load_config
+        from jimmy_cli.config import load_config as _load_config
         from agent import shell_hooks
 
         try:
-            from hermes_cli.plugins import VALID_HOOKS
+            from jimmy_cli.plugins import VALID_HOOKS
             valid_events = sorted(VALID_HOOKS)
         except Exception:
             valid_events = []
@@ -14267,7 +14267,7 @@ async def create_hook(body: HookCreate):
         raise HTTPException(status_code=400, detail="event and command are required")
 
     try:
-        from hermes_cli.plugins import VALID_HOOKS
+        from jimmy_cli.plugins import VALID_HOOKS
         if event not in VALID_HOOKS:
             raise HTTPException(
                 status_code=400,
@@ -14356,11 +14356,11 @@ async def delete_hook(body: HookDelete):
 @app.get("/api/ops/checkpoints")
 async def list_checkpoints():
     """List the /rollback shadow store checkpoints (read-only)."""
-    # Checkpoints live under <hermes_home>/checkpoints/.  Surface a count +
+    # Checkpoints live under <jimmy_home>/checkpoints/.  Surface a count +
     # total size so the dashboard can show what a prune would reclaim; the
     # actual prune is a spawned action so confirmation/pruning logic stays
     # in one place (the CLI).
-    cp_dir = get_hermes_home() / "checkpoints"
+    cp_dir = get_jimmy_home() / "checkpoints"
     sessions = []
     total_bytes = 0
     if cp_dir.is_dir():
@@ -14390,7 +14390,7 @@ async def list_checkpoints():
 @app.post("/api/ops/checkpoints/prune")
 async def prune_checkpoints():
     try:
-        proc = _spawn_hermes_action(["checkpoints", "prune"], "checkpoints-prune")
+        proc = _spawn_jimmy_action(["checkpoints", "prune"], "checkpoints-prune")
     except Exception as exc:
         _log.exception("Failed to spawn checkpoints prune")
         raise HTTPException(status_code=500, detail=f"Failed to prune checkpoints: {exc}")
@@ -14410,7 +14410,7 @@ async def prune_checkpoints():
 def _profile_cli_args(profile: Optional[str]) -> List[str]:
     """Return ``["-p", <name>]`` for a validated non-default profile.
 
-    Hub install/uninstall/update run in a fresh ``hermes`` subprocess, and
+    Hub install/uninstall/update run in a fresh ``jimmy`` subprocess, and
     ``_apply_profile_override()`` reads ``-p`` from argv in the child — the
     only mechanism that reaches import-time-bound globals like
     ``skills_hub.SKILLS_DIR``. Empty/"current" means the dashboard's own
@@ -14419,7 +14419,7 @@ def _profile_cli_args(profile: Optional[str]) -> List[str]:
     requested = (profile or "").strip()
     if not requested or requested.lower() in {"current", "default"}:
         return []
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     _resolve_profile_dir(requested)
     return ["-p", profiles_mod.normalize_profile_name(requested)]
 
@@ -14427,7 +14427,7 @@ def _profile_cli_args(profile: Optional[str]) -> List[str]:
 def _hub_action_name(verb: str, key: str) -> str:
     """Unique per-skill hub action name (+ registered log file).
 
-    ``_spawn_hermes_action`` tracks one process/log per name, so a shared
+    ``_spawn_jimmy_action`` tracks one process/log per name, so a shared
     "skills-install"/"skills-uninstall" would make concurrent row-level actions
     overwrite each other's status/log while the UI polls per identifier. Slug
     (readable) + hash (collision-proof) keys each action to its own row.
@@ -14439,10 +14439,10 @@ def _hub_action_name(verb: str, key: str) -> str:
     return name
 
 
-from hermes_cli.web_routers import skills as _skills_routes  # noqa: E402
+from jimmy_cli.web_routers import skills as _skills_routes  # noqa: E402
 
 app.include_router(_skills_routes.hub_router)
-from hermes_cli.web_routers.skills import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.skills import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     install_skill_hub,
     uninstall_skill_hub,
     update_skills_hub,
@@ -14457,11 +14457,11 @@ from hermes_cli.web_routers.skills import (  # noqa: E402,F401 — legacy re-exp
 
 
 
-# Human-readable labels for each hub source id (matches `hermes skills search`
+# Human-readable labels for each hub source id (matches `jimmy skills search`
 # provenance).  Keep in sync with create_source_router()'s source list.
 _SKILL_HUB_SOURCE_LABELS = {
     "official": "Official (Nous)",
-    "hermes-index": "Hermes Index",
+    "jimmy-index": "Jimmy Index",
     "skills-sh": "skills.sh",
     "well-known": "Well-Known",
     "url": "Direct URL",
@@ -14563,7 +14563,7 @@ def _fallback_profile_dicts(profiles_mod) -> List[Dict[str, Any]]:
             return default
 
     profiles: List[Dict[str, Any]] = []
-    default_home = profiles_mod._get_default_hermes_home()
+    default_home = profiles_mod._get_default_jimmy_home()
     if default_home.is_dir():
         model, provider = _safe(lambda: profiles_mod._read_config_model(default_home), (None, None))
         profiles.append({
@@ -14618,7 +14618,7 @@ def _fallback_profile_dicts(profiles_mod) -> List[Dict[str, Any]]:
 
 def _resolve_profile_dir(name: str) -> Path:
     """Validate ``name`` and resolve to its directory or raise an HTTPException."""
-    from hermes_cli import profiles as profiles_mod
+    from jimmy_cli import profiles as profiles_mod
     try:
         profiles_mod.validate_profile_name(name)
     except ValueError as e:
@@ -14631,35 +14631,35 @@ def _resolve_profile_dir(name: str) -> Path:
 def _profile_setup_command(name: str) -> str:
     """Return the shell command used to configure a profile in the CLI."""
     _resolve_profile_dir(name)
-    return "hermes setup" if name == "default" else f"{name} setup"
+    return "jimmy setup" if name == "default" else f"{name} setup"
 
 
 def _write_profile_model(profile_dir: Path, provider: str, model: str) -> None:
     """Write the main model assignment into a specific profile's config.yaml.
 
     Scopes ``load_config``/``save_config`` to ``profile_dir`` via the
-    context-local HERMES_HOME override so the write lands in the target
+    context-local JIMMY_HOME override so the write lands in the target
     profile's config rather than the dashboard process's active profile.
     Clears any stale ``base_url`` / ``context_length`` the same way
     ``POST /api/model/set`` does, since the new model may differ.
     """
-    from hermes_constants import set_hermes_home_override, reset_hermes_home_override
+    from jimmy_constants import set_jimmy_home_override, reset_jimmy_home_override
 
-    token = set_hermes_home_override(str(profile_dir))
+    token = set_jimmy_home_override(str(profile_dir))
     try:
         provider, model = _normalize_main_model_assignment(provider, model)
         cfg = load_config()
         cfg["model"] = _apply_main_model_assignment(cfg.get("model", {}), provider, model)
         save_config(cfg)
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
 
 def _write_profile_mcp_servers(profile_dir: Path, servers: List["MCPServerCreate"]) -> int:
     """Write MCP server entries into a specific profile's config.yaml.
 
     Scopes ``load_config``/``save_config`` to ``profile_dir`` via the
-    context-local HERMES_HOME override (same mechanism as
+    context-local JIMMY_HOME override (same mechanism as
     ``_write_profile_model``) so the entries land in the target profile's
     config rather than the dashboard process's active profile.
 
@@ -14667,11 +14667,11 @@ def _write_profile_mcp_servers(profile_dir: Path, servers: List["MCPServerCreate
     but batched so the whole profile-create write is a single config save.
     Returns the number of servers written.
     """
-    from hermes_constants import set_hermes_home_override, reset_hermes_home_override
-    from hermes_cli.mcp_config import _save_bearer_auth_token
+    from jimmy_constants import set_jimmy_home_override, reset_jimmy_home_override
+    from jimmy_cli.mcp_config import _save_bearer_auth_token
 
     written = 0
-    token = set_hermes_home_override(str(profile_dir))
+    token = set_jimmy_home_override(str(profile_dir))
     try:
         cfg = load_config()
         mcp = cfg.setdefault("mcp_servers", {})
@@ -14698,7 +14698,7 @@ def _write_profile_mcp_servers(profile_dir: Path, servers: List["MCPServerCreate
             cfg.pop("mcp_servers", None)
             save_config(cfg)
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
     return written
 
 
@@ -14710,15 +14710,15 @@ def _disable_unselected_skills(profile_dir: Path, keep: List[str]) -> int:
     uses "replace" semantics: the user picks exactly which seeded built-in /
     optional skills stay active, and everything else gets added to the disabled
     list. (Hub skills are installed separately via subprocess and are active on
-    install.) Scoped to the profile via the HERMES_HOME override. Returns the
+    install.) Scoped to the profile via the JIMMY_HOME override. Returns the
     number of skills newly disabled.
     """
-    from hermes_constants import set_hermes_home_override, reset_hermes_home_override
-    from hermes_cli.skills_config import get_disabled_skills, save_disabled_skills
+    from jimmy_constants import set_jimmy_home_override, reset_jimmy_home_override
+    from jimmy_cli.skills_config import get_disabled_skills, save_disabled_skills
 
     keep_set = {s.strip() for s in keep if s and s.strip()}
     disabled_count = 0
-    token = set_hermes_home_override(str(profile_dir))
+    token = set_jimmy_home_override(str(profile_dir))
     try:
         installed: List[str] = []
         skills_root = profile_dir / "skills"
@@ -14734,12 +14734,12 @@ def _disable_unselected_skills(profile_dir: Path, keep: List[str]) -> int:
         if disabled_count:
             save_disabled_skills(cfg, disabled)
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
     return disabled_count
 
 
 app.include_router(_profiles_routes.router)
-from hermes_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     list_profiles_endpoint,
     create_profile_endpoint,
     get_active_profile_endpoint,
@@ -14802,8 +14802,8 @@ def _profile_scope(profile: Optional[str]):
 
     Two seams must be redirected for skills/toolsets endpoints:
 
-    1. ``load_config``/``save_config`` resolve ``get_hermes_home()`` at call
-       time — the context-local override from ``set_hermes_home_override``
+    1. ``load_config``/``save_config`` resolve ``get_jimmy_home()`` at call
+       time — the context-local override from ``set_jimmy_home_override``
        reaches them (same pattern as ``_write_profile_model``).
     2. ``tools.skills_tool`` and ``tools.skill_manager_tool`` bind
        ``SKILLS_DIR`` at import time, so the override CANNOT reach them.
@@ -14818,46 +14818,46 @@ def _profile_scope(profile: Optional[str]):
 
     ``profile`` of None/""/"current" means "the dashboard's own profile" —
     config resolution is untouched, but the skill-module globals are still
-    retargeted to the *current* ``get_hermes_home()`` so writes land in the
+    retargeted to the *current* ``get_jimmy_home()`` so writes land in the
     live home even when the import-time binding is stale (e.g. the process
-    imported the modules before a HERMES_HOME override, or under test
+    imported the modules before a JIMMY_HOME override, or under test
     isolation).
     """
     requested = (profile or "").strip()
 
-    from hermes_constants import (
-        get_hermes_home,
-        set_hermes_home_override,
-        reset_hermes_home_override,
+    from jimmy_constants import (
+        get_jimmy_home,
+        set_jimmy_home_override,
+        reset_jimmy_home_override,
     )
     from tools import skills_tool as _skills_tool
     from tools import skill_manager_tool as _skill_mgr
 
     token = None
     if not requested or requested.lower() == "current":
-        profile_dir = get_hermes_home()
+        profile_dir = get_jimmy_home()
     else:
         profile_dir = _resolve_profile_dir(requested)
-        token = set_hermes_home_override(str(profile_dir))
+        token = set_jimmy_home_override(str(profile_dir))
 
     with _SKILLS_PROFILE_LOCK:
-        old_home = _skills_tool.HERMES_HOME
+        old_home = _skills_tool.JIMMY_HOME
         old_skills_dir = _skills_tool.SKILLS_DIR
-        old_mgr_home = _skill_mgr.HERMES_HOME
+        old_mgr_home = _skill_mgr.JIMMY_HOME
         old_mgr_skills_dir = _skill_mgr.SKILLS_DIR
-        _skills_tool.HERMES_HOME = profile_dir
+        _skills_tool.JIMMY_HOME = profile_dir
         _skills_tool.SKILLS_DIR = profile_dir / "skills"
-        _skill_mgr.HERMES_HOME = profile_dir
+        _skill_mgr.JIMMY_HOME = profile_dir
         _skill_mgr.SKILLS_DIR = profile_dir / "skills"
         try:
             yield profile_dir if token is not None else None
         finally:
-            _skills_tool.HERMES_HOME = old_home
+            _skills_tool.JIMMY_HOME = old_home
             _skills_tool.SKILLS_DIR = old_skills_dir
-            _skill_mgr.HERMES_HOME = old_mgr_home
+            _skill_mgr.JIMMY_HOME = old_mgr_home
             _skill_mgr.SKILLS_DIR = old_mgr_skills_dir
             if token is not None:
-                reset_hermes_home_override(token)
+                reset_jimmy_home_override(token)
 
 
 @contextmanager
@@ -14865,13 +14865,13 @@ def _config_profile_scope(profile: Optional[str]):
     """Await-safe, config-only profile scope for handlers that ``await``.
 
     Unlike ``_profile_scope`` this touches ONLY the context-local
-    ``set_hermes_home_override`` contextvar — it does NOT swap the
+    ``set_jimmy_home_override`` contextvar — it does NOT swap the
     process-global ``skills_tool``/``skill_manager`` module attributes.
     Those globals are shared across all event-loop tasks, so holding them
     across an ``await`` lets a concurrent skills request restore THIS
     request's profile dir on its ``finally`` (cross-contamination). The
     contextvar override is task-local and survives an ``await`` cleanly,
-    which is all endpoints that resolve ``get_hermes_home()`` at call time
+    which is all endpoints that resolve ``get_jimmy_home()`` at call time
     (config, env, gateway status) actually need.
 
     None/""/"current" means the dashboard's own profile — no override.
@@ -14881,21 +14881,21 @@ def _config_profile_scope(profile: Optional[str]):
         yield None
         return
 
-    from hermes_constants import (
-        set_hermes_home_override,
-        reset_hermes_home_override,
+    from jimmy_constants import (
+        set_jimmy_home_override,
+        reset_jimmy_home_override,
     )
 
     profile_dir = _resolve_profile_dir(requested)
-    token = set_hermes_home_override(str(profile_dir))
+    token = set_jimmy_home_override(str(profile_dir))
     try:
         yield profile_dir
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
 
 app.include_router(_skills_routes.router)
-from hermes_cli.web_routers.skills import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.skills import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     get_skills,
     toggle_skill,
     get_skill_content,
@@ -14925,10 +14925,10 @@ def _clear_skills_prompt_cache() -> None:
 
 
 
-from hermes_cli.web_routers import tools as _tools_routes  # noqa: E402
+from jimmy_cli.web_routers import tools as _tools_routes  # noqa: E402
 
 app.include_router(_tools_routes.router)
-from hermes_cli.web_routers.tools import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
+from jimmy_cli.web_routers.tools import (  # noqa: E402,F401 — legacy re-exports; tests call these via web_server.<name>
     get_toolsets,
     toggle_toolset,
     get_toolset_config,
@@ -14976,7 +14976,7 @@ def _resolve_toolset_model_plugin(ts_key: str, provider_row: dict) -> Optional[s
 
 def _toolset_model_catalog(ts_key: str, plugin_name: str):
     """Return ``(catalog_dict, default_model)`` for a toolset's plugin backend."""
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         _plugin_image_gen_catalog,
         _plugin_video_gen_catalog,
     )
@@ -14988,7 +14988,7 @@ def _toolset_model_catalog(ts_key: str, plugin_name: str):
 
 def _find_toolset_provider_row(ts_key: str, config: dict, provider: Optional[str]) -> Optional[dict]:
     """Resolve a provider picker row by name, or the active row when omitted."""
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         TOOL_CATEGORIES,
         _is_provider_active,
         _visible_providers,
@@ -15069,7 +15069,7 @@ def _terminal_cfg_value(terminal_cfg: dict, key: str, env_var: str) -> str:
     if value is not None and str(value).strip():
         return str(value).strip()
     try:
-        from hermes_cli.config import get_env_value
+        from jimmy_cli.config import get_env_value
 
         return (get_env_value(env_var) or "").strip()
     except Exception:
@@ -15137,7 +15137,7 @@ def _probe_modal_backend() -> tuple:
     except Exception:
         pass
     try:
-        from hermes_cli.config import get_env_value
+        from jimmy_cli.config import get_env_value
 
         if get_env_value("MODAL_TOKEN_ID") and get_env_value("MODAL_TOKEN_SECRET"):
             return ("ready", "")
@@ -15151,7 +15151,7 @@ def _probe_modal_backend() -> tuple:
 
 def _probe_daytona_backend() -> tuple:
     try:
-        from hermes_cli.config import get_env_value
+        from jimmy_cli.config import get_env_value
 
         if get_env_value("DAYTONA_API_KEY"):
             return ("ready", "")
@@ -15189,7 +15189,7 @@ def _probe_terminal_backend(name: str, terminal_cfg: dict) -> tuple:
 #
 # cua-driver runs on macOS, Windows, and Linux. The desktop card reflects
 # per-OS readiness: on macOS the Accessibility + Screen Recording TCC grants
-# (which attach to cua-driver's OWN identity, com.trycua.driver — not Hermes,
+# (which attach to cua-driver's OWN identity, com.trycua.driver — not Jimmy,
 # so no app entitlement is involved); elsewhere, driver health from
 # `cua-driver doctor`. The grant flow is macOS-only (no TCC toggles to request
 # on Windows/Linux).
@@ -15634,7 +15634,7 @@ async def get_models_analytics(
 # ---------------------------------------------------------------------------
 # /api/pty — PTY-over-WebSocket bridge for the dashboard "Chat" tab.
 #
-# The endpoint spawns the same ``hermes --tui`` binary the CLI uses, behind
+# The endpoint spawns the same ``jimmy --tui`` binary the CLI uses, behind
 # a POSIX pseudo-terminal, and forwards bytes + resize escapes across a
 # WebSocket.  The browser renders the ANSI through xterm.js (see
 # web/src/pages/ChatPage.tsx).
@@ -15651,7 +15651,7 @@ async def get_models_analytics(
 # so the /api/pty WebSocket handler needs no platform guards.
 if sys.platform.startswith("win"):
     try:
-        from hermes_cli.win_pty_bridge import WinPtyBridge as PtyBridge, PtyUnavailableError
+        from jimmy_cli.win_pty_bridge import WinPtyBridge as PtyBridge, PtyUnavailableError
         _PTY_BRIDGE_AVAILABLE = True
     except ImportError:  # pragma: no cover - pywinpty missing
         PtyBridge = None  # type: ignore[assignment]
@@ -15662,7 +15662,7 @@ if sys.platform.startswith("win"):
             pass
 else:
     try:
-        from hermes_cli.pty_bridge import PtyBridge, PtyUnavailableError
+        from jimmy_cli.pty_bridge import PtyBridge, PtyUnavailableError
         _PTY_BRIDGE_AVAILABLE = True
     except ImportError:  # pragma: no cover - dev env without ptyprocess
         PtyBridge = None  # type: ignore[assignment]
@@ -15681,7 +15681,7 @@ _PTY_IDLE_BACKOFF = 0.05
 
 # Keep-alive PTY sessions: a terminal connecting with ``?attach=<token>`` is
 # bound to a process that survives disconnect/refresh and is reattachable.
-from hermes_cli.pty_session import PtySessionRegistry, RegistryFull, run_reaper  # noqa: E402
+from jimmy_cli.pty_session import PtySessionRegistry, RegistryFull, run_reaper  # noqa: E402
 
 PTY_REGISTRY = PtySessionRegistry(
     ttl=30 * 60,
@@ -15955,8 +15955,8 @@ def _ws_auth_reason(ws: "WebSocket") -> tuple[Optional[str], str]:
     if auth_required:
         # Lazy import — keeps this function importable in test harnesses
         # that don't bring in the dashboard_auth layer.
-        from hermes_cli.dashboard_auth.audit import AuditEvent, audit_log
-        from hermes_cli.dashboard_auth.ws_tickets import (
+        from jimmy_cli.dashboard_auth.audit import AuditEvent, audit_log
+        from jimmy_cli.dashboard_auth.ws_tickets import (
             TicketInvalid,
             consume_internal_credential,
             consume_ticket,
@@ -16023,40 +16023,40 @@ def _resolve_chat_argv(
 ) -> tuple[list[str], Optional[str], Optional[dict]]:
     """Resolve the argv + cwd + env for the chat PTY.
 
-    Default: whatever ``hermes --tui`` would run.  Tests monkeypatch this
+    Default: whatever ``jimmy --tui`` would run.  Tests monkeypatch this
     function to inject a tiny fake command (``cat``, ``sh -c 'printf …'``)
     so nothing has to build Node or the TUI bundle.
 
-    Session resume is propagated via the ``HERMES_TUI_RESUME`` env var —
-    matching what ``hermes_cli.main._launch_tui`` does for the CLI path.
+    Session resume is propagated via the ``JIMMY_TUI_RESUME`` env var —
+    matching what ``jimmy_cli.main._launch_tui`` does for the CLI path.
     Appending ``--resume <id>`` to argv doesn't work because ``ui-tui`` does
     not parse its argv.
 
-    ``HERMES_TUI_GATEWAY_URL`` is injected so the PTY child can attach to
+    ``JIMMY_TUI_GATEWAY_URL`` is injected so the PTY child can attach to
     this process's in-memory ``tui_gateway`` instance instead of spawning
     its own Python gateway subprocess.
 
-    `sidecar_url` (when set) is forwarded as ``HERMES_TUI_SIDECAR_URL`` so
+    `sidecar_url` (when set) is forwarded as ``JIMMY_TUI_SIDECAR_URL`` so
     the spawned ``tui_gateway.entry`` can mirror dispatcher emits to the
     dashboard's ``/api/pub`` endpoint (see :func:`pub_ws`).
 
     `active_session_file` (when set) is forwarded as
-    ``HERMES_TUI_ACTIVE_SESSION_FILE``. The TUI writes the current session id
+    ``JIMMY_TUI_ACTIVE_SESSION_FILE``. The TUI writes the current session id
     there whenever it creates/resumes/switches sessions, giving the dashboard a
     small cross-process breadcrumb for reconnecting after an unexpected browser
     WebSocket close.
 
     `profile` (when set) scopes the ENTIRE chat to that profile by pointing
-    ``HERMES_HOME`` at the profile dir in the child env. Every spawned
+    ``JIMMY_HOME`` at the profile dir in the child env. Every spawned
     process (the TUI and the ``tui_gateway.entry`` it launches) resolves
-    ``get_hermes_home()`` from that env var at its own import, so the child
+    ``get_jimmy_home()`` from that env var at its own import, so the child
     binds the profile's config, skills, memory, and state.db from the start
-    — the same propagation ``hermes -p <name>`` performs. The in-process
-    ``HERMES_TUI_GATEWAY_URL`` attach is SKIPPED for scoped chats: the
+    — the same propagation ``jimmy -p <name>`` performs. The in-process
+    ``JIMMY_TUI_GATEWAY_URL`` attach is SKIPPED for scoped chats: the
     dashboard's in-memory gateway runs under the dashboard's own profile,
     so a profile-scoped chat must spawn its own gateway subprocess.
     """
-    from hermes_cli.main import PROJECT_ROOT, _apply_tui_python_env, _make_tui_argv
+    from jimmy_cli.main import PROJECT_ROOT, _apply_tui_python_env, _make_tui_argv
 
     profile_dir: Optional[Path] = None
     requested = (profile or "").strip()
@@ -16064,13 +16064,13 @@ def _resolve_chat_argv(
         profile_dir = _resolve_profile_dir(requested)
 
     argv, cwd = _make_tui_argv(PROJECT_ROOT / "ui-tui", tui_dev=False)
-    # Hermes TUI child: build via the single spawn-env factory (profile-home
+    # Jimmy TUI child: build via the single spawn-env factory (profile-home
     # contract applied; secrets kept — the spawned agent needs provider creds).
-    # An explicit profile scope below still overrides HERMES_HOME afterwards.
+    # An explicit profile scope below still overrides JIMMY_HOME afterwards.
     from tools.environments.local import build_subprocess_env
     env = build_subprocess_env(scrub_secrets=False, inherit_profile_home=True)
     try:
-        from hermes_cli.config import apply_terminal_config_to_env
+        from jimmy_cli.config import apply_terminal_config_to_env
         apply_terminal_config_to_env(env=env)
     except Exception:
         _log.debug("Failed to apply terminal config bridge for dashboard chat", exc_info=True)
@@ -16082,8 +16082,8 @@ def _resolve_chat_argv(
     # makes browser-side transcript scrolling feel broken. Keep the terminal
     # build unchanged for native CLI usage; only disable mouse tracking for
     # the dashboard PTY path.
-    env.setdefault("HERMES_TUI_DISABLE_MOUSE", "1")
-    env.setdefault("HERMES_TUI_INLINE", "1")
+    env.setdefault("JIMMY_TUI_DISABLE_MOUSE", "1")
+    env.setdefault("JIMMY_TUI_INLINE", "1")
     # The dashboard terminal is xterm.js, which always renders 24-bit RGB.
     # But chalk inside the TUI child decides its color depth from the
     # SERVER process env — and hosted/cloud deploys run the dashboard under
@@ -16095,10 +16095,10 @@ def _resolve_chat_argv(
     # COLORTERM=truecolor into os.environ. Backfill it for the PTY child;
     # setdefault so an explicit operator value still wins.
     env.setdefault("COLORTERM", "truecolor")
-    env["HERMES_TUI_DASHBOARD"] = "1"
+    env["JIMMY_TUI_DASHBOARD"] = "1"
 
     if profile_dir is not None:
-        env["HERMES_HOME"] = str(profile_dir)
+        env["JIMMY_HOME"] = str(profile_dir)
 
     if resume:
         _resume_db = _open_session_db_for_profile(
@@ -16111,21 +16111,21 @@ def _resolve_chat_argv(
             _resume_db.close()
         if latest_resume:
             resume = latest_resume
-        env["HERMES_TUI_RESUME"] = resume
+        env["JIMMY_TUI_RESUME"] = resume
 
     if sidecar_url:
-        env["HERMES_TUI_SIDECAR_URL"] = sidecar_url
+        env["JIMMY_TUI_SIDECAR_URL"] = sidecar_url
 
     if active_session_file:
-        env["HERMES_TUI_ACTIVE_SESSION_FILE"] = active_session_file
+        env["JIMMY_TUI_ACTIVE_SESSION_FILE"] = active_session_file
 
     # Profile-scoped chats must NOT attach to the dashboard's in-memory
     # gateway — it runs under the dashboard's own profile. Without the
     # attach URL, gatewayClient spawns its own `tui_gateway.entry`, which
-    # inherits the profile HERMES_HOME set above.
+    # inherits the profile JIMMY_HOME set above.
     if profile_dir is None:
         if gateway_ws_url := _build_gateway_ws_url():
-            env["HERMES_TUI_GATEWAY_URL"] = gateway_ws_url
+            env["JIMMY_TUI_GATEWAY_URL"] = gateway_ws_url
 
     return list(argv), str(cwd) if cwd else None, env
 
@@ -16145,7 +16145,7 @@ def _resolve_client_ws_host() -> Optional[str]:
 
     Resolution order:
 
-    1. Explicit ``HERMES_DASHBOARD_WS_HOST`` env var — wins always. Operators
+    1. Explicit ``JIMMY_DASHBOARD_WS_HOST`` env var — wins always. Operators
        running the dashboard behind a forward proxy can pin a routable host
        (e.g. ``127.0.0.1``, the container's internal IP, or a sidecar DNS
        name) and bypass auto-detection entirely.
@@ -16154,7 +16154,7 @@ def _resolve_client_ws_host() -> Optional[str]:
        run in the same container.
     3. Any other bind host (loopback or LAN IP) — preserved verbatim.
     """
-    explicit = os.environ.get("HERMES_DASHBOARD_WS_HOST", "").strip()
+    explicit = os.environ.get("JIMMY_DASHBOARD_WS_HOST", "").strip()
     if explicit:
         return explicit
 
@@ -16192,7 +16192,7 @@ def _build_gateway_ws_url() -> Optional[str]:
     )
 
     if getattr(app.state, "auth_required", False):
-        from hermes_cli.dashboard_auth.ws_tickets import internal_ws_credential
+        from jimmy_cli.dashboard_auth.ws_tickets import internal_ws_credential
 
         qs = urllib.parse.urlencode({"internal": internal_ws_credential()})
     else:
@@ -16257,7 +16257,7 @@ def _build_sidecar_url(channel: str) -> Optional[str]:
     if getattr(app.state, "auth_required", False):
         # Gated mode — use the internal credential so the WS upgrade survives
         # _ws_auth_ok and the child can reconnect.
-        from hermes_cli.dashboard_auth.ws_tickets import internal_ws_credential
+        from jimmy_cli.dashboard_auth.ws_tickets import internal_ws_credential
 
         qs = urllib.parse.urlencode(
             {"internal": internal_ws_credential(), "channel": channel}
@@ -16297,7 +16297,7 @@ def _active_session_file_for_channel(app: "FastAPI", channel: str) -> Path:
     if existing is not None:
         return existing
 
-    fd, raw_path = tempfile.mkstemp(prefix="hermes-pty-active-", suffix=".json")
+    fd, raw_path = tempfile.mkstemp(prefix="jimmy-pty-active-", suffix=".json")
     os.close(fd)
     path = Path(raw_path)
     files[channel] = path
@@ -16335,14 +16335,14 @@ def _ws_close_reason(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# /api/console — safe Hermes Console command WebSocket.
+# /api/console — safe Jimmy Console command WebSocket.
 #
-# Unlike /api/pty, this endpoint never spawns a PTY, shell, or full Hermes CLI
+# Unlike /api/pty, this endpoint never spawns a PTY, shell, or full Jimmy CLI
 # subprocess. It runs the curated console engine in-process and exchanges
 # structured JSON frames with the dashboard xterm overlay.
 # ---------------------------------------------------------------------------
 
-_CONSOLE_PROMPT = "hermes> "
+_CONSOLE_PROMPT = "jimmy> "
 _CONSOLE_COMMAND_TIMEOUT_SECONDS = 60.0
 _CONSOLE_OUTPUT_LIMIT = 50000
 
@@ -16365,7 +16365,7 @@ def _get_console_executor() -> concurrent.futures.ThreadPoolExecutor:
             if _console_executor is None:
                 _console_executor = concurrent.futures.ThreadPoolExecutor(
                     max_workers=_CONSOLE_EXECUTOR_MAX_WORKERS,
-                    thread_name_prefix="hermes-console",
+                    thread_name_prefix="jimmy-console",
                 )
                 # Ensure the pool is torn down on interpreter exit. Don't wait on
                 # in-flight workers: a stuck 60s console command must not block
@@ -16586,9 +16586,9 @@ async def console_ws(ws: WebSocket) -> None:
     send_lock = asyncio.Lock()
 
     try:
-        from hermes_cli.console_engine import HermesConsoleEngine
+        from jimmy_cli.console_engine import JimmyConsoleEngine
 
-        engine = HermesConsoleEngine(output_limit=_CONSOLE_OUTPUT_LIMIT)
+        engine = JimmyConsoleEngine(output_limit=_CONSOLE_OUTPUT_LIMIT)
         if profile and profile.lower() != "current":
             _resolve_profile_dir(profile)
     except HTTPException as exc:
@@ -16667,7 +16667,7 @@ async def console_ws(ws: WebSocket) -> None:
                         "type": "error",
                         "id": command_id,
                         "message": (
-                            "Command timed out. Hermes Console returned to the prompt."
+                            "Command timed out. Jimmy Console returned to the prompt."
                         ),
                         "command": line,
                     },
@@ -16945,7 +16945,7 @@ async def pty_ws(ws: WebSocket) -> None:
         await ws.send_text(
             "\r\n\x1b[31mChat unavailable: the embedded terminal requires a "
             "POSIX PTY, which native Windows Python doesn't provide.\x1b[0m\r\n"
-            "\x1b[33mInstall Hermes inside WSL2 to use the dashboard's /chat "
+            "\x1b[33mInstall Jimmy inside WSL2 to use the dashboard's /chat "
             "tab — the rest of the dashboard works here.\x1b[0m\r\n"
         )
         await ws.close(code=1011)
@@ -16998,7 +16998,7 @@ async def pty_ws(ws: WebSocket) -> None:
     attach_token = ws.query_params.get("attach") or None
     registry_resume = raw_resume
     if raw_resume and env:
-        registry_resume = env.get("HERMES_TUI_RESUME") or raw_resume
+        registry_resume = env.get("JIMMY_TUI_RESUME") or raw_resume
     if attach_token is not None and (registry_resume or profile):
         # Key explicit resumes on their canonical target, never the active-session fallback.
         attach_token = f"{attach_token}\0{profile or ''}\0{registry_resume or ''}"
@@ -17112,7 +17112,7 @@ async def gateway_ws(ws: WebSocket) -> None:
 # /api/pub + /api/events — chat-tab event broadcast.
 #
 # The PTY-side ``tui_gateway.entry`` opens /api/pub at startup (driven by
-# HERMES_TUI_SIDECAR_URL set in /api/pty's PTY env) and writes every
+# JIMMY_TUI_SIDECAR_URL set in /api/pty's PTY env) and writes every
 # dispatcher emit through it.  The dashboard fans those frames out to any
 # subscriber that opened /api/events on the same channel id.  This is what
 # gives the React sidebar its tool-call feed without breaking the PTY
@@ -17195,12 +17195,12 @@ async def events_ws(ws: WebSocket) -> None:
 def _normalise_prefix(raw: Optional[str]) -> str:
     """Normalise an X-Forwarded-Prefix header value.
 
-    Thin re-export of :func:`hermes_cli.dashboard_auth.prefix.normalise_prefix`
+    Thin re-export of :func:`jimmy_cli.dashboard_auth.prefix.normalise_prefix`
     — the single source of truth lives in the dashboard_auth package so
     the gate middleware, the OAuth routes, the cookie helpers, and the
     SPA mount all agree on validation rules.
     """
-    from hermes_cli.dashboard_auth.prefix import normalise_prefix
+    from jimmy_cli.dashboard_auth.prefix import normalise_prefix
     return normalise_prefix(raw)
 
 
@@ -17211,7 +17211,7 @@ def _render_active_theme_bootstrap_css() -> str:
     ``ThemeProvider.applyTheme()`` installs once the
     ``/api/dashboard/themes`` round-trip completes.  The goal is to
     eliminate the green flash where the first paint shows the bundle's
-    default Hermes Teal canvas before the SPA flips the configured user
+    default Jimmy Teal canvas before the SPA flips the configured user
     theme into place.
 
     Built-in themes return an empty string — their full definitions live
@@ -17256,7 +17256,7 @@ def _render_active_theme_bootstrap_css() -> str:
             # the cascade — the rule below re-resolves automatically and
             # never goes stale when the user picks a different theme.
             return (
-                '<style id="hermes-theme-bootstrap">'
+                '<style id="jimmy-theme-bootstrap">'
                 ":root{"
                 f"--background-base:{_esc(bg_hex)};"
                 f"--midground-base:{_esc(mg_hex)};"
@@ -17291,20 +17291,20 @@ def mount_spa(application: FastAPI):
     separate (unauthenticated) token-dispensing endpoint.
 
     When served behind a path-prefix reverse proxy (e.g.
-    ``mission-control.tilos.com/hermes/*`` -> local Caddy -> :9119), the
-    proxy injects ``X-Forwarded-Prefix: /hermes`` on every request. We
+    ``mission-control.tilos.com/jimmy/*`` -> local Caddy -> :9119), the
+    proxy injects ``X-Forwarded-Prefix: /jimmy`` on every request. We
     rewrite the served ``index.html`` so absolute asset URLs (``/assets/...``)
-    and the SPA's runtime ``__HERMES_BASE_PATH__`` honour that prefix
+    and the SPA's runtime ``__JIMMY_BASE_PATH__`` honour that prefix
     without rebuilding the bundle.
     """
-    # `hermes serve` is the headless backend: it must NEVER serve the browser
+    # `jimmy serve` is the headless backend: it must NEVER serve the browser
     # SPA, even if a dist is lying around from a prior `dashboard`/build. Take
     # the no-frontend path so only the JSON-RPC/WS/API surface is reachable.
-    _headless = os.environ.get("HERMES_SERVE_HEADLESS") == "1"
+    _headless = os.environ.get("JIMMY_SERVE_HEADLESS") == "1"
     if _headless or not WEB_DIST.exists():
         _msg = (
-            "Headless backend (hermes serve): web UI disabled — use "
-            "`hermes dashboard` for the browser UI."
+            "Headless backend (jimmy serve): web UI disabled — use "
+            "`jimmy dashboard` for the browser UI."
             if _headless
             else "Frontend not built. Run: cd web && npm run build"
         )
@@ -17319,13 +17319,13 @@ def mount_spa(application: FastAPI):
     def _serve_index(prefix: str = ""):
         """Return index.html with the session token + base-path injected.
 
-        ``prefix`` is the normalised ``X-Forwarded-Prefix`` (e.g. ``/hermes``)
+        ``prefix`` is the normalised ``X-Forwarded-Prefix`` (e.g. ``/jimmy``)
         or empty string when served at root.
 
         When the OAuth auth gate is active (``app.state.auth_required``),
         the legacy ``_SESSION_TOKEN`` is NOT injected — the SPA reads
         identity from ``/api/auth/me`` over cookie auth instead.  The
-        ``__HERMES_AUTH_REQUIRED__`` flag lets the SPA pick the right
+        ``__JIMMY_AUTH_REQUIRED__`` flag lets the SPA pick the right
         auth scheme for /api/pty and /api/ws (ticket vs token).
         """
         try:
@@ -17346,17 +17346,17 @@ def mount_spa(application: FastAPI):
         if gated:
             bootstrap_script = (
                 f"<script>"
-                f"window.__HERMES_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
-                f'window.__HERMES_BASE_PATH__="{prefix}";'
-                f"window.__HERMES_AUTH_REQUIRED__={gated_js};"
+                f"window.__JIMMY_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
+                f'window.__JIMMY_BASE_PATH__="{prefix}";'
+                f"window.__JIMMY_AUTH_REQUIRED__={gated_js};"
                 f"</script>"
             )
         else:
             bootstrap_script = (
-                f'<script>window.__HERMES_SESSION_TOKEN__="{_SESSION_TOKEN}";'
-                f"window.__HERMES_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
-                f'window.__HERMES_BASE_PATH__="{prefix}";'
-                f"window.__HERMES_AUTH_REQUIRED__={gated_js};"
+                f'<script>window.__JIMMY_SESSION_TOKEN__="{_SESSION_TOKEN}";'
+                f"window.__JIMMY_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
+                f'window.__JIMMY_BASE_PATH__="{prefix}";'
+                f"window.__JIMMY_AUTH_REQUIRED__={gated_js};"
                 f"</script>"
             )
         if prefix:
@@ -17369,9 +17369,9 @@ def mount_spa(application: FastAPI):
             html = html.replace('href="/ds-assets/', f'href="{prefix}/ds-assets/')
             html = html.replace('src="/ds-assets/', f'src="{prefix}/ds-assets/')
         # Theme flash mitigation: when the active theme is a user theme
-        # (``HERMES_HOME/dashboard-themes/<name>.yaml``), inject a minimal
+        # (``JIMMY_HOME/dashboard-themes/<name>.yaml``), inject a minimal
         # critical-CSS block so the first paint uses the target palette.
-        # Without this the SPA paints the default Hermes Teal canvas, then
+        # Without this the SPA paints the default Jimmy Teal canvas, then
         # ``ThemeProvider`` flips the CSS variables once
         # ``/api/dashboard/themes`` resolves.  Built-in themes are already
         # in the bundle's ``presets.ts`` so no shim is needed for them.
@@ -17387,8 +17387,8 @@ def mount_spa(application: FastAPI):
     # When served behind a path-prefix proxy, the built CSS contains
     # absolute ``url(/fonts/...)`` and ``url(/ds-assets/...)`` references.
     # Browsers resolve those against the document origin, which means
-    # under ``/hermes`` they'd hit ``mission-control.tilos.com/fonts/...``
-    # (the MC Pages app), not the Hermes backend. Intercept CSS asset
+    # under ``/jimmy`` they'd hit ``mission-control.tilos.com/fonts/...``
+    # (the MC Pages app), not the Jimmy backend. Intercept CSS asset
     # requests BEFORE the StaticFiles mount and rewrite the absolute paths
     # when a prefix is in play.
     @application.get("/assets/{filename}.css")
@@ -17465,8 +17465,8 @@ def mount_spa(application: FastAPI):
 # Built-in dashboard themes — label + description only.  The actual color
 # definitions live in the frontend (web/src/themes/presets.ts).
 _BUILTIN_DASHBOARD_THEMES = [
-    {"name": "default",       "label": "Hermes Teal",         "description": "Classic dark teal — the canonical Hermes look"},
-    {"name": "default-large", "label": "Hermes Teal (Large)", "description": "Hermes Teal with bigger fonts and roomier spacing"},
+    {"name": "default",       "label": "Jimmy Teal",         "description": "Classic dark teal — the canonical Jimmy look"},
+    {"name": "default-large", "label": "Jimmy Teal (Large)", "description": "Jimmy Teal with bigger fonts and roomier spacing"},
     {"name": "nous-blue",     "label": "Nous Blue",           "description": "Light mode — vivid Nous-blue accents on cream canvas"},
     {"name": "midnight",      "label": "Midnight",            "description": "Deep blue-violet with cool accents"},
     {"name": "ember",     "label": "Ember",          "description": "Warm crimson and bronze — forge vibes"},
@@ -17636,7 +17636,7 @@ def _normalise_theme_definition(data: Dict[str, Any]) -> Optional[Dict[str, Any]
     # tag on theme apply.  Clipped to _THEME_CUSTOM_CSS_MAX to keep the
     # payload bounded.  We intentionally do NOT parse/sanitise the CSS
     # here — the dashboard is localhost-only and themes are user-authored
-    # YAML in ~/.hermes/, same trust level as the config file itself.
+    # YAML in ~/.jimmy/, same trust level as the config file itself.
     custom_css_val = data.get("customCSS")
     custom_css: Optional[str] = None
     if isinstance(custom_css_val, str) and custom_css_val.strip():
@@ -17691,17 +17691,17 @@ def _normalise_theme_definition(data: Dict[str, Any]) -> Optional[Dict[str, Any]
 
 
 def _discover_user_themes() -> list:
-    """Scan ~/.hermes/dashboard-themes/*.yaml for user-created themes.
+    """Scan ~/.jimmy/dashboard-themes/*.yaml for user-created themes.
 
     Returns a list of fully-normalised theme definitions ready to ship
     to the frontend, so the client can apply them without a secondary
     round-trip or a built-in stub.
 
-    Uses the dashboard process launch home, not ``get_hermes_home()``, so a
+    Uses the dashboard process launch home, not ``get_jimmy_home()``, so a
     transient profile override from embedded chat does not hide themes that
-    live under the server's own ``HERMES_HOME``.
+    live under the server's own ``JIMMY_HOME``.
     """
-    themes_dir = get_process_hermes_home() / "dashboard-themes"
+    themes_dir = get_process_jimmy_home() / "dashboard-themes"
     if not themes_dir.is_dir():
         return []
     result = []
@@ -17722,7 +17722,7 @@ async def get_dashboard_themes():
 
     Built-in entries ship name/label/description only (the frontend owns
     their full definitions in `web/src/themes/presets.ts`).  User themes
-    from `~/.hermes/dashboard-themes/*.yaml` ship with their full
+    from `~/.jimmy/dashboard-themes/*.yaml` ship with their full
     normalised definition under `definition`, so the client can apply
     them without a stub.
     """
@@ -17859,35 +17859,35 @@ def _safe_plugin_api_relpath(api_field: Any, *, dashboard_dir: Path) -> Optional
 def _discover_dashboard_plugins() -> list:
     """Scan plugins/*/dashboard/manifest.json for dashboard extensions.
 
-    Checks three plugin sources (same as hermes_cli.plugins):
-    1. User plugins:    ~/.hermes/plugins/<name>/dashboard/manifest.json
+    Checks three plugin sources (same as jimmy_cli.plugins):
+    1. User plugins:    ~/.jimmy/plugins/<name>/dashboard/manifest.json
     2. Bundled plugins: <repo>/plugins/<name>/dashboard/manifest.json  (memory/, etc.)
-    3. Project plugins: ./.hermes/plugins/  (only if HERMES_ENABLE_PROJECT_PLUGINS)
+    3. Project plugins: ./.jimmy/plugins/  (only if JIMMY_ENABLE_PROJECT_PLUGINS)
     """
     plugins = []
     seen_names: set = set()
 
-    from hermes_cli.plugins import get_bundled_plugins_dir
+    from jimmy_cli.plugins import get_bundled_plugins_dir
     bundled_root = get_bundled_plugins_dir()
     # User dashboard plugins are a dashboard-owned asset (same category as
     # theme YAML): resolve them from the process launch home so they don't
     # vanish when a request is scoped to another profile via a context-local
-    # HERMES_HOME override (e.g. embedded /chat under --open-profile).
+    # JIMMY_HOME override (e.g. embedded /chat under --open-profile).
     #
     # #87197: when the process itself is profile-scoped (``--profile <name>``
-    # sets ``HERMES_HOME=<root>/profiles/<name>``), the launch home is the
+    # sets ``JIMMY_HOME=<root>/profiles/<name>``), the launch home is the
     # profile directory, which has no ``plugins/`` — user plugins are
-    # installed in the hermes root (``~/.hermes/plugins``). Scan the default
-    # root as well (``get_default_hermes_root()`` unwraps
+    # installed in the jimmy root (``~/.jimmy/plugins``). Scan the default
+    # root as well (``get_default_jimmy_root()`` unwraps
     # ``<root>/profiles/<name>`` → ``<root>`` and returns a custom
-    # ``HERMES_HOME`` unchanged when it *is* the root), mirroring how
-    # ``hermes_cli.plugins`` resolves plugin install locations. The
+    # ``JIMMY_HOME`` unchanged when it *is* the root), mirroring how
+    # ``jimmy_cli.plugins`` resolves plugin install locations. The
     # ``seen_names`` dedupe below keeps profile-local plugins (if any)
     # authoritative over same-named root plugins.
-    from hermes_constants import get_default_hermes_root
+    from jimmy_constants import get_default_jimmy_root
 
-    user_plugin_roots = [get_process_hermes_home() / "plugins"]
-    root_plugins = get_default_hermes_root() / "plugins"
+    user_plugin_roots = [get_process_jimmy_home() / "plugins"]
+    root_plugins = get_default_jimmy_root() / "plugins"
     if root_plugins.resolve(strict=False) != user_plugin_roots[0].resolve(strict=False):
         user_plugin_roots.append(root_plugins)
     search_dirs = [(d, "user") for d in user_plugin_roots]
@@ -17903,9 +17903,9 @@ def _discover_dashboard_plugins() -> list:
     # the manifest's ``api`` field (now patched below), this turned the
     # opt-in into a sticky always-on switch.  Use the shared truthy
     # semantics (``1`` / ``true`` / ``yes`` / ``on``) so the gate matches
-    # ``hermes_cli/plugins.py`` and the documented user contract.
-    if env_var_enabled("HERMES_ENABLE_PROJECT_PLUGINS"):
-        search_dirs.append((Path.cwd() / ".hermes" / "plugins", "project"))
+    # ``jimmy_cli/plugins.py`` and the documented user contract.
+    if env_var_enabled("JIMMY_ENABLE_PROJECT_PLUGINS"):
+        search_dirs.append((Path.cwd() / ".jimmy" / "plugins", "project"))
 
     for plugins_root, source in search_dirs:
         if not plugins_root.is_dir():
@@ -18009,7 +18009,7 @@ async def get_dashboard_plugins():
         # in plugins.disabled.  This prevents the frontend from loading JS/CSS
         # from plugins the user has not explicitly activated.  (#46435)
         try:
-            from hermes_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
+            from jimmy_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
             enabled_set = _get_enabled_set()
             disabled_set = _get_disabled_set()
         except Exception:
@@ -18121,7 +18121,7 @@ def _merged_plugins_hub(force_refresh: bool = False) -> Dict[str, Any]:
                 return _plugins_hub_cache
 
     started_at = time.monotonic()
-    from hermes_cli.plugins_cmd import (
+    from jimmy_cli.plugins_cmd import (
         _discover_all_plugins,
         _get_current_context_engine,
         _get_current_memory_provider,
@@ -18141,7 +18141,7 @@ def _merged_plugins_hub(force_refresh: bool = False) -> Dict[str, Any]:
     config = load_config()
     hidden_plugins: list = cfg_get(config, "dashboard", "hidden_plugins", default=[]) or []
 
-    plugins_root_resolved = (get_hermes_home() / "plugins").resolve()
+    plugins_root_resolved = (get_jimmy_home() / "plugins").resolve()
     rows: List[Dict[str, Any]] = []
 
     for name, version, description, source, dir_str, key in _discover_all_plugins():
@@ -18198,7 +18198,7 @@ def _merged_plugins_hub(force_refresh: bool = False) -> Dict[str, Any]:
                         continue
                     if cached_result is False:
                         auth_required = True
-                        auth_command = f"hermes auth {name}"
+                        auth_command = f"jimmy auth {name}"
                         break
             except Exception:
                 pass
@@ -18273,7 +18273,7 @@ async def get_plugins_hub(request: Request):
 @app.post("/api/dashboard/agent-plugins/install")
 async def post_agent_plugin_install(request: Request, body: _AgentPluginInstallBody):
     _require_token(request)
-    from hermes_cli.plugins_cmd import dashboard_install_plugin
+    from jimmy_cli.plugins_cmd import dashboard_install_plugin
 
     result = dashboard_install_plugin(
         body.identifier.strip(),
@@ -18304,7 +18304,7 @@ def _validate_plugin_name(name: str) -> str:
 async def post_agent_plugin_enable(request: Request, name: str):
     _require_token(request)
     name = _validate_plugin_name(name)
-    from hermes_cli.plugins_cmd import dashboard_set_agent_plugin_enabled
+    from jimmy_cli.plugins_cmd import dashboard_set_agent_plugin_enabled
 
     result = dashboard_set_agent_plugin_enabled(name, enabled=True)
     if not result.get("ok"):
@@ -18317,7 +18317,7 @@ async def post_agent_plugin_enable(request: Request, name: str):
 async def post_agent_plugin_disable(request: Request, name: str):
     _require_token(request)
     name = _validate_plugin_name(name)
-    from hermes_cli.plugins_cmd import dashboard_set_agent_plugin_enabled
+    from jimmy_cli.plugins_cmd import dashboard_set_agent_plugin_enabled
 
     result = dashboard_set_agent_plugin_enabled(name, enabled=False)
     if not result.get("ok"):
@@ -18330,7 +18330,7 @@ async def post_agent_plugin_disable(request: Request, name: str):
 async def post_agent_plugin_update(request: Request, name: str):
     _require_token(request)
     name = _validate_plugin_name(name)
-    from hermes_cli.plugins_cmd import dashboard_update_user_plugin
+    from jimmy_cli.plugins_cmd import dashboard_update_user_plugin
 
     result = dashboard_update_user_plugin(name)
     if not result.get("ok"):
@@ -18344,7 +18344,7 @@ async def post_agent_plugin_update(request: Request, name: str):
 async def delete_agent_plugin(request: Request, name: str):
     _require_token(request)
     name = _validate_plugin_name(name)
-    from hermes_cli.plugins_cmd import dashboard_remove_user_plugin
+    from jimmy_cli.plugins_cmd import dashboard_remove_user_plugin
 
     result = dashboard_remove_user_plugin(name)
     if not result.get("ok"):
@@ -18358,7 +18358,7 @@ async def delete_agent_plugin(request: Request, name: str):
 async def put_plugin_providers(request: Request, body: _PluginProvidersPutBody):
     """Persist memory provider / context engine selection (writes config.yaml)."""
     _require_token(request)
-    from hermes_cli.plugins_cmd import (
+    from jimmy_cli.plugins_cmd import (
         _save_context_engine,
         _save_memory_provider,
     )
@@ -18434,7 +18434,7 @@ async def serve_plugin_asset(plugin_name: str, file_path: str):
     # Gate: user plugins must be enabled to serve assets;
     # bundled plugins must not be explicitly disabled.
     try:
-        from hermes_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
+        from jimmy_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
         enabled_set = _get_enabled_set()
         disabled_set = _get_disabled_set()
     except Exception:
@@ -18501,7 +18501,7 @@ def _mount_plugin_api_routes():
     ``/api/plugins/<name>/``.
 
     Backend import is restricted to ``bundled`` and ``user`` sources.
-    Project plugins (``./.hermes/plugins/``) ship with the CWD and are
+    Project plugins (``./.jimmy/plugins/``) ship with the CWD and are
     therefore attacker-controlled in any threat model where the user
     opens a malicious repo; they can extend the dashboard UI via
     static JS/CSS but their Python ``api`` file is never auto-imported
@@ -18516,7 +18516,7 @@ def _mount_plugin_api_routes():
     """
     # Load the enabled/disabled sets once for the loop.
     try:
-        from hermes_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
+        from jimmy_cli.plugins_cmd import _get_enabled_set, _get_disabled_set
         enabled_set = _get_enabled_set()
         disabled_set = _get_disabled_set()
     except Exception:
@@ -18556,7 +18556,7 @@ def _mount_plugin_api_routes():
             _log.warning(
                 "Plugin %s: ignoring backend api=%s (project plugins may "
                 "not auto-import Python code; move the plugin to "
-                "~/.hermes/plugins/ if you trust it)",
+                "~/.jimmy/plugins/ if you trust it)",
                 plugin["name"], api_file_name,
             )
             continue
@@ -18580,7 +18580,7 @@ def _mount_plugin_api_routes():
             _log.warning("Plugin %s declares api=%s but file not found", plugin["name"], api_file_name)
             continue
         try:
-            module_name = f"hermes_dashboard_plugin_{plugin['name']}"
+            module_name = f"jimmy_dashboard_plugin_{plugin['name']}"
             spec = importlib.util.spec_from_file_location(module_name, api_path)
             if spec is None or spec.loader is None:
                 continue
@@ -18614,7 +18614,7 @@ _mount_plugin_api_routes()
 # SPA catch-all so /{full_path:path} doesn't swallow them.  These are
 # always mounted — the gate middleware decides whether to enforce auth,
 # not whether the routes exist.
-from hermes_cli.dashboard_auth.routes import router as _dashboard_auth_router  # noqa: E402
+from jimmy_cli.dashboard_auth.routes import router as _dashboard_auth_router  # noqa: E402
 app.include_router(_dashboard_auth_router)
 
 mount_spa(app)
@@ -18638,10 +18638,10 @@ def _write_dashboard_ready_file(actual_port: int) -> None:
 
     Windows Desktop can launch dashboard backends with ``pythonw.exe`` to avoid
     console flashes. That path cannot rely on stdout for the port announcement,
-    so Electron passes ``HERMES_DESKTOP_READY_FILE`` and waits for this JSON.
+    so Electron passes ``JIMMY_DESKTOP_READY_FILE`` and waits for this JSON.
     Normal CLI/dashboard launches still use the stdout READY line below.
     """
-    target = os.environ.get("HERMES_DESKTOP_READY_FILE")
+    target = os.environ.get("JIMMY_DESKTOP_READY_FILE")
     if not target:
         return
 
@@ -18724,8 +18724,8 @@ def _is_serve_orphaned(
 ) -> bool:
     """True when the exact Desktop process that owns this backend is gone.
 
-    ``HERMES_PARENT_PID`` is the Electron Desktop PID, not necessarily this
-    Python process's immediate PPID. On Windows the venv ``hermes.exe`` launcher
+    ``JIMMY_PARENT_PID`` is the Electron Desktop PID, not necessarily this
+    Python process's immediate PPID. On Windows the venv ``jimmy.exe`` launcher
     introduces one or more shim processes, so comparing ``os.getppid()`` to the
     Electron PID incorrectly treats a healthy backend as orphaned and exits 0.
 
@@ -18759,12 +18759,12 @@ def _start_parent_death_watchdog() -> None:
     The desktop passes its PID and, in newer versions, its process-start marker
     plus a per-spawn nonce. The marker distinguishes a live owner from PID reuse;
     the nonce makes partial/mixed-version identity plumbing fail safe. Legacy
-    Desktop versions that provide only ``HERMES_PARENT_PID`` retain PID-only
+    Desktop versions that provide only ``JIMMY_PARENT_PID`` retain PID-only
     tracking.
     """
-    raw_pid = os.environ.get("HERMES_PARENT_PID")
-    start_marker = os.environ.get("HERMES_PARENT_START_MARKER")
-    nonce = os.environ.get("HERMES_PARENT_NONCE")
+    raw_pid = os.environ.get("JIMMY_PARENT_PID")
+    start_marker = os.environ.get("JIMMY_PARENT_START_MARKER")
+    nonce = os.environ.get("JIMMY_PARENT_NONCE")
 
     try:
         desktop_pid = int(raw_pid or "")
@@ -18785,7 +18785,7 @@ def _start_parent_death_watchdog() -> None:
         return
 
     try:
-        poll = max(0.5, float(os.environ.get("HERMES_SERVE_WATCHDOG_POLL_S", "2.0")))
+        poll = max(0.5, float(os.environ.get("JIMMY_SERVE_WATCHDOG_POLL_S", "2.0")))
     except (TypeError, ValueError):
         poll = 2.0
 
@@ -18821,7 +18821,7 @@ def start_server(
     machine dashboard.
 
     ``headless`` is the ``serve`` path: the JSON-RPC/WS backend with no UI
-    build and no SPA mount (mount_spa() honours ``HERMES_SERVE_HEADLESS``), so
+    build and no SPA mount (mount_spa() honours ``JIMMY_SERVE_HEADLESS``), so
     the banner announces the bind rather than a browser URL.
 
     ``ssh_session_token`` and ``ssh_owner_nonce`` are process-local Desktop SSH
@@ -18834,7 +18834,7 @@ def start_server(
     # the `serve` path in main.py (which applies the same floor). Canonical
     # policy lives in resource_limits; #81547's motivating leak (iterdir fds)
     # is fixed above, this covers legitimate high fd demand.
-    from hermes_cli.resource_limits import apply_nofile_soft_limit
+    from jimmy_cli.resource_limits import apply_nofile_soft_limit
 
     apply_nofile_soft_limit()
 
@@ -18847,7 +18847,7 @@ def start_server(
     app.state.auth_required = should_require_auth(host)
 
     # ``--insecure`` no longer disables the auth gate (June 2026 hardening:
-    # the hermes-0day MCP-persistence campaign abused unauthenticated public
+    # the jimmy-0day MCP-persistence campaign abused unauthenticated public
     # dashboards). If a caller still passes it, warn that it is now a no-op
     # rather than silently changing their expectation of an open bind.
     if allow_public and host not in _LOOPBACK_HOST_VALUES:
@@ -18863,11 +18863,11 @@ def start_server(
         # The gate engages on every non-loopback bind. Require at least one
         # provider to be registered, else fail closed — there is no longer an
         # escape hatch that serves the dashboard without authentication.
-        from hermes_cli.dashboard_auth import list_providers
+        from jimmy_cli.dashboard_auth import list_providers
         if not list_providers():
             # Surface the *specific* reason any bundled provider declined
-            # to register (e.g. missing HERMES_DASHBOARD_OAUTH_CLIENT_ID).
-            # Each provider plugin that ships with Hermes Agent exposes a
+            # to register (e.g. missing JIMMY_DASHBOARD_OAUTH_CLIENT_ID).
+            # Each provider plugin that ships with Jimmy exposes a
             # module-level ``LAST_SKIP_REASON`` string for this purpose;
             # without it the operator would only see "no providers" which
             # is misleading when the provider IS installed but unconfigured.
@@ -18889,7 +18889,7 @@ def start_server(
                 "    (hash with: python -c \"from "
                 "plugins.dashboard_auth.basic import hash_password; "
                 "print(hash_password('your-password'))\")\n"
-                "  • OAuth: run `hermes dashboard register` (Nous Portal) or "
+                "  • OAuth: run `jimmy dashboard register` (Nous Portal) or "
                 "install a DashboardAuthProvider plugin.\n"
                 "There is no unauthenticated public-bind option — to keep it "
                 "local, bind 127.0.0.1 and tunnel in (SSH / Tailscale)."
@@ -18897,8 +18897,8 @@ def start_server(
             # Hint when credentials exist but the bundled provider is blocked
             # (#54489).
             try:
-                from hermes_cli.config import load_config as _load_cfg
-                from hermes_cli.plugins_cmd import _BASIC_AUTH_PLUGIN_KEYS
+                from jimmy_cli.config import load_config as _load_cfg
+                from jimmy_cli.plugins_cmd import _BASIC_AUTH_PLUGIN_KEYS
 
                 _cfg = _load_cfg()
                 _ba = (_cfg.get("dashboard") or {}).get("basic_auth") or {}
@@ -18915,7 +18915,7 @@ def start_server(
                         "plugins.disabled but dashboard.basic_auth is "
                         "configured.\n"
                         "Remove 'basic' from plugins.disabled (or run "
-                        "`hermes plugins enable basic`), then restart the "
+                        "`jimmy plugins enable basic`), then restart the "
                         "dashboard.\n\n"
                     ) + _fix_hint
             except Exception:
@@ -18949,7 +18949,7 @@ def start_server(
     # We use uvicorn.Server directly (not uvicorn.run) so we can split
     # startup from the main loop.  After startup() the socket is actually
     # bound — we read the OS-assigned port from the live socket, print
-    # HERMES_DASHBOARD_READY, open the browser, *then* serve.
+    # JIMMY_DASHBOARD_READY, open the browser, *then* serve.
     #
     # This eliminates the TOCTOU of the old pre-bind-then-close approach
     # (bind port 0 → close → uvicorn rebind): the socket is held by
@@ -19018,9 +19018,9 @@ def start_server(
             # Clear corpses left by a previous unclean Desktop exit before we
             # stack another backend + MCP tree (EMFILE / missing tabs).
             # Parent-death watchdog only protects *this* process going forward.
-            if os.getenv("HERMES_DESKTOP") == "1":
+            if os.getenv("JIMMY_DESKTOP") == "1":
                 try:
-                    from hermes_cli.dashboard_procs import (
+                    from jimmy_cli.dashboard_procs import (
                         _reap_orphaned_desktop_local_serves,
                     )
 
@@ -19029,7 +19029,7 @@ def start_server(
                     _log.debug("orphan desktop-local serve reap skipped: %s", exc)
 
             # tui_gateway/slash_worker.py::_start_parent_death_watchdog. No-op
-            # for standalone `hermes serve` (no HERMES_PARENT_PID env).
+            # for standalone `jimmy serve` (no JIMMY_PARENT_PID env).
             _start_parent_death_watchdog()
 
             # Positive process identity: record (pid, create_time, purpose,
@@ -19037,7 +19037,7 @@ def start_server(
             # to a kill-on-close job so this backend's whole child tree dies
             # with it. Both best-effort; failures degrade to legacy behavior.
             try:
-                from hermes_cli.process_identity import (
+                from jimmy_cli.process_identity import (
                     attach_self_to_kill_on_close_job,
                     register_self,
                 )
@@ -19054,7 +19054,7 @@ def start_server(
             # Port-discovery sentinel parsed by the desktop spawn. `serve` is a
             # plain backend, not a dashboard, so it announces a neutral token;
             # `dashboard` keeps the legacy one. The desktop matches either.
-            ready_token = "HERMES_BACKEND_READY" if headless else "HERMES_DASHBOARD_READY"
+            ready_token = "JIMMY_BACKEND_READY" if headless else "JIMMY_DASHBOARD_READY"
             print(f"{ready_token} port={actual_port}", flush=True)
             if headless:
                 # No SPA, and the JSON-RPC/WS endpoints are auth-gated — don't
@@ -19063,9 +19063,9 @@ def start_server(
                 # block-buffered and can surface MINUTES after the flushed
                 # READY sentinel above, which reads as a slow boot in
                 # support bundles when the backend was actually up.
-                print(f"  Hermes backend listening on {host}:{actual_port}", flush=True)
+                print(f"  Jimmy backend listening on {host}:{actual_port}", flush=True)
             else:
-                print(f"  Hermes Web UI → http://{host}:{actual_port}")
+                print(f"  Jimmy Web UI → http://{host}:{actual_port}")
             _maybe_open_browser(host, actual_port, open_browser, initial_profile)
 
             # Collapse the peer-hangup teardown flood (#50005). When the Desktop

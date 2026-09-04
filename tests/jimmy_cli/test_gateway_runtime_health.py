@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from hermes_cli.gateway import _runtime_health_lines
+from jimmy_cli.gateway import _runtime_health_lines
 
 
 def _iso_age(seconds_ago: float) -> str:
@@ -69,8 +69,8 @@ def test_runtime_status_running_pid_validates_live_gateway_record(monkeypatch):
 
     runtime = {
         "pid": 12345,
-        "kind": "hermes-gateway",
-        "argv": ["/opt/hermes/hermes_cli/main.py", "gateway", "run", "--replace"],
+        "kind": "jimmy-gateway",
+        "argv": ["/opt/jimmy/jimmy_cli/main.py", "gateway", "run", "--replace"],
         "start_time": None,
         "gateway_state": "running",
     }

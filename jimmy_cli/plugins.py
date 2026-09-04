@@ -1,16 +1,16 @@
 """
-Hermes Plugin System
+Jimmy Plugin System
 ====================
 
 Discovers, loads, and manages plugins from four sources:
 
-1. **Bundled plugins** – ``<repo>/plugins/<name>/`` (shipped with hermes-agent;
+1. **Bundled plugins** – ``<repo>/plugins/<name>/`` (shipped with jimmy-agent;
    ``memory/`` and ``context_engine/`` subdirs are excluded — they have their
    own discovery paths)
-2. **User plugins**   – ``~/.hermes/plugins/<name>/``
-3. **Project plugins** – ``./.hermes/plugins/<name>/`` (opt-in via
-   ``HERMES_ENABLE_PROJECT_PLUGINS``)
-4. **Pip plugins**     – packages that expose the ``hermes_agent.plugins``
+2. **User plugins**   – ``~/.jimmy/plugins/<name>/``
+3. **Project plugins** – ``./.jimmy/plugins/<name>/`` (opt-in via
+   ``JIMMY_ENABLE_PROJECT_PLUGINS``)
+4. **Pip plugins**     – packages that expose the ``jimmy_agent.plugins``
    entry-point group.
 
 Later sources override earlier ones on name collision, so a user or project
@@ -53,25 +53,25 @@ from functools import wraps
 from pathlib import Path
 from typing import (Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union)
 
-from hermes_constants import (
-    get_hermes_home,
-    hermes_home_key,
-    reset_hermes_home_override,
-    set_hermes_home_override,
+from jimmy_constants import (
+    get_jimmy_home,
+    jimmy_home_key,
+    reset_jimmy_home_override,
+    set_jimmy_home_override,
 )
 from registration_lifecycle import replacement_coordinator
 from utils import env_var_enabled, fast_safe_load
-from hermes_cli.config import cfg_get, load_config_readonly
-from hermes_cli.middleware import OBSERVER_SCHEMA_VERSION, VALID_MIDDLEWARE
-from hermes_cli.plugin_capabilities import (  # noqa: F401 — re-exported
+from jimmy_cli.config import cfg_get, load_config_readonly
+from jimmy_cli.middleware import OBSERVER_SCHEMA_VERSION, VALID_MIDDLEWARE
+from jimmy_cli.plugin_capabilities import (  # noqa: F401 — re-exported
     CAPABILITY_REGISTRY,
     VALID_CAPABILITY_IDS,
     plugin_capability_granted,
 )
-from hermes_cli.plugin_capabilities import (
+from jimmy_cli.plugin_capabilities import (
     parse_declared_capabilities as _parse_declared_capabilities,
 )
-from hermes_cli.relay_plugin_cutover import (
+from jimmy_cli.relay_plugin_cutover import (
     LEGACY_RELAY_PLUGIN_KEYS,
     RELAY_PLUGINS_CONFIG_ENV,
     legacy_relay_plugin_keys,
@@ -81,11 +81,11 @@ from hermes_cli.relay_plugin_cutover import (
 def get_bundled_plugins_dir() -> Path:
     """Locate the bundled ``plugins/`` directory.
 
-    Honours ``HERMES_BUNDLED_PLUGINS`` (set by the Nix wrapper / packaged
+    Honours ``JIMMY_BUNDLED_PLUGINS`` (set by the Nix wrapper / packaged
     installs) so read-only store paths are consulted first.  Falls back to
     the in-repo path used during development.
     """
-    env_override = os.getenv("HERMES_BUNDLED_PLUGINS")
+    env_override = os.getenv("JIMMY_BUNDLED_PLUGINS")
     if env_override:
         return Path(env_override)
     return Path(__file__).resolve().parent.parent / "plugins"
@@ -109,8 +109,8 @@ logger = logging.getLogger(__name__)
 # Plugin developer debug logging
 # ---------------------------------------------------------------------------
 #
-# Set ``HERMES_PLUGINS_DEBUG=1`` to surface verbose plugin-discovery logs to
-# stderr in addition to ~/.hermes/logs/agent.log. Aimed at plugin authors
+# Set ``JIMMY_PLUGINS_DEBUG=1`` to surface verbose plugin-discovery logs to
+# stderr in addition to ~/.jimmy/logs/agent.log. Aimed at plugin authors
 # trying to figure out why their plugin isn't showing up: which directories
 # were scanned, which manifests parsed, which plugins were skipped (and why),
 # what each ``register(ctx)`` call registered, and full tracebacks on load
@@ -119,21 +119,21 @@ logger = logging.getLogger(__name__)
 # The env var is read once at import time; tests that need to flip it
 # mid-process can call ``_install_plugin_debug_handler(force=True)``.
 
-_PLUGINS_DEBUG = os.getenv("HERMES_PLUGINS_DEBUG", "").strip().lower() in {
+_PLUGINS_DEBUG = os.getenv("JIMMY_PLUGINS_DEBUG", "").strip().lower() in {
     "1", "true", "yes", "on",
 }
 _DEBUG_HANDLER_INSTALLED = False
 
 
 def _install_plugin_debug_handler(force: bool = False) -> None:
-    """When HERMES_PLUGINS_DEBUG is on, tee plugin logs to stderr at DEBUG.
+    """When JIMMY_PLUGINS_DEBUG is on, tee plugin logs to stderr at DEBUG.
 
     Idempotent: only attaches the handler once per process unless ``force``
-    is passed. Does not touch the root logger or other Hermes loggers.
+    is passed. Does not touch the root logger or other Jimmy loggers.
     """
     global _DEBUG_HANDLER_INSTALLED, _PLUGINS_DEBUG
     if force:
-        _PLUGINS_DEBUG = os.getenv("HERMES_PLUGINS_DEBUG", "").strip().lower() in {
+        _PLUGINS_DEBUG = os.getenv("JIMMY_PLUGINS_DEBUG", "").strip().lower() in {
             "1", "true", "yes", "on",
         }
     if not _PLUGINS_DEBUG or _DEBUG_HANDLER_INSTALLED:
@@ -148,7 +148,7 @@ def _install_plugin_debug_handler(force: bool = False) -> None:
     logger.propagate = True
     _DEBUG_HANDLER_INSTALLED = True
     logger.debug(
-        "HERMES_PLUGINS_DEBUG=1 — verbose plugin discovery logging enabled"
+        "JIMMY_PLUGINS_DEBUG=1 — verbose plugin discovery logging enabled"
     )
 
 
@@ -183,7 +183,7 @@ VALID_HOOKS: Set[str] = {
     #   {"action": "continue", "message": "<follow-up instruction>"}
     # The Claude-Code Stop shape {"decision": "block", "reason": "..."} (block
     # the stop == keep going) is accepted too. Anything else lets the turn
-    # finish. Hermes' shipped guidance lives in the evidence-based
+    # finish. Jimmy' shipped guidance lives in the evidence-based
     # verification-stop nudge; this hook is for user/plugin policy and is
     # bounded by agent.max_verify_nudges.
     "pre_verify",
@@ -258,15 +258,15 @@ VALID_HOOKS: Set[str] = {
     # read-only — attempts to change it are logged and dropped. The static
     # ``stt.prompt`` config value is the base; hook results mutate on top.
     "pre_transcription",
-    # Kanban task lifecycle hooks. Fired by hermes_cli.kanban_db when a task
+    # Kanban task lifecycle hooks. Fired by jimmy_cli.kanban_db when a task
     # transitions state, AFTER the change is committed to the board DB (so the
     # hook always sees durable state and a slow plugin can never hold the
     # SQLite write lock). Observers only: return values are ignored.
     #
     # WHICH PROCESS each fires in matters, because kanban workers run as
-    # separate `hermes -p <profile> chat -q` subprocesses:
+    # separate `jimmy -p <profile> chat -q` subprocesses:
     #   - kanban_task_claimed   -> the DISPATCHER process (gateway-embedded
-    #                              dispatcher or `hermes kanban dispatch`),
+    #                              dispatcher or `jimmy kanban dispatch`),
     #                              right before the worker subprocess spawns.
     #   - kanban_task_completed -> the WORKER process, when it calls
     #                              kanban_complete (or a CLI/manual complete).
@@ -294,7 +294,7 @@ VALID_HOOKS: Set[str] = {
     #
     # WHICH PROCESS: worker spawn/exit/stale-claim and the dispatch tick
     # fire in the DISPATCHER process (gateway-embedded dispatcher or
-    # ``hermes kanban dispatch``); on_kanban_task_updated fires in whichever
+    # ``jimmy kanban dispatch``); on_kanban_task_updated fires in whichever
     # process committed the mutation (CLI, worker, or the gateway-embedded
     # dashboard API).
     #
@@ -343,7 +343,7 @@ VALID_HOOKS: Set[str] = {
     # subscriber can never extend the writer critical section.
     # Kwargs: board: str | None, profile_name: str, dry_run: bool,
     #   outcome: "ok" | "skipped_locked" | "idle",
-    #   result: hermes_cli.kanban_db.DispatchResult (spawned, reclaimed,
+    #   result: jimmy_cli.kanban_db.DispatchResult (spawned, reclaimed,
     #     promoted, reconciled_orphans, crashed, stale, timed_out,
     #     auto_blocked, rate_limited, auto_assigned_default,
     #     respawn_guarded, skipped_per_profile_capped, skipped_unassigned,
@@ -396,8 +396,8 @@ SHELL_UNSUPPORTED_HOOKS: Set[str] = {
     "transform_api_error_classification",
 }
 
-ENTRY_POINTS_GROUP = "hermes_agent.plugins"
-ENTRY_POINT_CAPABILITIES_GROUP = "hermes_agent.plugin_capabilities"
+ENTRY_POINTS_GROUP = "jimmy_agent.plugins"
+ENTRY_POINT_CAPABILITIES_GROUP = "jimmy_agent.plugin_capabilities"
 
 
 def _select_entry_point_group(entry_points: Any, group: str) -> list:
@@ -420,7 +420,7 @@ def discover_entrypoint_manifests() -> List["PluginManifest"]:
       and model providers (``model-provider``) are routed to their own
       discovery systems instead of being eagerly imported here.
     * **Capability declarations** — read from the companion
-      ``hermes_agent.plugin_capabilities`` entry-point group (declarations
+      ``jimmy_agent.plugin_capabilities`` entry-point group (declarations
       named ``<plugin-id>.<capability-id>`` pointing at the same object),
       so consent/introspection is accurate without importing plugin code.
 
@@ -504,8 +504,8 @@ MAX_SYSTEM_PROMPT_SECTIONS = 32
 MAX_SYSTEM_PROMPT_SECTIONS_TOTAL_CHARS = 8_000
 _SYSTEM_PROMPT_SECTION_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 _SYSTEM_PROMPT_SECTION_HEADING_PREFIX = "## Plugin Context: "
-PLUGIN_SECTIONS_START = "<!-- hermes-plugin-sections:start -->"
-PLUGIN_SECTIONS_END = "<!-- hermes-plugin-sections:end -->"
+PLUGIN_SECTIONS_START = "<!-- jimmy-plugin-sections:start -->"
+PLUGIN_SECTIONS_END = "<!-- jimmy-plugin-sections:end -->"
 
 
 def is_valid_system_prompt_section_id(value: Any) -> bool:
@@ -517,7 +517,7 @@ def format_system_prompt_section(section_id: str, content: str) -> str:
     """Render an auditable, length-framed block recoverable from the full prompt."""
     return (
         f"{_SYSTEM_PROMPT_SECTION_HEADING_PREFIX}{section_id}\n"
-        f"<!-- hermes-plugin-section-chars:{len(content)} -->\n\n"
+        f"<!-- jimmy-plugin-section-chars:{len(content)} -->\n\n"
         f"{content}"
     )
 
@@ -528,8 +528,8 @@ def format_system_prompt_sections(sections: list) -> str:
         return ""
     blocks = [format_system_prompt_section(item.id, item.content) for item in sections]
     return f"{PLUGIN_SECTIONS_START}\n" + "\n\n".join(blocks) + f"\n{PLUGIN_SECTIONS_END}"
-# Reserved event namespace prefix — only core may publish ``hermes:<event>``.
-HERMES_EVENT_NAMESPACE = "hermes"
+# Reserved event namespace prefix — only core may publish ``jimmy:<event>``.
+JIMMY_EVENT_NAMESPACE = "jimmy"
 
 # Max inter-plugin event dispatch recursion depth. A subscriber may itself
 # call ``ctx.emit``; this bound stops mutually-emitting plugins from looping
@@ -542,7 +542,7 @@ _EVENT_EMIT_DEPTH_CAP = 8
 _EVENT_PENDING_CAP = 64
 _EVENT_WORKER_STOP = object()
 
-_NS_PARENT = "hermes_plugins"
+_NS_PARENT = "jimmy_plugins"
 _MODULE_NAMESPACE_LOCK = threading.RLock()
 _BARE_MODULE_SCOPE: Dict[str, str] = {}
 
@@ -559,12 +559,12 @@ def _serialized_replacement(method):
 
 @contextmanager
 def _plugin_home_scope(home: Path):
-    """Bind discovery and loading to the manager's immutable Hermes home."""
-    token = set_hermes_home_override(home)
+    """Bind discovery and loading to the manager's immutable Jimmy home."""
+    token = set_jimmy_home_override(home)
     try:
         yield
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
 
 def _env_enabled(name: str) -> bool:
@@ -580,7 +580,7 @@ def _get_disabled_plugins() -> set:
     ``plugins.enabled``.
     """
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         disabled = cfg_get(config, "plugins", "disabled", default=[])
         return set(disabled) if isinstance(disabled, list) else set()
@@ -603,7 +603,7 @@ def _get_enabled_plugins() -> Optional[set]:
     * ``set(...)`` — the concrete allow-list.
     """
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         plugins_cfg = config.get("plugins")
         if not isinstance(plugins_cfg, dict):
@@ -663,10 +663,10 @@ _KNOWN_MANIFEST_FIELDS: Set[str] = {
     "manifest_version", "api_version", "requires_plugins",
     "python_dependencies", "config_schema", "license", "homepage", "tags",
     # owned by sibling sub-issues but reserved so their manifests don't warn
-    "capabilities", "emits", "listens", "hermes", "depends",
+    "capabilities", "emits", "listens", "jimmy", "depends",
 }
 
-# Highest manifest schema version this Hermes understands.
+# Highest manifest schema version this Jimmy understands.
 SUPPORTED_MANIFEST_VERSION = 2
 
 _CONFIG_SCHEMA_TYPES: Dict[str, tuple] = {
@@ -705,7 +705,7 @@ def _parse_manifest_v2_fields(data: Mapping, key: str) -> Dict[str, Any]:
         mv = 1
     if mv > SUPPORTED_MANIFEST_VERSION:
         logger.warning(
-            "Plugin %s: manifest_version %d is newer than this Hermes "
+            "Plugin %s: manifest_version %d is newer than this Jimmy "
             "supports (%d); loading anyway and ignoring unknown fields",
             key, mv, SUPPORTED_MANIFEST_VERSION,
         )
@@ -894,7 +894,7 @@ def resolve_plugin_load_order(
                 logger.warning(
                     "Plugin %s requires plugin '%s' which is not enabled/"
                     "installed; loading anyway (probe availability at runtime "
-                    "via ctx.has_plugin). Run `hermes plugins enable %s` if "
+                    "via ctx.has_plugin). Run `jimmy plugins enable %s` if "
                     "it is installed.",
                     k, dep_id, dep_id,
                 )
@@ -1058,11 +1058,11 @@ class PluginManifest:
     # ``platform``: gateway messaging platform adapter (e.g. IRC). Bundled
     #              platform plugins auto-load so every shipped platform is
     #              available out of the box; user-installed platform plugins
-    #              in ~/.hermes/plugins/ still gated by ``plugins.enabled``
+    #              in ~/.jimmy/plugins/ still gated by ``plugins.enabled``
     #              (untrusted code).
     kind: str = "standalone"
     # Registry key — path-derived, used by ``plugins.enabled``/``disabled``
-    # lookups and by ``hermes plugins list``. For a flat plugin at
+    # lookups and by ``jimmy plugins list``. For a flat plugin at
     # ``plugins/disk-cleanup/`` the key is ``disk-cleanup``; for a nested
     # category plugin at ``plugins/image_gen/openai/`` the key is
     # ``image_gen/openai``. When empty, falls back to ``name``.
@@ -1071,7 +1071,7 @@ class PluginManifest:
     skill_namespace: str = ""
     # Declared capability ids from the manifest ``capabilities:`` list
     # (#64228). Normalized to KNOWN ids only — see
-    # ``hermes_cli.plugin_capabilities.CAPABILITY_REGISTRY``. Declaration is
+    # ``jimmy_cli.plugin_capabilities.CAPABILITY_REGISTRY``. Declaration is
     # consent metadata, not a grant: a capability is live only when the user
     # granted it (``plugins.entries.<id>.granted_capabilities``) or the
     # deprecated legacy ``allow_*`` key is set.
@@ -1089,7 +1089,7 @@ class PluginManifest:
     # loads (plugins can probe availability via ``ctx.has_plugin``). Load
     # ORDER honors these edges: if A requires B, B registers first.
     requires_plugins: List[Dict[str, Any]] = field(default_factory=list)
-    # Declared pip dependencies. VALIDATED AND SURFACED ONLY — Hermes never
+    # Declared pip dependencies. VALIDATED AND SURFACED ONLY — Jimmy never
     # auto-installs these (isolation design for the install seam is a
     # deferred follow-up; see #64165 round-2 review and #15220).
     python_dependencies: List[str] = field(default_factory=list)
@@ -1106,7 +1106,7 @@ class PluginManifest:
     # ``<key>:`` namespace (e.g. ``["ping"]`` → publishes ``<key>:ping``).
     # ``listens`` lists the fully-qualified ``<plugin>:<event>`` names this
     # plugin subscribes to. Both are purely for discoverability
-    # (``hermes plugins show``); a plugin may emit/subscribe without declaring.
+    # (``jimmy plugins show``); a plugin may emit/subscribe without declaring.
     emits: List[str] = field(default_factory=list)
     listens: List[str] = field(default_factory=list)
 
@@ -1221,7 +1221,7 @@ def _plugin_relative_segments(key: str) -> tuple[str, ...]:
     """Validate and split a plugin-relative settings key.
 
     The public API accepts only relative keys (``endpoint`` or
-    ``retry.policy``).  Full Hermes paths, traversal syntax, and the security-
+    ``retry.policy``).  Full Jimmy paths, traversal syntax, and the security-
     sensitive core roots called out in #64227 are rejected before any config
     read occurs.
     """
@@ -1326,7 +1326,7 @@ class PluginState:
     @property
     def data_dir(self) -> Path:
         """Profile-scoped directory matching portable plugins' PLUGIN_DATA."""
-        return get_hermes_home() / "plugin-data" / self._data_namespace
+        return get_jimmy_home() / "plugin-data" / self._data_namespace
 
     @property
     def path(self) -> Path:
@@ -1438,7 +1438,7 @@ class PluginContext:
                 "Rejected config path %r from plugin %s", key, self.plugin_id
             )
             raise
-        from hermes_cli.config import load_config_readonly
+        from jimmy_cli.config import load_config_readonly
 
         config = load_config_readonly() or {}
         plugins = config.get("plugins") if isinstance(config, Mapping) else None
@@ -1461,13 +1461,13 @@ class PluginContext:
                 "Rejected config path %r from plugin %s", key, self.plugin_id
             )
             raise
-        from hermes_cli import config as config_mod
+        from jimmy_cli import config as config_mod
 
         if config_mod.is_managed():
             raise PermissionError(
                 "Plugin settings cannot be changed in a managed install"
             )
-        from hermes_cli import managed_scope
+        from jimmy_cli import managed_scope
 
         dotted_path = ".".join((
             "plugins",
@@ -1493,7 +1493,7 @@ class PluginContext:
         # The lock covers the merge read plus atomic save, preventing sibling
         # plugin writes from racing between those two steps.
         # Serialize bridge-to-bridge writes across processes as well as
-        # threads. Other Hermes config writers still retain their existing
+        # threads. Other Jimmy config writers still retain their existing
         # atomic-replace semantics; this lock specifically prevents two
         # plugin read/merge/write transactions from dropping siblings.
         with _locked_plugin_state(config_mod.get_config_path()):
@@ -1527,7 +1527,7 @@ class PluginContext:
         into hook dispatch. No adapter handles or raw SDK objects are exposed.
         """
         if self._platform_actions is None:
-            from hermes_cli.platform_actions import PlatformActions
+            from jimmy_cli.platform_actions import PlatformActions
 
             self._platform_actions = PlatformActions(self.plugin_id)
         return self._platform_actions
@@ -1605,20 +1605,20 @@ class PluginContext:
 
     @property
     def profile_name(self) -> str:
-        """Return the active Hermes profile name (e.g. ``"default"``).
+        """Return the active Jimmy profile name (e.g. ``"default"``).
 
-        Derived from ``HERMES_HOME`` via
-        :func:`hermes_cli.profiles.get_active_profile_name`, so it works in
+        Derived from ``JIMMY_HOME`` via
+        :func:`jimmy_cli.profiles.get_active_profile_name`, so it works in
         every execution context — interactive CLI, gateway, and
         kanban-spawned worker sessions alike — without depending on
         ``_cli_ref`` (which is ``None`` outside an interactive CLI run).
 
         Returns ``"default"`` for the default profile, the profile id when
-        running under ``~/.hermes/profiles/<name>``, or ``"custom"`` when
-        ``HERMES_HOME`` points somewhere unrecognized.
+        running under ``~/.jimmy/profiles/<name>``, or ``"custom"`` when
+        ``JIMMY_HOME`` points somewhere unrecognized.
         """
         try:
-            from hermes_cli.profiles import get_active_profile_name
+            from jimmy_cli.profiles import get_active_profile_name
             return get_active_profile_name()
         except Exception:
             return "default"
@@ -1924,7 +1924,7 @@ class PluginContext:
         default-deny).
         """
         try:
-            from hermes_cli.config import load_config
+            from jimmy_cli.config import load_config
             cfg = load_config() or {}
         except Exception:
             return []
@@ -1940,7 +1940,7 @@ class PluginContext:
     def _tool_override_allowed(self, tool_name: str) -> bool:
         """Return True if this plugin is configured to override built-in tools.
 
-        Bundled plugins (shipped with Hermes core) are trusted by default —
+        Bundled plugins (shipped with Jimmy core) are trusted by default —
         an override there is a deliberate maintainer choice, not a third-party
         plugin trying to elevate privilege. For every other source, the
         canonical check is :func:`plugin_capability_granted` with the
@@ -1953,7 +1953,7 @@ class PluginContext:
         if source == "bundled":
             return True
         try:
-            from hermes_cli.config import load_config
+            from jimmy_cli.config import load_config
 
             with _plugin_home_scope(self._manager.home_path):
                 cfg = load_config() or {}
@@ -2071,7 +2071,7 @@ class PluginContext:
         handler_fn: Callable | None = None,
         description: str = "",
     ) -> PluginRegistration:
-        """Register a CLI subcommand (e.g. ``hermes honcho ...``).
+        """Register a CLI subcommand (e.g. ``jimmy honcho ...``).
 
         The *setup_fn* receives an argparse subparser and should add any
         arguments/sub-subparsers.  If *handler_fn* is provided it is set
@@ -2115,7 +2115,7 @@ class PluginContext:
         The handler signature is ``fn(raw_args: str) -> str | None``.
         It may also be an async callable — the gateway dispatch handles both.
 
-        Unlike ``register_cli_command()`` (which creates ``hermes <subcommand>``
+        Unlike ``register_cli_command()`` (which creates ``jimmy <subcommand>``
         terminal commands), this registers in-session slash commands that users
         invoke during a conversation.
 
@@ -2138,7 +2138,7 @@ class PluginContext:
 
         # Reject if it conflicts with a built-in command
         try:
-            from hermes_cli.commands import resolve_command
+            from jimmy_cli.commands import resolve_command
             if resolve_command(clean) is not None:
                 logger.warning(
                     "Plugin '%s' tried to register command '/%s' which conflicts "
@@ -2373,7 +2373,7 @@ class PluginContext:
         """Register a dashboard authentication provider.
 
         ``provider`` must be an instance of
-        :class:`hermes_cli.dashboard_auth.DashboardAuthProvider`. Used by
+        :class:`jimmy_cli.dashboard_auth.DashboardAuthProvider`. Used by
         the dashboard OAuth auth gate, which engages when the dashboard
         binds to a non-loopback host without ``--insecure``.
 
@@ -2382,12 +2382,12 @@ class PluginContext:
         cannot crash the host. Same convention as
         ``register_image_gen_provider``.
         """
-        from hermes_cli.dashboard_auth import (
+        from jimmy_cli.dashboard_auth import (
             DashboardAuthProvider,
             register_provider,
         )
-        from hermes_cli.dashboard_auth.registry import restore_registration
-        from hermes_cli.dashboard_auth.registry import snapshot_registration
+        from jimmy_cli.dashboard_auth.registry import restore_registration
+        from jimmy_cli.dashboard_auth.registry import snapshot_registration
 
         if not isinstance(provider, DashboardAuthProvider):
             logger.warning(
@@ -2588,17 +2588,17 @@ class PluginContext:
 
         ``source`` must be an instance of
         :class:`agent.secret_sources.base.SecretSource`.  Registered
-        sources run during ``load_hermes_dotenv()`` startup — after
-        ``~/.hermes/.env`` loads, before Hermes reads credentials — when
+        sources run during ``load_jimmy_dotenv()`` startup — after
+        ``~/.jimmy/.env`` loads, before Jimmy reads credentials — when
         their ``secrets.<source.name>`` config section is enabled.  The
         orchestrator (``agent.secret_sources.registry.apply_all``) owns
         ordering, mapped-vs-bulk precedence, conflict warnings, and
         provenance; the source only fetches.
 
-        NOTE ON TIMING: ``load_hermes_dotenv()`` usually runs at import
+        NOTE ON TIMING: ``load_jimmy_dotenv()`` usually runs at import
         *before* plugin discovery.  After discovery completes, the plugin
         manager re-pulls enabled plugin secret sources (``reset_secret_source_cache``
-        + ``load_hermes_dotenv``) so the first process sees them (#64177).
+        + ``load_jimmy_dotenv``) so the first process sees them (#64177).
         Child processes that load env after plugins still work without that
         re-pull.  Failed re-pulls never block startup.
 
@@ -2876,7 +2876,7 @@ class PluginContext:
     ) -> PluginRegistration:
         """Register a Slack Block Kit action handler from a plugin.
 
-        Hermes' Slack adapter wires registered handlers into its
+        Jimmy' Slack adapter wires registered handlers into its
         ``slack_bolt.AsyncApp`` at connect time. The callback is invoked
         when a user clicks a button (or interacts with another Block Kit
         action element) whose ``action_id`` matches.
@@ -2955,7 +2955,7 @@ class PluginContext:
         Plugins use this to declare their own auxiliary tasks without touching
         core files. After registration, the task:
 
-          - Appears in the ``hermes model → Configure auxiliary models`` picker
+          - Appears in the ``jimmy model → Configure auxiliary models`` picker
           - Has its provider/model/base_url/api_key bridged from config.yaml to
             ``AUXILIARY_<KEY_UPPER>_*`` env vars at gateway startup
           - Gets default routing fields (provider="auto", model="", etc.) merged
@@ -3000,8 +3000,8 @@ class PluginContext:
                 f"must contain only alphanumeric characters and underscores"
             )
 
-        # Lazy import to avoid circular: hermes_cli.main imports plugins indirectly
-        from hermes_cli.main import _AUX_TASKS as _BUILTIN_AUX_TASKS
+        # Lazy import to avoid circular: jimmy_cli.main imports plugins indirectly
+        from jimmy_cli.main import _AUX_TASKS as _BUILTIN_AUX_TASKS
 
         builtin_keys = {k for k, _name, _desc in _BUILTIN_AUX_TASKS}
         if key in builtin_keys:
@@ -3224,8 +3224,8 @@ class PluginContext:
         a plugin may only publish under its own namespace.
 
         Passing an already-namespaced name (anything containing ``':'``,
-        including ``hermes:x`` or a foreign ``other:x``) is rejected with a
-        ``ValueError`` and a logged warning — fail-closed. The ``hermes:``
+        including ``jimmy:x`` or a foreign ``other:x``) is rejected with a
+        ``ValueError`` and a logged warning — fail-closed. The ``jimmy:``
         prefix is reserved for core.
 
         Delivery is fire-and-forget through a host-owned, single-worker queue:
@@ -3253,12 +3253,12 @@ class PluginContext:
                 "a plugin may only emit bare event names under its own '%s:' "
                 "namespace (the '%s:' prefix is reserved for core, and foreign "
                 "namespaces are forbidden)",
-                plugin_key, event, plugin_key, HERMES_EVENT_NAMESPACE,
+                plugin_key, event, plugin_key, JIMMY_EVENT_NAMESPACE,
             )
             raise ValueError(
                 f"Plugin '{plugin_key}' may not emit '{event}': emit only the "
                 f"bare event name; the namespace is forced to '{plugin_key}:' "
-                f"and the '{HERMES_EVENT_NAMESPACE}:' prefix is reserved for core"
+                f"and the '{JIMMY_EVENT_NAMESPACE}:' prefix is reserved for core"
             )
         if payload is not None and not isinstance(payload, dict):
             raise TypeError(
@@ -3270,7 +3270,7 @@ class PluginContext:
     def subscribe(self, event: str, callback: Callable) -> None:
         """Subscribe *callback* to a fully-qualified event name.
 
-        *event* is the full ``<plugin_key>:<event>`` name (or ``hermes:<event>``
+        *event* is the full ``<plugin_key>:<event>`` name (or ``jimmy:<event>``
         if core ever emits). Subscribing is unrestricted — any plugin may
         listen to any published event; only *emitting* is namespace-gated.
 
@@ -3332,7 +3332,7 @@ class PluginContext:
 
         The skill becomes resolvable as ``'<plugin_name>:<name>'`` via
         ``skill_view()``.  It does **not** enter the flat
-        ``~/.hermes/skills/`` tree and is **not** listed in the system
+        ``~/.jimmy/skills/`` tree and is **not** listed in the system
         prompt's ``<available_skills>`` index — plugin skills are
         opt-in explicit loads only.
 
@@ -3397,7 +3397,7 @@ class PluginManager:
         # Capture the home immutably. Unload can run from a different ambient
         # profile context, but every inverse must target the registration's
         # original scope.
-        self.scope_key = scope_key or hermes_home_key()
+        self.scope_key = scope_key or jimmy_home_key()
         self.home_path = Path(self.scope_key)
         self._discovery_lock = threading.RLock()
         self._plugins: Dict[str, LoadedPlugin] = {}
@@ -3448,8 +3448,8 @@ class PluginManager:
         # Multi-profile constraint (#65593): several process-global registries
         # (tools, platforms, providers) are shared across profiles while
         # multiple PluginManager instances may coexist in one process (keyed
-        # by resolved hermes home). The ledger is therefore keyed per manager
-        # — i.e. per (hermes_home, plugin_id) — and every release/restore
+        # by resolved jimmy home). The ledger is therefore keyed per manager
+        # — i.e. per (jimmy_home, plugin_id) — and every release/restore
         # closure is identity-conditional, so one profile's unload can never
         # clear another profile's registrations. Registry overlays keyed by
         # scope_key (see tools/registry.py and gateway/platform_registry.py)
@@ -3463,7 +3463,7 @@ class PluginManager:
         # discovery time (see _register_deferred_platform_tools). Keyed by
         # plugin id: the already-imported package module, so materializing the
         # adapter later doesn't re-execute it, and the tool names it
-        # contributed, so `hermes plugins list` still attributes them once the
+        # contributed, so `jimmy plugins list` still attributes them once the
         # full plugin loads.
         self._predeclared_modules: Dict[str, types.ModuleType] = {}
         self._predeclared_tools: Dict[str, List[str]] = {}
@@ -3784,8 +3784,8 @@ class PluginManager:
                 # The ledger owns teardown.  Clearing manager-local containers by
                 # itself leaves process-global tools/platforms/providers installed.
                 self.unload()
-            if env_var_enabled("HERMES_SAFE_MODE"):
-                logger.info("HERMES_SAFE_MODE=1 — plugin discovery skipped")
+            if env_var_enabled("JIMMY_SAFE_MODE"):
+                logger.info("JIMMY_SAFE_MODE=1 — plugin discovery skipped")
                 self._discovered = True
                 return
             # Set the flag up front as a re-entrancy guard (a plugin's register()
@@ -3798,7 +3798,7 @@ class PluginManager:
             try:
                 self._discover_and_load_inner()
                 # Plugin secret sources register during discover; the initial
-                # load_hermes_dotenv() already ran at import time. Re-pull so the
+                # load_jimmy_dotenv() already ran at import time. Re-pull so the
                 # first process sees plugin backends (tracking #64177).
                 self._refresh_secret_sources_after_discovery()
                 if force:
@@ -3835,7 +3835,7 @@ class PluginManager:
         """
         try:
             from agent.secret_sources.registry import list_plugin_sources
-            from hermes_cli.env_loader import load_hermes_dotenv, reset_secret_source_cache
+            from jimmy_cli.env_loader import load_jimmy_dotenv, reset_secret_source_cache
         except Exception:
             return
         try:
@@ -3847,7 +3847,7 @@ class PluginManager:
         # Load the secrets config once; hand each source its own section and
         # let its is_enabled() decide (honours custom activation extensions).
         try:
-            from hermes_cli.config import load_config
+            from jimmy_cli.config import load_config
 
             cfg = load_config() or {}
             secrets = cfg.get("secrets") or {}
@@ -3869,7 +3869,7 @@ class PluginManager:
             return
         try:
             reset_secret_source_cache()
-            load_hermes_dotenv()
+            load_jimmy_dotenv()
             logger.debug(
                 "Re-applied secret sources after plugin discovery for: %s",
                 ", ".join(sorted(enabled_names)),
@@ -3900,7 +3900,7 @@ class PluginManager:
         stale_relay_keys = legacy_relay_plugin_keys(enabled)
         if stale_relay_keys:
             logger.warning(
-                "Removed Hermes plugin %s is still listed in plugins.enabled; "
+                "Removed Jimmy plugin %s is still listed in plugins.enabled; "
                 "remove it and configure native Relay plugins with %s",
                 ", ".join(stale_relay_keys),
                 RELAY_PLUGINS_CONFIG_ENV,
@@ -3915,7 +3915,7 @@ class PluginManager:
         for manifest in winners.values():
             lookup_key = manifest.key or manifest.name
 
-            # Relay lifecycle ownership now lives in the Hermes core. Loading
+            # Relay lifecycle ownership now lives in the Jimmy core. Loading
             # an old user or entry-point copy would let plugin.initialize()
             # compete for the same process-global Relay registries.
             if (
@@ -3924,12 +3924,12 @@ class PluginManager:
             ):
                 loaded = LoadedPlugin(manifest=manifest, enabled=False)
                 loaded.error = (
-                    "removed — Relay lifecycle is owned by Hermes core; configure "
+                    "removed — Relay lifecycle is owned by Jimmy core; configure "
                     f"{RELAY_PLUGINS_CONFIG_ENV} instead"
                 )
                 self._plugins[lookup_key] = loaded
                 logger.warning(
-                    "Refusing to load removed Hermes Relay plugin '%s'; %s",
+                    "Refusing to load removed Jimmy Relay plugin '%s'; %s",
                     lookup_key,
                     loaded.error,
                 )
@@ -3974,7 +3974,7 @@ class PluginManager:
                 )
                 continue
 
-            # Built-in backends auto-load — they ship with hermes and must
+            # Built-in backends auto-load — they ship with jimmy and must
             # just work. Selection among them (e.g. which image_gen backend
             # services calls) is driven by ``<category>.provider`` config,
             # enforced by the tool wrapper.
@@ -3986,12 +3986,12 @@ class PluginManager:
             # feishu, teams, ...) are registered LAZILY. Their modules import
             # heavy, platform-specific SDKs at module level (lark_oapi,
             # microsoft_teams, discord.py, slack_bolt, ...), so eagerly loading
-            # all ~20 of them added several seconds to every `hermes`
-            # invocation — including plain `hermes chat`, which never touches a
+            # all ~20 of them added several seconds to every `jimmy`
+            # invocation — including plain `jimmy chat`, which never touches a
             # gateway platform. Instead we register a cheap deferred loader in
             # the platform_registry keyed on the platform name; the real module
             # is imported only when the gateway / cron / setup / send_message
-            # path actually asks for that platform. Every platform Hermes ships
+            # path actually asks for that platform. Every platform Jimmy ships
             # remains available out of the box — it just loads on first use.
             if manifest.source == "bundled" and manifest.kind == "platform":
                 self._register_deferred_platform(manifest)
@@ -4008,7 +4008,7 @@ class PluginManager:
             if not is_enabled:
                 loaded = LoadedPlugin(manifest=manifest, enabled=False)
                 loaded.error = (
-                    "not enabled in config (run `hermes plugins enable {}` to activate)"
+                    "not enabled in config (run `jimmy plugins enable {}` to activate)"
                     .format(lookup_key)
                 )
                 self._plugins[lookup_key] = loaded
@@ -4045,7 +4045,7 @@ class PluginManager:
         """Register one plugin-owned approval transport for this profile."""
         import re
 
-        from hermes_cli.approval_transport import RegisteredApprovalTransport
+        from jimmy_cli.approval_transport import RegisteredApprovalTransport
 
         clean = str(name).strip().lower()
         if clean == "builtin":
@@ -4065,7 +4065,7 @@ class PluginManager:
             name=clean,
             present=present_fn,
             plugin_id=plugin_id,
-            profile_home=str(get_hermes_home().resolve()),
+            profile_home=str(get_jimmy_home().resolve()),
         )
         logger.info("Plugin %s registered approval transport: %s", plugin_id, clean)
 
@@ -4074,7 +4074,7 @@ class PluginManager:
         registered = self._approval_transports.get(str(name).strip().lower())
         if registered is None:
             return None
-        if registered.profile_home != str(get_hermes_home().resolve()):
+        if registered.profile_home != str(get_jimmy_home().resolve()):
             return None
         return registered
 
@@ -4107,24 +4107,24 @@ class PluginManager:
         logger.debug("  bundled/platforms: %d manifest(s)", len(bundled_platforms))
         manifests.extend(bundled_platforms)
 
-        # 2. User plugins (~/.hermes/plugins/)
-        user_dir = get_hermes_home() / "plugins"
+        # 2. User plugins (~/.jimmy/plugins/)
+        user_dir = get_jimmy_home() / "plugins"
         logger.debug("Scanning user plugins: %s", user_dir)
         user_manifests = self._scan_directory(user_dir, source="user")
         logger.debug("  user: %d manifest(s)", len(user_manifests))
         manifests.extend(user_manifests)
 
-        # 3. Project plugins (./.hermes/plugins/), only when explicitly opted
+        # 3. Project plugins (./.jimmy/plugins/), only when explicitly opted
         # in. This must match the full discovery gate exactly.
-        if _env_enabled("HERMES_ENABLE_PROJECT_PLUGINS"):
-            project_dir = Path.cwd() / ".hermes" / "plugins"
+        if _env_enabled("JIMMY_ENABLE_PROJECT_PLUGINS"):
+            project_dir = Path.cwd() / ".jimmy" / "plugins"
             logger.debug("Scanning project plugins: %s", project_dir)
             project_manifests = self._scan_directory(project_dir, source="project")
             logger.debug("  project: %d manifest(s)", len(project_manifests))
             manifests.extend(project_manifests)
         else:
             logger.debug(
-                "Project plugins disabled (set HERMES_ENABLE_PROJECT_PLUGINS=1 to enable)"
+                "Project plugins disabled (set JIMMY_ENABLE_PROJECT_PLUGINS=1 to enable)"
             )
 
         return manifests
@@ -4136,7 +4136,7 @@ class PluginManager:
         native ``plugin.yaml`` precedence, source ordering, depth limits, and
         project-plugin gating cannot diverge between startup and runtime.
         """
-        if _env_enabled("HERMES_SAFE_MODE"):
+        if _env_enabled("JIMMY_SAFE_MODE"):
             return False
 
         plugins_config = raw_config.get("plugins")
@@ -4168,11 +4168,11 @@ class PluginManager:
             if lookup_key not in enabled and manifest.name not in enabled:
                 continue
             try:
-                from hermes_cli.agent_plugins import _discover_mcp
+                from jimmy_cli.agent_plugins import _discover_mcp
 
                 if _discover_mcp(
                     Path(manifest.path),
-                    get_hermes_home()
+                    get_jimmy_home()
                     / "plugin-data"
                     / (manifest.skill_namespace or lookup_key),
                     [],
@@ -4253,7 +4253,7 @@ class PluginManager:
             portable_file = child / "plugin.json"
             if portable_file.exists() or portable_file.is_symlink():
                 try:
-                    from hermes_cli.agent_plugins import read_agent_plugin_manifest
+                    from jimmy_cli.agent_plugins import read_agent_plugin_manifest
 
                     data, diagnostics = read_agent_plugin_manifest(child)
                     for diagnostic in diagnostics:
@@ -4397,7 +4397,7 @@ class PluginManager:
         directory plugins: memory providers (``exclusive``) and model
         providers (``model-provider``) have their own discovery systems,
         so importing them here registers nothing and only pays the
-        module's import cost in every Hermes process (e.g. a pip
+        module's import cost in every Jimmy process (e.g. a pip
         memory-provider plugin pulling in onnxruntime via fastembed —
         ~60 MB RSS on startup).
 
@@ -4436,7 +4436,7 @@ class PluginManager:
         Delegates to ``discover_entrypoint_manifests()``, which composes
         kind classification (import-free source scan routing memory/model
         providers away from the general manager) with capability
-        declarations from the ``hermes_agent.plugin_capabilities`` group.
+        declarations from the ``jimmy_agent.plugin_capabilities`` group.
         Capability declarations live in distribution metadata so discovery
         is available before importing untrusted plugin code and does not
         depend on a package-data ``plugin.yaml`` being present.
@@ -4473,13 +4473,13 @@ class PluginManager:
         The platform adapter module is imported only when the gateway / cron /
         setup / send_message path first asks the ``platform_registry`` for this
         platform. Until then we record a lightweight ``LoadedPlugin`` so
-        ``hermes plugins list`` still shows the platform as available, and we
+        ``jimmy plugins list`` still shows the platform as available, and we
         hand the registry a loader that runs the normal eager-load path.
         """
         lookup_key = manifest.key or manifest.name
         platform_name = self._platform_name_from_manifest(manifest)
 
-        # Record an enabled placeholder for introspection (`hermes plugins
+        # Record an enabled placeholder for introspection (`jimmy plugins
         # list`). The real module load swaps in a fully-populated LoadedPlugin
         # (tools/hooks/commands attribution) when the loader fires.
         loaded = LoadedPlugin(manifest=manifest, enabled=True)
@@ -4564,7 +4564,7 @@ class PluginManager:
         agent calls like any other tool. Deferring the plugin defers both, so
         in a CLI/TUI process the client tools never register at all:
         ``resolve_toolset()`` returns ``[]``, the toolset is missing from the
-        ``hermes tools`` checklist, and even an explicit ``platform_toolsets``
+        ``jimmy tools`` checklist, and even an explicit ``platform_toolsets``
         entry is dropped because the key is unknown. The same tools work in
         gateway/web processes only because those materialize every platform at
         startup (issue #78050).
@@ -4641,7 +4641,7 @@ class PluginManager:
         except Exception as exc:
             # A register_tools() that registered some tools and THEN raised
             # leaves those tools live in the registry. Credit them, or
-            # `hermes plugins list` under-reports what the process is actually
+            # `jimmy plugins list` under-reports what the process is actually
             # carrying — and _load_plugin's own diff would miss them later
             # too, since they are already in its "before" snapshot.
             partial = [t for t in self._plugin_tool_names if t not in before]
@@ -4679,7 +4679,7 @@ class PluginManager:
     def _warn_python_dependencies(self, manifest: PluginManifest) -> None:
         """Surface declared pip dependencies (#64165).
 
-        python_dependencies is a declaration seam ONLY: Hermes validates and
+        python_dependencies is a declaration seam ONLY: Jimmy validates and
         prints the requirements with an install hint but NEVER auto-installs
         them. The isolation design (constraints installs vs. vendored dirs
         vs. conflict-detection-and-refusal) is an explicitly deferred
@@ -4704,7 +4704,7 @@ class PluginManager:
         if missing:
             logger.warning(
                 "Plugin %s declares Python dependencies that are not "
-                "installed: %s. Hermes does not install plugin dependencies "
+                "installed: %s. Jimmy does not install plugin dependencies "
                 "automatically; install them yourself, e.g.: pip install %s",
                 key, ", ".join(missing),
                 " ".join(f"'{m}'" for m in missing),
@@ -4726,7 +4726,7 @@ class PluginManager:
         plugin_id = manifest.key or manifest.name
         settings: Mapping[str, Any] = {}
         try:
-            from hermes_cli.config import load_config
+            from jimmy_cli.config import load_config
 
             cfg = load_config() or {}
             entries = (cfg.get("plugins") or {}).get("entries") or {}
@@ -4833,7 +4833,7 @@ class PluginManager:
                 ]
                 # Tools this plugin already contributed at discovery time were
                 # registered before ``registration_start``, so the ledger slice
-                # above cannot see them and `hermes plugins list` would
+                # above cannot see them and `jimmy plugins list` would
                 # under-report once the deferred adapter materializes (#78050).
                 # Credit them back to the plugin that actually registered them.
                 _predeclared = [
@@ -4916,11 +4916,11 @@ class PluginManager:
 
         lookup_key = manifest.key or manifest.name
         try:
-            from hermes_cli.agent_plugins import load_agent_plugin
+            from jimmy_cli.agent_plugins import load_agent_plugin
 
             package = load_agent_plugin(
                 Path(manifest.path),
-                get_hermes_home() / "plugin-data" / manifest.skill_namespace,
+                get_jimmy_home() / "plugin-data" / manifest.skill_namespace,
             )
             ctx = PluginContext(manifest, self)
             for diagnostic in package.diagnostics:
@@ -4990,11 +4990,11 @@ class PluginManager:
         *,
         module_name: Optional[str] = None,
     ) -> types.ModuleType:
-        """Import a directory-based plugin as ``hermes_plugins.<slug>``.
+        """Import a directory-based plugin as ``jimmy_plugins.<slug>``.
 
         The module slug is derived from ``manifest.key`` so category-namespaced
         plugins (``image_gen/openai``) import as
-        ``hermes_plugins.image_gen__openai`` without colliding with any
+        ``jimmy_plugins.image_gen__openai`` without colliding with any
         future ``tts/openai``.
         """
         plugin_dir = Path(manifest.path)  # type: ignore[arg-type]
@@ -5013,8 +5013,8 @@ class PluginManager:
 
         # Evict any stale sys.modules entries for this slug before
         # (re-)importing. A same-slug module may already be cached here
-        # from a different Hermes home (profile switch reusing a slug
-        # like "hermes-lcm") or from an earlier force=True reload in the
+        # from a different Jimmy home (profile switch reusing a slug
+        # like "jimmy-lcm") or from an earlier force=True reload in the
         # same home. Replacing only sys.modules[module_name] below is not
         # enough: the plugin's own relative imports (`from . import foo`)
         # are cached separately under "module_name + '.' + submodule",
@@ -5221,7 +5221,7 @@ class PluginManager:
         worker = threading.Thread(
             target=self._event_worker_loop,
             args=(dispatch_queue,),
-            name="hermes-plugin-events",
+            name="jimmy-plugin-events",
             daemon=True,
         )
         self._event_worker = worker
@@ -5567,12 +5567,12 @@ class PluginManager:
 # keeps working — ``get_plugin_manager()`` still reads/writes this name.
 _plugin_manager: Optional[PluginManager] = None
 
-# Keyed cache: resolved Hermes home -> PluginManager. Hermes supports
-# multiple profiles via different HERMES_HOME directories, and a single
+# Keyed cache: resolved Jimmy home -> PluginManager. Jimmy supports
+# multiple profiles via different JIMMY_HOME directories, and a single
 # long-lived process (gateway multiplexer, test session, embedder) can
-# switch between them via ``set_hermes_home_override()`` — which is a
+# switch between them via ``set_jimmy_home_override()`` — which is a
 # ContextVar and deliberately does NOT touch os.environ (see
-# hermes_constants.set_hermes_home_override). A process-wide single-slot
+# jimmy_constants.set_jimmy_home_override). A process-wide single-slot
 # cache leaks one profile's plugin/context-engine state into another. We
 # key the cache by the *resolved* home path so re-entering a previously
 # seen profile reuses its manager (and picks up any modules it already
@@ -5584,29 +5584,29 @@ _plugin_managers_lock = threading.RLock()
 def _plugin_home_key() -> Path:
     """Return the profile/home key for process-global plugin state.
 
-    Plugins are discovered from ``get_hermes_home() / "plugins"`` and some
-    plugins (notably context engines such as hermes-lcm) capture that home
+    Plugins are discovered from ``get_jimmy_home() / "plugins"`` and some
+    plugins (notably context engines such as jimmy-lcm) capture that home
     at registration time for profile-scoped storage. A long-lived process
-    can temporarily switch Hermes home (env var *or* the context-local
-    ``set_hermes_home_override()``) while serving another profile, so the
-    plugin manager must be scoped to the active Hermes home instead of
+    can temporarily switch Jimmy home (env var *or* the context-local
+    ``set_jimmy_home_override()``) while serving another profile, so the
+    plugin manager must be scoped to the active Jimmy home instead of
     being one process-wide singleton.
     """
     try:
-        return get_hermes_home().expanduser().resolve()
+        return get_jimmy_home().expanduser().resolve()
     except Exception:
-        return get_hermes_home().expanduser()
+        return get_jimmy_home().expanduser()
 
 
 def _clear_plugin_submodules(manager: Optional[PluginManager]) -> None:
     """Purge ``sys.modules`` entries for directory-loaded plugins.
 
     ``PluginManager._load_directory_module`` imports each plugin as
-    ``hermes_plugins.<slug>`` and registers that top-level module in
+    ``jimmy_plugins.<slug>`` and registers that top-level module in
     ``sys.modules``. Anything the plugin's ``__init__.py`` imports with a
     *relative* import (``from . import foo``, ``from .sub import bar``)
     ends up cached in ``sys.modules`` too, under
-    ``hermes_plugins.<slug>.<submodule>``. When we swap in a fresh manager
+    ``jimmy_plugins.<slug>.<submodule>``. When we swap in a fresh manager
     for a new home, replacing only the parent module leaves those
     submodules behind: if a same-named plugin in the new profile does a
     relative import, Python resolves it from ``sys.modules`` first and
@@ -5632,12 +5632,12 @@ def _clear_plugin_submodules(manager: Optional[PluginManager]) -> None:
 
 
 def get_plugin_manager() -> PluginManager:
-    """Return the plugin manager for the active Hermes profile/home.
+    """Return the plugin manager for the active Jimmy profile/home.
 
     Managers are cached per resolved home so repeated calls within the
     same profile reuse discovery state (normal performance), while a
-    profile switch — via ``HERMES_HOME`` or the context-local
-    ``set_hermes_home_override()`` — gets its own manager with its own
+    profile switch — via ``JIMMY_HOME`` or the context-local
+    ``set_jimmy_home_override()`` — gets its own manager with its own
     plugin submodules, instead of silently inheriting another profile's
     context engine or stale relative-import state.
     """
@@ -5658,7 +5658,7 @@ def get_plugin_manager() -> PluginManager:
 
         manager = _plugin_managers_by_home.get(current_home)
         if manager is None:
-            manager = PluginManager(scope_key=hermes_home_key(current_home))
+            manager = PluginManager(scope_key=jimmy_home_key(current_home))
             _plugin_managers_by_home[current_home] = manager
 
         _plugin_manager = manager
@@ -5755,8 +5755,8 @@ def _join_background_discovery(timeout: float = 30.0) -> None:
 
 
 def _plugin_toolset_keys_cache_path():
-    from hermes_constants import get_hermes_home
-    return get_hermes_home() / "cache" / "plugin_toolset_keys.json"
+    from jimmy_constants import get_jimmy_home
+    return get_jimmy_home() / "cache" / "plugin_toolset_keys.json"
 
 
 def _persist_plugin_toolset_keys() -> None:
@@ -6042,7 +6042,7 @@ def _get_pre_tool_call_directive_details(
             message=fmt.format(tool_name=tool_name),
         )
 
-    from hermes_cli.lifecycle import invoke_hook as invoke_lifecycle_hook
+    from jimmy_cli.lifecycle import invoke_hook as invoke_lifecycle_hook
 
     hook_results = invoke_lifecycle_hook(
         "pre_tool_call",
@@ -6495,7 +6495,7 @@ def resolve_plugin_command_result(result: Any) -> Any:
 
     thread = threading.Thread(
         target=_runner,
-        name="hermes-plugin-command-await",
+        name="jimmy-plugin-command-await",
         daemon=True,
     )
     thread.start()
@@ -6537,7 +6537,7 @@ def get_plugin_subscriptions() -> Dict[str, List[Callable]]:
     """Return the inter-plugin event bus subscription registry.
 
     Returns a snapshot mapping each fully-qualified event name
-    (``<plugin_key>:<event>`` or ``hermes:<event>``) to subscriber callbacks in
+    (``<plugin_key>:<event>`` or ``jimmy:<event>``) to subscriber callbacks in
     registration order. Owner ledger metadata stays private to the manager.
     Triggers idempotent plugin discovery before reading the snapshot.
     """
@@ -6552,7 +6552,7 @@ def get_plugin_subscriptions() -> Dict[str, List[Callable]]:
 def get_plugin_toolsets() -> List[tuple]:
     """Return plugin toolsets as ``(key, label, description)`` tuples.
 
-    Used by the ``hermes tools`` TUI so plugin-provided toolsets appear
+    Used by the ``jimmy tools`` TUI so plugin-provided toolsets appear
     alongside the built-in ones and can be toggled on/off per platform.
     """
     manager = get_plugin_manager()

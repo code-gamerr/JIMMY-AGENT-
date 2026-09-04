@@ -1,6 +1,6 @@
 """Profile display_name (#45624): presentation-only label in profile.yaml.
 
-The canonical profile id ("default" for ~/.hermes) is never touched —
+The canonical profile id ("default" for ~/.jimmy) is never touched —
 resolution, comparison, and spawn paths must be provably unaffected.
 """
 
@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from hermes_cli.profiles import (
+from jimmy_cli.profiles import (
     create_profile,
     format_profile_label,
     get_profile_dir,
@@ -27,11 +27,11 @@ from hermes_cli.profiles import (
 
 @pytest.fixture()
 def profile_env(tmp_path, monkeypatch):
-    """Isolated environment: Path.home() and HERMES_HOME under tmp_path."""
+    """Isolated environment: Path.home() and JIMMY_HOME under tmp_path."""
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    default_home = tmp_path / ".hermes"
+    default_home = tmp_path / ".jimmy"
     default_home.mkdir(exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(default_home))
+    monkeypatch.setenv("JIMMY_HOME", str(default_home))
     return default_home
 
 
@@ -101,7 +101,7 @@ class TestRenameDefault:
         self, profile_env, monkeypatch
     ):
         monkeypatch.setattr(
-            "hermes_cli.profiles.check_alias_collision", lambda name: "skip"
+            "jimmy_cli.profiles.check_alias_collision", lambda name: "skip"
         )
         create_profile("oldname", no_alias=True)
         write_profile_meta(get_profile_dir("oldname"), display_name="Old Friend")

@@ -1,5 +1,5 @@
 """Tests for kanban DB corruption repair, backup retention, WAL checkpointing,
-and the ``hermes kanban repair`` CLI verb."""
+and the ``jimmy kanban repair`` CLI verb."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban_db as kb
+from jimmy_cli import kanban_db as kb
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ def test_connect_auto_repairs_index_only_corruption(tmp_path, caplog):
     assert any(m.startswith("wrong # of entries in index") for m in messages)
     assert kb._repairable_index_names(messages) == ["idx_tasks_status"]
 
-    with caplog.at_level(logging.WARNING, logger="hermes_cli.kanban_db"):
+    with caplog.at_level(logging.WARNING, logger="jimmy_cli.kanban_db"):
         conn = kb.connect(db_path=db_path)
     try:
         # DB is clean again and data survived.
@@ -205,7 +205,7 @@ def test_dispatch_tick_runs_wal_checkpoint_at_interval(tmp_path, monkeypatch):
     interval elapses the next tick checkpoints again."""
     db_path = tmp_path / "kanban.db"
     _build_board_db(db_path, tasks=1)
-    monkeypatch.setenv("HERMES_KANBAN_DB", str(db_path))
+    monkeypatch.setenv("JIMMY_KANBAN_DB", str(db_path))
     # Fresh per-path clock so previous tests can't have claimed the slot.
     monkeypatch.setattr(kb, "_LAST_WAL_CHECKPOINT", {})
 
@@ -241,14 +241,14 @@ def test_dispatch_tick_runs_wal_checkpoint_at_interval(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# repair_db() API + `hermes kanban repair` CLI verb
+# repair_db() API + `jimmy kanban repair` CLI verb
 # ---------------------------------------------------------------------------
 
 def _run_kanban_cli(argv: list[str]) -> int:
-    """Drive the real argparse surface exactly like `hermes kanban …`."""
+    """Drive the real argparse surface exactly like `jimmy kanban …`."""
     import argparse
 
-    from hermes_cli import kanban as kc
+    from jimmy_cli import kanban as kc
 
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command")
@@ -259,10 +259,10 @@ def _run_kanban_cli(argv: list[str]) -> int:
 
 @pytest.fixture
 def cli_home(tmp_path, monkeypatch):
-    """Isolated HERMES_HOME so kanban_db_path() resolves inside tmp_path."""
-    home = tmp_path / ".hermes"
+    """Isolated JIMMY_HOME so kanban_db_path() resolves inside tmp_path."""
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     return home
 

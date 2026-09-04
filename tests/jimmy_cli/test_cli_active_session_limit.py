@@ -1,12 +1,12 @@
-from cli import HermesCLI
-from hermes_cli.active_sessions import (
+from cli import JimmyCLI
+from jimmy_cli.active_sessions import (
     active_session_registry_snapshot,
     try_acquire_active_session,
 )
 
 
 def test_cli_claim_active_session_respects_global_limit(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
     cfg = {"max_concurrent_sessions": 1}
     held, message = try_acquire_active_session(
         session_id="held-session",
@@ -16,7 +16,7 @@ def test_cli_claim_active_session_respects_global_limit(tmp_path, monkeypatch):
     assert message is None
     assert held is not None
 
-    cli = object.__new__(HermesCLI)
+    cli = object.__new__(JimmyCLI)
     cli.session_id = "new-cli-session"
     cli.config = cfg
     cli._active_session_lease = None

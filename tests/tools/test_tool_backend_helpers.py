@@ -32,7 +32,7 @@ class TestNousToolGatewayUnavailableMessage:
     def test_mentions_capability_and_byok(self):
         message = nous_tool_gateway_unavailable_message("managed image generation")
         assert "managed image generation" in message
-        assert "BYOK" in message or "hermes tools" in message
+        assert "BYOK" in message or "jimmy tools" in message
 
 
 class TestNormalizeBrowserCloudProvider:
@@ -112,14 +112,14 @@ class TestPrefersGateway:
 
     def test_returns_false_for_quoted_false(self, monkeypatch):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "jimmy_cli.config.load_config",
             lambda: {"web": {"use_gateway": "false"}},
         )
         assert prefers_gateway("web") is False
 
     def test_returns_true_for_quoted_true(self, monkeypatch):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "jimmy_cli.config.load_config",
             lambda: {"web": {"use_gateway": "true"}},
         )
         # Managed gateway removed — prefers_gateway is always False.

@@ -11,8 +11,8 @@ from types import MethodType
 import yaml
 
 
-def _write_plugin(hermes_home: Path) -> None:
-    plugin_dir = hermes_home / "plugins" / "ledger_probe"
+def _write_plugin(jimmy_home: Path) -> None:
+    plugin_dir = jimmy_home / "plugins" / "ledger_probe"
     plugin_dir.mkdir(parents=True)
     (plugin_dir / "plugin.yaml").write_text(
         yaml.safe_dump(
@@ -75,13 +75,13 @@ def _write_plugin(hermes_home: Path) -> None:
         "    )\n"
         "    ctx.on_unload(lambda: UNLOADED.append('ledger_probe'))\n"
     )
-    (hermes_home / "config.yaml").write_text(
+    (jimmy_home / "config.yaml").write_text(
         yaml.safe_dump({"plugins": {"enabled": ["ledger_probe"]}})
     )
 
 
-def _write_profile_probe(hermes_home: Path, marker: str) -> None:
-    plugin_dir = hermes_home / "plugins" / "profile_probe"
+def _write_profile_probe(jimmy_home: Path, marker: str) -> None:
+    plugin_dir = jimmy_home / "plugins" / "profile_probe"
     plugin_dir.mkdir(parents=True)
     (plugin_dir / "plugin.yaml").write_text(
         yaml.safe_dump(
@@ -107,7 +107,7 @@ def _write_profile_probe(hermes_home: Path, marker: str) -> None:
         "        check_fn=lambda: True,\n"
         "    )\n"
     )
-    (hermes_home / "config.yaml").write_text(
+    (jimmy_home / "config.yaml").write_text(
         yaml.safe_dump({"plugins": {"enabled": ["profile_probe"]}})
     )
 
@@ -117,14 +117,14 @@ def test_load_force_reload_and_unload_remove_every_manager_registration(
     monkeypatch,
 ):
     """A real temporary plugin has one live registration after each reload."""
-    import hermes_cli.plugins as plugins_mod
+    import jimmy_cli.plugins as plugins_mod
     from gateway.platform_registry import platform_registry
-    from hermes_cli.plugins import PluginManager
+    from jimmy_cli.plugins import PluginManager
     from tools.registry import registry
 
-    hermes_home = tmp_path / "hermes"
-    _write_plugin(hermes_home)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    jimmy_home = tmp_path / "jimmy"
+    _write_plugin(jimmy_home)
+    monkeypatch.setenv("JIMMY_HOME", str(jimmy_home))
     monkeypatch.setattr(
         plugins_mod,
         "get_bundled_plugins_dir",
@@ -213,7 +213,7 @@ def test_load_force_reload_and_unload_remove_every_manager_registration(
 def test_reverse_unload_restores_an_overridden_platform_registration():
     """Reverse teardown reveals an older entry before removing it."""
     from gateway.platform_registry import platform_registry
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     name = "ledger_override_platform"
     scope = platform_registry.current_scope_key()
@@ -262,7 +262,7 @@ def test_reverse_unload_restores_an_overridden_platform_registration():
 
 def test_targeted_unload_does_not_resurrect_an_older_tool_override():
     """The tool overlay follows the same arbitrary-order ownership contract."""
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
     from tools.registry import registry
 
     name = "ledger_out_of_order_tool"
@@ -305,7 +305,7 @@ def test_targeted_unload_does_not_resurrect_an_older_tool_override():
 
 def test_rejected_tool_registration_does_not_claim_global_fallback():
     """Effective fallback identity cannot masquerade as a successful write."""
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
     from tools.registry import registry
 
     name = "ledger_rejected_tool"
@@ -346,7 +346,7 @@ def test_rejected_tool_registration_does_not_claim_global_fallback():
 
 def test_plugin_context_cannot_shadow_same_toolset_global_with_core_callable():
     """Explicit context scope cannot launder an imported/core handler."""
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
     from tools.registry import registry
 
     name = "ledger_same_toolset_global"
@@ -381,7 +381,7 @@ def test_plugin_context_cannot_shadow_same_toolset_global_with_core_callable():
 
 def test_rejected_tool_registration_does_not_claim_local_predecessor():
     """A same-handler rejection cannot manufacture a replacement lease."""
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
     from tools.registry import registry
 
     name = "ledger_rejected_local_tool"
@@ -435,7 +435,7 @@ def test_scoped_plugin_cannot_deregister_a_process_global_tool():
         schema={"name": name, "parameters": {"type": "object", "properties": {}}},
         handler=lambda args, **kwargs: "base",
     )
-    module_name = "hermes_plugins.scoped_cleanup"
+    module_name = "jimmy_plugins.scoped_cleanup"
     registry.register_plugin_override_policy(
         module_name, True, scope="/profiles/isolated"
     )
@@ -451,11 +451,11 @@ def test_shared_entrypoint_module_uses_the_active_profile_scope(tmp_path):
     """One pip module can serve A and B without becoming process-global."""
     import pytest
 
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
     from tools.registry import ToolRegistry
 
     registry = ToolRegistry()
-    module_name = "third_party.shared_hermes_plugin"
+    module_name = "third_party.shared_jimmy_plugin"
     home_a = str((tmp_path / "entrypoint-a").resolve())
     home_b = str((tmp_path / "entrypoint-b").resolve())
     home_c = str((tmp_path / "entrypoint-c").resolve())
@@ -468,7 +468,7 @@ def test_shared_entrypoint_module_uses_the_active_profile_scope(tmp_path):
     handler = eval("lambda args, **kwargs: 'shared'", {"__name__": module_name})
 
     def register_in(home, name):
-        token = set_hermes_home_override(home)
+        token = set_jimmy_home_override(home)
         try:
             registry.register(
                 name=name,
@@ -480,7 +480,7 @@ def test_shared_entrypoint_module_uses_the_active_profile_scope(tmp_path):
                 handler=handler,
             )
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
 
     register_in(home_a, "shared_entrypoint_a")
     register_in(home_b, "shared_entrypoint_b")
@@ -491,12 +491,12 @@ def test_shared_entrypoint_module_uses_the_active_profile_scope(tmp_path):
 
     from unittest.mock import patch
 
-    token = set_hermes_home_override(home_a)
+    token = set_jimmy_home_override(home_a)
     try:
         with patch.object(ToolRegistry, "_caller_module", return_value=module_name):
             registry.deregister("shared_entrypoint_a")
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
     assert registry.snapshot_registration("shared_entrypoint_a", scope=home_a) is None
     assert registry.snapshot_registration("shared_entrypoint_b", scope=home_b) is not None
 
@@ -551,7 +551,7 @@ def test_decorated_plugin_callable_keeps_its_defining_module_scope(tmp_path):
 
 
 def test_entrypoint_policy_uses_the_most_specific_module_prefix(tmp_path):
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
     from tools.registry import ToolRegistry
 
     registry = ToolRegistry()
@@ -565,7 +565,7 @@ def test_entrypoint_policy_uses_the_most_specific_module_prefix(tmp_path):
         "lambda args, **kwargs: 'narrow'",
         {"__name__": "vendor.plugin.handlers"},
     )
-    token = set_hermes_home_override(narrow_scope)
+    token = set_jimmy_home_override(narrow_scope)
     try:
         registry.register(
             name="specific_entrypoint_tool",
@@ -577,7 +577,7 @@ def test_entrypoint_policy_uses_the_most_specific_module_prefix(tmp_path):
             handler=handler,
         )
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
     assert registry.snapshot_registration(
         "specific_entrypoint_tool", scope=narrow_scope
@@ -590,7 +590,7 @@ def test_entrypoint_policy_uses_the_most_specific_module_prefix(tmp_path):
 def test_targeted_unload_does_not_resurrect_an_older_override():
     """Removing A under B tombstones A so B cannot restore it later."""
     from gateway.platform_registry import platform_registry
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     name = "ledger_out_of_order_platform"
     scope = platform_registry.current_scope_key()
@@ -635,7 +635,7 @@ def test_targeted_unload_does_not_resurrect_an_older_override():
 
 
 def test_manager_local_override_does_not_resurrect_after_targeted_unload():
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     manager = PluginManager()
     context_a = PluginContext(PluginManifest(name="local_a", key="local_a"), manager)
@@ -657,8 +657,8 @@ def test_provider_overlay_switches_profiles_and_reveals_fresh_global_fallback(
     """Provider consumers see A→B→A, and unload never pins a stale base."""
     from agent.image_gen_provider import ImageGenProvider
     import agent.image_gen_registry as image_registry
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     class Provider(ImageGenProvider):
         def __init__(self, marker):
@@ -684,16 +684,16 @@ def test_provider_overlay_switches_profiles_and_reveals_fresh_global_fallback(
     context_a = PluginContext(PluginManifest(name="provider_a", key="provider_a"), manager_a)
     context_b = PluginContext(PluginManifest(name="provider_b", key="provider_b"), manager_b)
     monkeypatch.setattr(
-        "hermes_cli.config.load_config_readonly",
+        "jimmy_cli.config.load_config_readonly",
         lambda: {"image_gen": {"provider": name}},
     )
 
     def active_for(home):
-        token = set_hermes_home_override(home)
+        token = set_jimmy_home_override(home)
         try:
             return image_registry.get_active_provider()
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
 
     image_registry.register_provider(global_a)
     try:
@@ -727,7 +727,7 @@ def test_reused_provider_singleton_keeps_registration_generations_distinct():
         restore_registration,
         snapshot_registration,
     )
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     class ProbeProvider(ImageGenProvider):
         def __init__(self, marker):
@@ -786,7 +786,7 @@ def test_same_provider_singleton_can_have_two_live_owners():
         restore_registration,
         snapshot_registration,
     )
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     class SharedProvider(ImageGenProvider):
         @property
@@ -828,7 +828,7 @@ def test_provider_cleanup_uses_the_captured_normalized_name():
         restore_registration,
         snapshot_registration,
     )
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     class MutableProvider(ImageGenProvider):
         def __init__(self):
@@ -866,7 +866,7 @@ def test_registration_transaction_excludes_concurrent_disposal(monkeypatch):
     """A lease cannot be retired between another generation's write/acquire."""
     from agent.image_gen_provider import ImageGenProvider
     import agent.image_gen_registry as image_registry
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     class Provider(ImageGenProvider):
         def __init__(self, marker):
@@ -1010,7 +1010,7 @@ def test_deferred_platform_recursive_lookup_does_not_deadlock():
 def test_resolved_deferred_platform_restores_its_displaced_loader():
     """Deferred-to-concrete loading remains one replacement chain."""
     from gateway.platform_registry import platform_registry
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     name = "ledger_transfer"
     scope = platform_registry.current_scope_key()
@@ -1051,7 +1051,7 @@ def test_resolved_deferred_platform_restores_its_displaced_loader():
 def test_unload_cancels_a_deferred_platform_before_module_load():
     """Losing the in-flight race cannot publish registrations after unload."""
     from gateway.platform_registry import platform_registry
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     name = "ledger_cancel"
     scope = platform_registry.current_scope_key()
@@ -1114,12 +1114,12 @@ def test_unload_cancels_a_deferred_platform_before_module_load():
 def test_direct_plugin_platform_registration_infers_immutable_scope(tmp_path):
     """The documented direct registry API cannot leak into another profile."""
     from gateway.platform_registry import PlatformEntry, platform_registry
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
     from tools.registry import registry as tool_registry
 
     home_a = str((tmp_path / "direct-a").resolve())
     home_b = tmp_path / "direct-b"
-    module_name = "company.hermes.direct_platform_probe"
+    module_name = "company.jimmy.direct_platform_probe"
     policy = tool_registry.register_plugin_override_policy(
         module_name, False, scope=home_a
     )
@@ -1130,7 +1130,7 @@ def test_direct_plugin_platform_registration_infers_immutable_scope(tmp_path):
     name = "ledger_direct_platform"
     previous_a = platform_registry.snapshot_registration(name, scope=home_a)
     previous_global = platform_registry.snapshot_registration(name)
-    token = set_hermes_home_override(home_b)
+    token = set_jimmy_home_override(home_b)
     try:
         platform_registry.register(
             PlatformEntry(
@@ -1143,13 +1143,13 @@ def test_direct_plugin_platform_registration_infers_immutable_scope(tmp_path):
         )
         assert platform_registry.get(name) is None
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
-    token = set_hermes_home_override(home_a)
+    token = set_jimmy_home_override(home_a)
     try:
         assert platform_registry.get(name).label == "Direct A"
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
         current_a = platform_registry.snapshot_registration(name, scope=home_a)
         platform_registry.restore_registration(
             name, current_a, previous_a, scope=home_a
@@ -1164,15 +1164,15 @@ def test_direct_plugin_platform_registration_infers_immutable_scope(tmp_path):
         )
 
 
-def test_same_name_tool_and_platform_are_isolated_by_hermes_home(
+def test_same_name_tool_and_platform_are_isolated_by_jimmy_home(
     tmp_path,
     monkeypatch,
 ):
     """Real A→B→A profile switching keeps dispatch and adapters isolated."""
-    import hermes_cli.plugins as plugins_mod
+    import jimmy_cli.plugins as plugins_mod
     from gateway.platform_registry import platform_registry
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
-    from hermes_cli.plugins import PluginManager
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
+    from jimmy_cli.plugins import PluginManager
     from tools.registry import registry
 
     home_a = tmp_path / "profile-a"
@@ -1187,7 +1187,7 @@ def test_same_name_tool_and_platform_are_isolated_by_hermes_home(
     monkeypatch.setattr(PluginManager, "_scan_entry_points", lambda self: [])
 
     def load_profile(home: Path):
-        token = set_hermes_home_override(home)
+        token = set_jimmy_home_override(home)
         try:
             manager = plugins_mod.get_plugin_manager()
             manager.discover_and_load()
@@ -1195,7 +1195,7 @@ def test_same_name_tool_and_platform_are_isolated_by_hermes_home(
             platform_entry = platform_registry.get("shared_profile_platform")
             return manager, tool_entry, platform_entry
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
 
     manager_a, tool_a, platform_a = load_profile(home_a)
     manager_b, tool_b, platform_b = load_profile(home_b)
@@ -1204,26 +1204,26 @@ def test_same_name_tool_and_platform_are_isolated_by_hermes_home(
     assert tool_a is not None and tool_b is not None and tool_a is not tool_b
     assert platform_a is not None and platform_b is not None and platform_a is not platform_b
 
-    token_a = set_hermes_home_override(home_a)
+    token_a = set_jimmy_home_override(home_a)
     try:
         assert registry.dispatch("shared_profile_tool", {}) == "profile-a"
         assert platform_registry.get("shared_profile_platform") is platform_a
     finally:
-        reset_hermes_home_override(token_a)
+        reset_jimmy_home_override(token_a)
 
-    token_b = set_hermes_home_override(home_b)
+    token_b = set_jimmy_home_override(home_b)
     try:
         assert registry.dispatch("shared_profile_tool", {}) == "profile-b"
         assert platform_registry.get("shared_profile_platform") is platform_b
     finally:
-        reset_hermes_home_override(token_b)
+        reset_jimmy_home_override(token_b)
 
-    token_a = set_hermes_home_override(home_a)
+    token_a = set_jimmy_home_override(home_a)
     try:
         assert registry.dispatch("shared_profile_tool", {}) == "profile-a"
         assert platform_registry.get("shared_profile_platform") is platform_a
     finally:
-        reset_hermes_home_override(token_a)
+        reset_jimmy_home_override(token_a)
 
 
 def test_manager_discovery_uses_its_home_not_the_ambient_profile(
@@ -1231,10 +1231,10 @@ def test_manager_discovery_uses_its_home_not_the_ambient_profile(
     monkeypatch,
 ):
     """A retained manager cannot scan another concurrently active profile."""
-    import hermes_cli.plugins as plugins_mod
+    import jimmy_cli.plugins as plugins_mod
     from gateway.platform_registry import platform_registry
-    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
-    from hermes_cli.plugins import PluginManager
+    from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
+    from jimmy_cli.plugins import PluginManager
     from tools.registry import registry
 
     home_a = tmp_path / "retained-a"
@@ -1249,11 +1249,11 @@ def test_manager_discovery_uses_its_home_not_the_ambient_profile(
     monkeypatch.setattr(PluginManager, "_scan_entry_points", lambda self: [])
 
     manager_a = PluginManager(scope_key=str(home_a.resolve()))
-    ambient = set_hermes_home_override(home_b)
+    ambient = set_jimmy_home_override(home_b)
     try:
         manager_a.discover_and_load()
     finally:
-        reset_hermes_home_override(ambient)
+        reset_jimmy_home_override(ambient)
 
     tool_a = registry.get_entry("shared_profile_tool", scope=manager_a.scope_key)
     platform_a = platform_registry.snapshot_registration(
@@ -1274,8 +1274,8 @@ def test_same_slug_profiles_allocate_distinct_modules_concurrently(
     monkeypatch,
 ):
     """Policy binding and import use one atomic profile-specific namespace."""
-    import hermes_cli.plugins as plugins_mod
-    from hermes_cli.plugins import PluginManager
+    import jimmy_cli.plugins as plugins_mod
+    from jimmy_cli.plugins import PluginManager
 
     home_a = tmp_path / "concurrent-a"
     home_b = tmp_path / "concurrent-b"
@@ -1303,7 +1303,7 @@ def test_spawned_supervised_task_is_cancelled_on_unload():
     """A plugin-spawned background task is tracked and cancelled on unload."""
     import asyncio
 
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     manager = PluginManager()
     manifest = PluginManifest(
@@ -1340,7 +1340,7 @@ def test_spawned_supervised_task_is_cancelled_on_unload():
 
 def test_on_unload_exception_does_not_block_other_teardown():
     """A raising on_unload callback is isolated; later cleanup still runs."""
-    from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+    from jimmy_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     manager = PluginManager()
     manifest = PluginManifest(

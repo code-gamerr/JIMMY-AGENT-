@@ -49,13 +49,13 @@ def get_conversation_context() -> Optional[str]:
     return _conversation_id.get()
 
 
-def hermes_client_tag() -> str:
+def jimmy_client_tag() -> str:
     """Formerly returned a Nous Portal ``client=...`` tag; now empty."""
     return ""
 
 
 def conversation_tag(session_id: str) -> str:
-    """Return a ``conversation=...`` tag string for a Hermes session id."""
+    """Return a ``conversation=...`` tag string for a Jimmy session id."""
     return f"conversation={session_id}"
 
 

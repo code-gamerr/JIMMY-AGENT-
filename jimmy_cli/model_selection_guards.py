@@ -1,6 +1,6 @@
 """Unified selection-time guard registry for model switching surfaces.
 
-Hermes has multiple model-selection surfaces (CLI picker, TUI, dashboard,
+Jimmy has multiple model-selection surfaces (CLI picker, TUI, dashboard,
 gateway ``/model``, Telegram/Discord pickers, TUI-gateway RPC). Each of them
 previously imported ``model_cost_guard.expensive_model_warning`` directly, so
 every new guard class (e.g. the data-training-tier guard) had to be wired into
@@ -44,7 +44,7 @@ def _cost_guard(
     api_key: Optional[str],
     model_info: Optional[ModelInfo],
 ) -> Optional[SelectionWarning]:
-    from hermes_cli.model_cost_guard import expensive_model_warning
+    from jimmy_cli.model_cost_guard import expensive_model_warning
 
     warning = expensive_model_warning(
         model_name,
@@ -73,7 +73,7 @@ def _data_policy_guard(
     api_key: Optional[str],
     model_info: Optional[ModelInfo],
 ) -> Optional[SelectionWarning]:
-    from hermes_cli.model_data_policy_guard import data_training_warning
+    from jimmy_cli.model_data_policy_guard import data_training_warning
 
     warning = data_training_warning(
         model_name,

@@ -1,20 +1,20 @@
-"""`hermes checkpoints` CLI subcommand.
+"""`jimmy checkpoints` CLI subcommand.
 
 Gives users direct visibility and control over the filesystem checkpoint
-store at ``~/.hermes/checkpoints/``.  Actions:
+store at ``~/.jimmy/checkpoints/``.  Actions:
 
-    hermes checkpoints               # same as `status`
-    hermes checkpoints status        # total size, project count, breakdown
-    hermes checkpoints list          # per-project checkpoint counts + workdir
-    hermes checkpoints prune [opts]  # force a sweep (ignores the 24h marker)
-    hermes checkpoints clear [-f]    # nuke the entire base (asks first)
-    hermes checkpoints clear-legacy  # delete just the legacy-* archives
+    jimmy checkpoints               # same as `status`
+    jimmy checkpoints status        # total size, project count, breakdown
+    jimmy checkpoints list          # per-project checkpoint counts + workdir
+    jimmy checkpoints prune [opts]  # force a sweep (ignores the 24h marker)
+    jimmy checkpoints clear [-f]    # nuke the entire base (asks first)
+    jimmy checkpoints clear-legacy  # delete just the legacy-* archives
 
 Examples::
 
-    hermes checkpoints
-    hermes checkpoints prune --retention-days 3 --max-size-mb 200
-    hermes checkpoints clear -f
+    jimmy checkpoints
+    jimmy checkpoints prune --retention-days 3 --max-size-mb 200
+    jimmy checkpoints clear -f
 
 None of these require the agent to be running.  Safe to call any time.
 """
@@ -27,7 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from hermes_cli.sizefmt import format_bytes as _fmt_bytes
+from jimmy_cli.sizefmt import format_bytes as _fmt_bytes
 
 
 def _fmt_ts(ts: Any) -> str:
@@ -89,7 +89,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         for arch in sorted(legacy, key=lambda a: a.get("mtime", 0), reverse=True):
             print(f"  {arch['name']:<40}  {_fmt_bytes(arch['size_bytes']):>10}")
         print()
-        print("Clear with: hermes checkpoints clear-legacy")
+        print("Clear with: jimmy checkpoints clear-legacy")
     return 0
 
 
@@ -230,8 +230,8 @@ def cmd_clear_legacy(args: argparse.Namespace) -> int:
 
 
 def register_cli(parser: argparse.ArgumentParser) -> None:
-    """Wire subcommands onto the ``hermes checkpoints`` parser."""
-    parser.set_defaults(func=cmd_status)  # bare `hermes checkpoints` → status
+    """Wire subcommands onto the ``jimmy checkpoints`` parser."""
+    parser.set_defaults(func=cmd_status)  # bare `jimmy checkpoints` → status
     subs = parser.add_subparsers(dest="checkpoints_command", metavar="COMMAND")
 
     p_status = subs.add_parser(

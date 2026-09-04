@@ -1,13 +1,13 @@
-"""hermes claw — OpenClaw migration commands.
+"""jimmy claw — OpenClaw migration commands.
 
 Usage:
-    hermes claw migrate              # Preview then migrate (always shows preview first)
-    hermes claw migrate --dry-run    # Preview only, no changes
-    hermes claw migrate --yes        # Skip confirmation prompt
-    hermes claw migrate --preset full --overwrite --migrate-secrets  # Full run w/ secrets
-    hermes claw migrate --no-backup  # Skip pre-migration snapshot
-    hermes claw cleanup              # Archive leftover OpenClaw directories
-    hermes claw cleanup --dry-run    # Preview what would be archived
+    jimmy claw migrate              # Preview then migrate (always shows preview first)
+    jimmy claw migrate --dry-run    # Preview only, no changes
+    jimmy claw migrate --yes        # Skip confirmation prompt
+    jimmy claw migrate --preset full --overwrite --migrate-secrets  # Full run w/ secrets
+    jimmy claw migrate --no-backup  # Skip pre-migration snapshot
+    jimmy claw cleanup              # Archive leftover OpenClaw directories
+    jimmy claw cleanup --dry-run    # Preview what would be archived
 """
 
 import importlib.util
@@ -18,9 +18,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from hermes_cli.config import get_hermes_home, get_config_path, load_config, save_config
-from hermes_constants import get_optional_skills_dir
-from hermes_cli.setup import (
+from jimmy_cli.config import get_jimmy_home, get_config_path, load_config, save_config
+from jimmy_constants import get_optional_skills_dir
+from jimmy_cli.setup import (
     Colors,
     color,
     print_header,
@@ -39,17 +39,17 @@ _OPENCLAW_SCRIPT = (
     / "migration"
     / "openclaw-migration"
     / "scripts"
-    / "openclaw_to_hermes.py"
+    / "openclaw_to_jimmy.py"
 )
 
 # Fallback: user may have installed the skill from the Hub
 _OPENCLAW_SCRIPT_INSTALLED = (
-    get_hermes_home()
+    get_jimmy_home()
     / "skills"
     / "migration"
     / "openclaw-migration"
     / "scripts"
-    / "openclaw_to_hermes.py"
+    / "openclaw_to_jimmy.py"
 )
 
 # Known OpenClaw directory names (current + legacy)
@@ -81,7 +81,7 @@ def _detect_openclaw_processes() -> list[str]:
         # forever on Windows in post-timeout cleanup when a conhost.exe
         # descendant holds duplicated pipe handles (#87134) — and a hang is
         # not an exception, so the try/except here can't save the caller.
-        from hermes_cli._subprocess_compat import bounded_probe_run
+        from jimmy_cli._subprocess_compat import bounded_probe_run
 
         try:
             for exe in ("openclaw.exe", "clawd.exe"):
@@ -140,7 +140,7 @@ def _warn_if_openclaw_running(auto_yes: bool) -> None:
     print_info(
         "Messaging platforms (Telegram, Discord, Slack) only allow one "
         "active session per bot token. If you continue, both OpenClaw and "
-        "Hermes may try to use the same token, causing disconnects."
+        "Jimmy may try to use the same token, causing disconnects."
     )
     print_info("Recommendation: stop OpenClaw before migrating.")
     print()
@@ -155,7 +155,7 @@ def _warn_if_openclaw_running(auto_yes: bool) -> None:
 
 
 def _warn_if_gateway_running(auto_yes: bool) -> None:
-    """Check if a Hermes gateway is running with connected platforms.
+    """Check if a Jimmy gateway is running with connected platforms.
 
     Migrating bot tokens while the gateway is polling will cause conflicts
     (e.g. Telegram 409 "terminated by other getUpdates request"). Warn the
@@ -175,7 +175,7 @@ def _warn_if_gateway_running(auto_yes: bool) -> None:
 
     print()
     print_error(
-        "Hermes gateway is running with active connections: "
+        "Jimmy gateway is running with active connections: "
         + ", ".join(connected)
     )
     print_info(
@@ -183,7 +183,7 @@ def _warn_if_gateway_running(auto_yes: bool) -> None:
         "conflicts (Telegram, Discord, and Slack only allow one active "
         "session per token)."
     )
-    print_info("Recommendation: stop the gateway first with 'hermes gateway stop'.")
+    print_info("Recommendation: stop the gateway first with 'jimmy gateway stop'.")
     print()
     if not auto_yes and not prompt_yes_no("Continue anyway?", default=False):
         print_info("Migration cancelled. Stop the gateway and try again.")
@@ -200,7 +200,7 @@ _WORKSPACE_STATE_GLOBS = (
 
 
 def _find_migration_script() -> Path | None:
-    """Find the openclaw_to_hermes.py script in known locations."""
+    """Find the openclaw_to_jimmy.py script in known locations."""
     for candidate in [_OPENCLAW_SCRIPT, _OPENCLAW_SCRIPT_INSTALLED]:
         if candidate.exists():
             return candidate
@@ -209,7 +209,7 @@ def _find_migration_script() -> Path | None:
 
 def _load_migration_module(script_path: Path):
     """Dynamically load the migration script as a module."""
-    spec = importlib.util.spec_from_file_location("openclaw_to_hermes", script_path)
+    spec = importlib.util.spec_from_file_location("openclaw_to_jimmy", script_path)
     if spec is None or spec.loader is None:
         return None
     mod = importlib.util.module_from_spec(spec)
@@ -299,7 +299,7 @@ def _archive_directory(source_dir: Path, dry_run: bool = False) -> Path:
 
 
 def claw_command(args):
-    """Route hermes claw subcommands."""
+    """Route jimmy claw subcommands."""
     action = getattr(args, "claw_action", None)
 
     if action == "migrate":
@@ -307,17 +307,17 @@ def claw_command(args):
     elif action in {"cleanup", "clean"}:
         _cmd_cleanup(args)
     else:
-        print("Usage: hermes claw <command> [options]")
+        print("Usage: jimmy claw <command> [options]")
         print()
         print("Commands:")
-        print("  migrate          Migrate settings from OpenClaw to Hermes")
+        print("  migrate          Migrate settings from OpenClaw to Jimmy")
         print("  cleanup          Archive leftover OpenClaw directories after migration")
         print()
-        print("Run 'hermes claw <command> --help' for options.")
+        print("Run 'jimmy claw <command> --help' for options.")
 
 
 def _cmd_migrate(args):
-    """Run the OpenClaw → Hermes migration."""
+    """Run the OpenClaw → Jimmy migration."""
     # Check current and legacy OpenClaw directories
     explicit_source = getattr(args, "source", None)
     if explicit_source:
@@ -341,7 +341,7 @@ def _cmd_migrate(args):
 
     # Secrets are never included implicitly — they must be explicitly requested
     # via --migrate-secrets, even under --preset full.  This mirrors OpenClaw's
-    # migrate-hermes posture (two-phase: run once without secrets, rerun with
+    # migrate-jimmy posture (two-phase: run once without secrets, rerun with
     # --include-secrets) and prevents a --preset full invocation from silently
     # importing API keys that the user may not have intended to copy.
 
@@ -370,7 +370,7 @@ def _cmd_migrate(args):
         print()
         print_error(f"OpenClaw directory not found: {source_dir}")
         print_info("Make sure your OpenClaw installation is at the expected path.")
-        print_info("You can specify a custom path: hermes claw migrate --source /path/to/.openclaw")
+        print_info("You can specify a custom path: jimmy claw migrate --source /path/to/.openclaw")
         return
 
     # Find the migration script
@@ -385,12 +385,12 @@ def _cmd_migrate(args):
         return
 
     # Show what we're doing
-    hermes_home = get_hermes_home()
+    jimmy_home = get_jimmy_home()
     auto_yes = getattr(args, "yes", False)
     print()
     print_header("Migration Settings")
     print_info(f"Source:      {source_dir}")
-    print_info(f"Target:      {hermes_home}")
+    print_info(f"Target:      {jimmy_home}")
     print_info(f"Preset:      {preset}")
     print_info(f"Overwrite:   {'yes' if overwrite else 'no (skip conflicts)'}")
     print_info(f"Secrets:     {'yes (allowlisted only)' if migrate_secrets else 'no'}")
@@ -404,7 +404,7 @@ def _cmd_migrate(args):
     # active will cause conflicts (e.g. Telegram 409).
     _warn_if_openclaw_running(auto_yes)
 
-    # Check if a Hermes gateway is running with connected platforms.
+    # Check if a Jimmy gateway is running with connected platforms.
     _warn_if_gateway_running(auto_yes)
 
     # Ensure config.yaml exists before migration tries to read it
@@ -431,7 +431,7 @@ def _cmd_migrate(args):
     try:
         preview = mod.Migrator(
             source_root=source_dir.resolve(),
-            target_root=hermes_home.resolve(),
+            target_root=jimmy_home.resolve(),
             execute=False,
             workspace_target=ws_target,
             overwrite=overwrite,
@@ -486,7 +486,7 @@ def _cmd_migrate(args):
             f"Plan has {preview_conflicts} conflict(s). Refusing to apply."
         )
         print_info(
-            "Each conflict is an item whose target already exists in ~/.hermes/. "
+            "Each conflict is an item whose target already exists in ~/.jimmy/. "
             "Re-run with --overwrite to replace conflicting targets (item-level "
             "backups are written to the migration report directory)."
         )
@@ -498,34 +498,34 @@ def _cmd_migrate(args):
     if not auto_yes:
         if not sys.stdin.isatty():
             print_info("Non-interactive session — preview only.")
-            print_info("To execute, re-run with: hermes claw migrate --yes")
+            print_info("To execute, re-run with: jimmy claw migrate --yes")
             return
         if not prompt_yes_no("Proceed with migration?", default=True):
             print_info("Migration cancelled.")
             return
 
-    # ── Phase 2b: Pre-apply backup of the Hermes home ─────────
-    # Delegates to hermes_cli.backup.create_pre_migration_backup(), which
+    # ── Phase 2b: Pre-apply backup of the Jimmy home ─────────
+    # Delegates to jimmy_cli.backup.create_pre_migration_backup(), which
     # shares implementation with the pre-update backup (same exclusion
     # rules, same SQLite safe-copy, zip format) so the archive is
-    # restorable with `hermes import`.  Mirrors OpenClaw's
+    # restorable with `jimmy import`.  Mirrors OpenClaw's
     # createPreMigrationBackup posture — one atomic restore point before
     # any mutation, auto-pruned to the last 5 pre-migration zips.
     backup_archive: Optional[Path] = None
     if not no_backup:
         try:
-            from hermes_cli.backup import create_pre_migration_backup, _format_size
-            backup_archive = create_pre_migration_backup(hermes_home=hermes_home)
+            from jimmy_cli.backup import create_pre_migration_backup, _format_size
+            backup_archive = create_pre_migration_backup(jimmy_home=jimmy_home)
             if backup_archive:
                 size_str = _format_size(backup_archive.stat().st_size)
                 print()
                 print_success(f"Pre-migration backup: {backup_archive} ({size_str})")
-                print_info(f"Restore with: hermes import {backup_archive.name}")
+                print_info(f"Restore with: jimmy import {backup_archive.name}")
         except Exception as e:
             print()
             print_error(f"Could not create pre-migration backup: {e}")
             print_info(
-                "Re-run with --no-backup to skip, or free up disk space under the Hermes home."
+                "Re-run with --no-backup to skip, or free up disk space under the Jimmy home."
             )
             logger.debug("Pre-migration backup error", exc_info=True)
             return
@@ -533,7 +533,7 @@ def _cmd_migrate(args):
     try:
         migrator = mod.Migrator(
             source_root=source_dir.resolve(),
-            target_root=hermes_home.resolve(),
+            target_root=jimmy_home.resolve(),
             execute=True,
             workspace_target=ws_target,
             overwrite=overwrite,
@@ -550,7 +550,7 @@ def _cmd_migrate(args):
         logger.debug("OpenClaw migration error", exc_info=True)
         if backup_archive:
             print_info(f"A pre-migration backup is available at: {backup_archive}")
-            print_info(f"Restore with: hermes import {backup_archive.name}")
+            print_info(f"Restore with: jimmy import {backup_archive.name}")
         return
 
     # Print results
@@ -558,7 +558,7 @@ def _cmd_migrate(args):
 
     # Source directory is left untouched — archiving is not the migration
     # tool's responsibility.  Users who want to clean up can run
-    # 'hermes claw cleanup' separately.
+    # 'jimmy claw cleanup' separately.
 
 
 def _cmd_cleanup(args):
@@ -621,7 +621,7 @@ def _cmd_cleanup(args):
                 print_info("Non-interactive session — aborting. Stop OpenClaw and re-run.")
                 return
             if not prompt_yes_no("Proceed anyway?", default=False):
-                print_info("Aborted. Stop OpenClaw first, then re-run: hermes claw cleanup")
+                print_info("Aborted. Stop OpenClaw first, then re-run: jimmy claw cleanup")
                 return
 
     total_archived = 0
@@ -675,7 +675,7 @@ def _cmd_cleanup(args):
             print_info(f"Would archive: {source_dir} → {archive_path}")
         elif not auto_yes and not sys.stdin.isatty():
             print_info(f"Non-interactive session — would archive: {source_dir}")
-            print_info("To execute, re-run with: hermes claw cleanup --yes")
+            print_info("To execute, re-run with: jimmy claw cleanup --yes")
         elif auto_yes or prompt_yes_no(f"Archive {source_dir}?", default=True):
             try:
                 archive_path = _archive_directory(source_dir)
@@ -794,7 +794,7 @@ def _print_migration_report(report: dict, dry_run: bool):
     if dry_run:
         print()
         print_info("To execute the migration, run without --dry-run:")
-        print_info(f"  hermes claw migrate --preset {report.get('preset', 'full')}")
+        print_info(f"  jimmy claw migrate --preset {report.get('preset', 'full')}")
     elif migrated:
         print()
         print_success("Migration complete!")
@@ -809,7 +809,7 @@ def _print_migration_report(report: dict, dry_run: bool):
             print(color("  Your OPENROUTER_API_KEY and other provider keys must be added manually.", Colors.YELLOW))
             print()
             print_info("To migrate API keys, re-run with:")
-            print_info("  hermes claw migrate --migrate-secrets")
+            print_info("  jimmy claw migrate --migrate-secrets")
             print()
             print_info("Or add your key manually:")
-            print_info("  hermes config set OPENROUTER_API_KEY sk-or-v1-...")
+            print_info("  jimmy config set OPENROUTER_API_KEY sk-or-v1-...")

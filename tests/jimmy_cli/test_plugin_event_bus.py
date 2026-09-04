@@ -3,14 +3,14 @@
 Covers:
   - Two plugins communicate via emit/subscribe; emit returns listener count
   - Namespace is FORCED to the emitting plugin's own key
-  - Namespace spoofing (hermes:, foreign, already-colon'd) is rejected
+  - Namespace spoofing (jimmy:, foreign, already-colon'd) is rejected
   - Non-blocking bounded delivery for synchronous subscribers
   - Per-callback isolation and deep-copied payload ownership
   - Async subscribers resolved through the loop-safe host path
   - Owner unload / generation reset cancel zombie callbacks
   - Recursion cap: mutually-emitting plugins terminate + warn
   - Manifest emits/listens parsed as optional advisory fields
-  - `hermes plugins show` output includes emits/listens
+  - `jimmy plugins show` output includes emits/listens
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import threading
 
 import pytest
 
-from hermes_cli.plugins import (
+from jimmy_cli.plugins import (
     _EVENT_EMIT_DEPTH_CAP,
     PluginContext,
     PluginManager,
@@ -133,7 +133,7 @@ def test_namespace_falls_back_to_name_when_key_empty():
 @pytest.mark.parametrize(
     "bad_event",
     [
-        "hermes:x",   # reserved core prefix
+        "jimmy:x",   # reserved core prefix
         "a:x",        # foreign namespace
         "b:x",        # even the plugin's own colon'd name — must pass bare only
         "other:evt",
@@ -147,7 +147,7 @@ def test_emit_rejects_namespaced_names(bad_event):
 
     fired = []
     # Subscribe to every plausible delivery target so we can prove no delivery.
-    for name in (bad_event, f"b:{bad_event}", "hermes:x", "a:x", "b:x"):
+    for name in (bad_event, f"b:{bad_event}", "jimmy:x", "a:x", "b:x"):
         ctx_b.subscribe(name, lambda **p: fired.append(name))
 
     with pytest.raises(ValueError):
@@ -164,14 +164,14 @@ def test_emit_rejects_empty_event():
 
 
 def test_subscribe_is_unrestricted():
-    """Any plugin may subscribe to any event, including hermes: and foreign."""
+    """Any plugin may subscribe to any event, including jimmy: and foreign."""
     manager = _fresh_manager()
     ctx_a = _make_ctx(manager, "plugin_a", key="a")
     got = []
     # None of these raise — only emit is namespace-gated.
-    ctx_a.subscribe("hermes:core_event", lambda **p: got.append("hermes"))
+    ctx_a.subscribe("jimmy:core_event", lambda **p: got.append("jimmy"))
     ctx_a.subscribe("b:ping", lambda **p: got.append("b"))
-    assert "hermes:core_event" in manager._subscriptions
+    assert "jimmy:core_event" in manager._subscriptions
     assert "b:ping" in manager._subscriptions
 
 
@@ -237,7 +237,7 @@ def test_emit_returns_before_blocking_subscriber_finishes():
 
 
 def test_pending_budget_drops_new_event_without_blocking(monkeypatch, caplog):
-    from hermes_cli import plugins as plugins_mod
+    from jimmy_cli import plugins as plugins_mod
 
     monkeypatch.setattr(plugins_mod, "_EVENT_PENDING_CAP", 1)
     manager = _fresh_manager()
@@ -469,7 +469,7 @@ def test_manifest_parse_absent_emits_listens(tmp_path):
 
 
 def test_get_plugin_subscriptions_accessor(monkeypatch):
-    from hermes_cli import plugins as plugins_mod
+    from jimmy_cli import plugins as plugins_mod
 
     fresh = _fresh_manager()
     monkeypatch.setattr(plugins_mod, "_ensure_plugins_discovered", lambda force=False: fresh)
@@ -487,7 +487,7 @@ def test_get_plugin_subscriptions_accessor(monkeypatch):
 
 def test_plugins_show_includes_emits_listens(tmp_path, monkeypatch, capsys):
     import yaml
-    from hermes_cli import plugins_cmd
+    from jimmy_cli import plugins_cmd
 
     plugin_dir = tmp_path / "showplug"
     plugin_dir.mkdir()
@@ -522,7 +522,7 @@ def test_plugins_show_includes_emits_listens(tmp_path, monkeypatch, capsys):
 
 
 def test_plugins_show_not_found_exits(monkeypatch, capsys):
-    from hermes_cli import plugins_cmd
+    from jimmy_cli import plugins_cmd
 
     monkeypatch.setattr(plugins_cmd, "_discover_all_plugins", lambda: [])
     with pytest.raises(SystemExit):

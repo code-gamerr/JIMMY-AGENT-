@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from hermes_state import SessionDB
+from jimmy_state import SessionDB
 
 
 @pytest.fixture
@@ -234,7 +234,7 @@ class TestAmbientAccountingContext:
 
 class TestAnalyticsAuxRows:
     def test_aux_usage_rows_and_merge(self, db):
-        from hermes_cli.web_server import (
+        from jimmy_cli.web_server import (
             _aux_task_summary,
             _aux_usage_rows,
             _merge_aux_into_by_model,
@@ -276,7 +276,7 @@ class TestAnalyticsAuxRows:
 
 class TestInsightsAuxTotals:
     def test_overview_totals_include_aux_usage(self, db):
-        """`hermes insights` overview must count aux tokens, not just the
+        """`jimmy insights` overview must count aux tokens, not just the
         sessions counters (issues #58592, #9979)."""
         from agent.insights import InsightsEngine
 

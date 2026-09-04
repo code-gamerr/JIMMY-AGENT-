@@ -1,6 +1,6 @@
 """Tests for `chat -c <title>` failing loudly (stderr) and `--create-if-missing`.
 
-Regression for #86794: a background/quiet `hermes chat -c "<title>" -q "..."`
+Regression for #86794: a background/quiet `jimmy chat -c "<title>" -q "..."`
 against a not-yet-existing titled session silently no-oped — the error message
 was written to stdout (which quiet/programmatic callers treat as the "final
 response" channel) instead of stderr, and there was no way to create the
@@ -20,15 +20,15 @@ import pytest
 
 @pytest.fixture
 def isolated_home(tmp_path, monkeypatch):
-    """Point HERMES_HOME at a temp dir so session creation stays isolated."""
-    home = tmp_path / "hermes_home"
+    """Point JIMMY_HOME at a temp dir so session creation stays isolated."""
+    home = tmp_path / "jimmy_home"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     return home
 
 
 def _create_titled_session(title):
-    from hermes_cli.main import _create_titled_session as fn
+    from jimmy_cli.main import _create_titled_session as fn
 
     return fn(title)
 
@@ -36,7 +36,7 @@ def _create_titled_session(title):
 class TestCreateIfMissingFlagParsing:
     def test_flag_parses_on_chat_subparser(self):
         """--create-if-missing is accepted by the real chat parser."""
-        from hermes_cli._parser import build_top_level_parser
+        from jimmy_cli._parser import build_top_level_parser
 
         parser, _subparsers, _chat_parser = build_top_level_parser()
         args = parser.parse_args(
@@ -47,7 +47,7 @@ class TestCreateIfMissingFlagParsing:
 
     def test_flag_absent_means_false(self):
         """Without the flag, create_if_missing stays unset (SUPPRESS default)."""
-        from hermes_cli._parser import build_top_level_parser
+        from jimmy_cli._parser import build_top_level_parser
 
         parser, _subparsers, _chat_parser = build_top_level_parser()
         args = parser.parse_args(["chat", "-c", "Bot Chat", "-q", "hi"])
@@ -61,7 +61,7 @@ class TestCreateTitledSession:
         sid = _create_titled_session("Bot Chat")
         assert sid, "should return a session id"
 
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         try:
@@ -76,7 +76,7 @@ class TestCreateTitledSession:
         sid = _create_titled_session("Bot Chat")
         assert sid
 
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         try:
@@ -93,7 +93,7 @@ class TestChatCFailLoudlyOnStderr:
         """-c <missing title> → exit 1, message on stderr, stdout untouched."""
         import sys
 
-        import hermes_cli.main as main_mod
+        import jimmy_cli.main as main_mod
 
         stderr_lines = []
 
@@ -131,11 +131,11 @@ class TestChatCFailLoudlyOnStderr:
 
         assert ei.value.args[0] == 1
         assert any("No session found matching 'Bot Chat'" in l for l in stderr_lines)
-        assert not stderr_lines[0].startswith("Use 'hermes sessions list'")
+        assert not stderr_lines[0].startswith("Use 'jimmy sessions list'")
 
     def test_create_if_missing_sets_resume(self, isolated_home, monkeypatch):
         """--create-if-missing resolves to a new session id on args.resume."""
-        import hermes_cli.main as main_mod
+        import jimmy_cli.main as main_mod
 
         args = type(
             "Args",
@@ -150,7 +150,7 @@ class TestChatCFailLoudlyOnStderr:
         main_mod._resolve_continue_arg(args, use_tui=False)
 
         assert args.resume, "resume should be set to the new session id"
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         try:

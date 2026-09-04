@@ -4,7 +4,7 @@ from argparse import Namespace
 from unittest.mock import patch
 
 import pytest
-from hermes_cli.config import DEFAULT_CONFIG, load_config, save_config
+from jimmy_cli.config import DEFAULT_CONFIG, load_config, save_config
 
 
 def _make_setup_args(**overrides):
@@ -41,9 +41,9 @@ class TestNonInteractiveSetup:
 
     def test_reset_flag_rewrites_config_before_noninteractive_exit(self, tmp_path, monkeypatch, capsys):
         """--reset should rewrite config.yaml even when the wizard cannot run interactively."""
-        from hermes_cli.setup import run_setup_wizard
+        from jimmy_cli.setup import run_setup_wizard
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
         cfg = load_config()
         cfg["model"] = {"provider": "custom", "base_url": "http://localhost:8080/v1", "default": "llama3"}
         cfg["agent"]["max_turns"] = 12
@@ -60,14 +60,14 @@ class TestNonInteractiveSetup:
         assert "Configuration reset to defaults." in out
 
     def test_chat_first_run_headless_skips_setup_prompt(self, capsys):
-        """Bare `hermes` should not prompt for input when no provider exists and stdin is headless."""
-        from hermes_cli.main import cmd_chat
+        """Bare `jimmy` should not prompt for input when no provider exists and stdin is headless."""
+        from jimmy_cli.main import cmd_chat
 
         args = _make_chat_args()
 
         with (
-            patch("hermes_cli.main._has_any_provider_configured", return_value=False),
-            patch("hermes_cli.main.cmd_setup") as mock_setup,
+            patch("jimmy_cli.main._has_any_provider_configured", return_value=False),
+            patch("jimmy_cli.main.cmd_setup") as mock_setup,
             patch("sys.stdin") as mock_stdin,
             patch("builtins.input", side_effect=AssertionError("input should not be called")),
         ):
@@ -78,5 +78,5 @@ class TestNonInteractiveSetup:
         assert exc.value.code == 1
         mock_setup.assert_not_called()
         out = capsys.readouterr().out
-        assert "hermes config set model.provider custom" in out
+        assert "jimmy config set model.provider custom" in out
 

@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 
 import agent.secret_scope as ss
-from hermes_constants import (
-    reset_hermes_home_override,
-    set_hermes_home_override,
+from jimmy_constants import (
+    reset_jimmy_home_override,
+    set_jimmy_home_override,
 )
 
 
@@ -38,12 +38,12 @@ def test_auto_resolution_sees_profile_scoped_key(tmp_path):
     Before the fix: the DEEPSEEK_API_KEY lived only in the scope, bare
     os.getenv found nothing, and auto-resolution reported no provider.
     """
-    from hermes_cli.auth import resolve_provider
+    from jimmy_cli.auth import resolve_provider
 
     home = _install_profile(tmp_path, "auto", "DEEPSEEK_API_KEY=sk-scoped\n")
 
     ss.set_multiplex_active(True)
-    home_token = set_hermes_home_override(str(home))
+    home_token = set_jimmy_home_override(str(home))
     try:
         scope_token = ss.set_secret_scope(ss.build_profile_secret_scope(home))
         try:
@@ -51,13 +51,13 @@ def test_auto_resolution_sees_profile_scoped_key(tmp_path):
         finally:
             ss.reset_secret_scope(scope_token)
     finally:
-        reset_hermes_home_override(home_token)
+        reset_jimmy_home_override(home_token)
         ss.set_multiplex_active(False)
 
 
 def test_auto_resolution_falls_back_to_os_environ_when_unscoped(monkeypatch):
     """Single-profile / CLI path unchanged: exported env keys still win."""
-    from hermes_cli.auth import resolve_provider
+    from jimmy_cli.auth import resolve_provider
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-env")
     assert resolve_provider("auto") == "openrouter"
@@ -65,12 +65,12 @@ def test_auto_resolution_falls_back_to_os_environ_when_unscoped(monkeypatch):
 
 def test_auto_resolution_honors_explicit_config_provider(tmp_path):
     """An explicit config provider still wins over env-key detection."""
-    from hermes_cli.auth import resolve_provider
+    from jimmy_cli.auth import resolve_provider
 
     home = _install_profile(tmp_path, "opencode-go", "OPENCODE_GO_API_KEY=sk\n")
 
     ss.set_multiplex_active(True)
-    home_token = set_hermes_home_override(str(home))
+    home_token = set_jimmy_home_override(str(home))
     try:
         scope_token = ss.set_secret_scope(ss.build_profile_secret_scope(home))
         try:
@@ -78,5 +78,5 @@ def test_auto_resolution_honors_explicit_config_provider(tmp_path):
         finally:
             ss.reset_secret_scope(scope_token)
     finally:
-        reset_hermes_home_override(home_token)
+        reset_jimmy_home_override(home_token)
         ss.set_multiplex_active(False)

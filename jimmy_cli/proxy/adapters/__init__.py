@@ -7,11 +7,11 @@ token. See :class:`UpstreamAdapter` for the contract.
 
 from typing import Dict, Type
 
-from hermes_cli.proxy.adapters.base import UpstreamAdapter
-from hermes_cli.proxy.adapters.xai import XAIGrokAdapter
+from jimmy_cli.proxy.adapters.base import UpstreamAdapter
+from jimmy_cli.proxy.adapters.xai import XAIGrokAdapter
 
 # Registry of available adapter classes keyed by provider name as used on
-# the ``hermes proxy start --provider <name>`` CLI flag.
+# the ``jimmy proxy start --provider <name>`` CLI flag.
 ADAPTERS: Dict[str, Type[UpstreamAdapter]] = {
     "xai": XAIGrokAdapter,
 }

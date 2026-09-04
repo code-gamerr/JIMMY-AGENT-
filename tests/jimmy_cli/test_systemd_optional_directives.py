@@ -22,7 +22,7 @@ import pytest
 
 class TestStripOptionalSystemdDirectives:
     def test_removes_restart_max_delay_sec(self):
-        from hermes_cli.gateway import _strip_optional_systemd_directives
+        from jimmy_cli.gateway import _strip_optional_systemd_directives
         text = """[Service]
 Restart=always
 RestartSec=5
@@ -41,18 +41,18 @@ RestartSteps=5
 
     def test_full_unit_comparison(self):
         """Simulate the full stale-check flow with an older systemd unit."""
-        from hermes_cli.gateway import (
+        from jimmy_cli.gateway import (
             _normalize_service_definition,
             _strip_optional_systemd_directives,
         )
         # What the installed unit looks like on older systemd (directives stripped)
         installed = """[Unit]
-Description=Hermes Gateway
+Description=Jimmy Gateway
 After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python -m hermes_cli.main gateway run
+ExecStart=/usr/bin/python -m jimmy_cli.main gateway run
 Restart=always
 RestartSec=5
 KillMode=mixed
@@ -63,12 +63,12 @@ WantedBy=default.target
 """
         # What generate_systemd_unit produces (with the directives)
         expected = """[Unit]
-Description=Hermes Gateway
+Description=Jimmy Gateway
 After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python -m hermes_cli.main gateway run
+ExecStart=/usr/bin/python -m jimmy_cli.main gateway run
 Restart=always
 RestartSec=5
 RestartMaxDelaySec=300
@@ -101,7 +101,7 @@ class TestSystemdUnitIsCurrent:
     def test_unit_without_fatal_config_restart_policy_is_not_current(
         self, tmp_path, monkeypatch,
     ):
-        from hermes_cli import gateway as gw
+        from jimmy_cli import gateway as gw
 
         expected = """[Service]
 Restart=always
@@ -109,7 +109,7 @@ RestartForceExitStatus=75
 RestartPreventExitStatus=78
 """
         installed = expected.replace("RestartPreventExitStatus=78\n", "")
-        unit_file = tmp_path / "hermes-gateway.service"
+        unit_file = tmp_path / "jimmy-gateway.service"
         unit_file.write_text(installed)
 
         monkeypatch.setattr(gw, "get_systemd_unit_path", lambda system=False: unit_file)
@@ -124,10 +124,10 @@ RestartPreventExitStatus=78
     def test_unit_without_optional_directives_is_current(self, tmp_path, monkeypatch):
         """Installed unit missing RestartMaxDelaySec/RestartSteps should be
         considered current when the generated unit includes them."""
-        from hermes_cli import gateway as gw
+        from jimmy_cli import gateway as gw
 
         installed = """[Unit]
-Description=Hermes Gateway
+Description=Jimmy Gateway
 
 [Service]
 Type=simple
@@ -138,7 +138,7 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 """
-        unit_file = tmp_path / "hermes-gateway.service"
+        unit_file = tmp_path / "jimmy-gateway.service"
         unit_file.write_text(installed)
 
         monkeypatch.setattr(gw, "get_systemd_unit_path", lambda system=False: unit_file)
@@ -152,7 +152,7 @@ WantedBy=default.target
 
 
     def test_nonexistent_unit_is_not_current(self, tmp_path, monkeypatch):
-        from hermes_cli import gateway as gw
+        from jimmy_cli import gateway as gw
         unit_file = tmp_path / "nonexistent.service"
         monkeypatch.setattr(gw, "get_systemd_unit_path", lambda system=False: unit_file)
         assert gw.systemd_unit_is_current(system=False) is False

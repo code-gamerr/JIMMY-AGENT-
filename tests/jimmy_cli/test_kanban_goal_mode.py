@@ -4,7 +4,7 @@ Covers three layers:
 
 1. DB: goal_mode / goal_max_turns persist through create_task + from_row,
    and a legacy DB (without the columns) migrates cleanly.
-2. Spawn: _default_spawn sets the HERMES_KANBAN_GOAL_MODE env vars only
+2. Spawn: _default_spawn sets the JIMMY_KANBAN_GOAL_MODE env vars only
    when the card opts in.
 3. Loop: goals.run_kanban_goal_loop continuation / completion / budget
    behaviour, driven entirely through injected callbacks (no live model).
@@ -17,15 +17,15 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban_db as kb
-from hermes_cli import goals
+from jimmy_cli import kanban_db as kb
+from jimmy_cli import goals
 
 
 @pytest.fixture
 def kanban_home(tmp_path, monkeypatch):
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb.init_db()
     return home
@@ -41,9 +41,9 @@ def kanban_home(tmp_path, monkeypatch):
 
 def test_legacy_db_migrates_goal_columns(tmp_path, monkeypatch):
     """A tasks table created without goal columns must gain them on init."""
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     db_path = kb.kanban_db_path()
@@ -133,11 +133,11 @@ def test_loop_stops_when_worker_already_completed(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# CLI judge gate tests (hermes kanban complete bypass fix)
+# CLI judge gate tests (jimmy kanban complete bypass fix)
 # ---------------------------------------------------------------------------
 
 class TestCLIJudgeGate:
-    """hermes kanban complete must apply the same goal_mode judge gate as the
+    """jimmy kanban complete must apply the same goal_mode judge gate as the
     kanban_complete tool (Issue #38367 sibling gap).
 
     Uses mocks for kb.get_task and kb.complete_task to avoid depending on the
@@ -149,7 +149,7 @@ class TestCLIJudgeGate:
         import argparse
         import types
         from unittest.mock import MagicMock
-        from hermes_cli.kanban import _cmd_complete
+        from jimmy_cli.kanban import _cmd_complete
 
         fake_task = types.SimpleNamespace(
             goal_mode=goal_mode,
@@ -170,10 +170,10 @@ class TestCLIJudgeGate:
             complete_calls.append(tid)
             return complete_ok
 
-        monkeypatch.setattr("hermes_cli.kanban.kb.get_task", lambda conn, tid: fake_task)
-        monkeypatch.setattr("hermes_cli.kanban.kb.complete_task", fake_complete_task)
-        monkeypatch.setattr("hermes_cli.kanban.kb.connect_closing", fake_connect_closing)
-        monkeypatch.setattr("hermes_cli.kanban._worker_run_id_for", lambda _: None)
+        monkeypatch.setattr("jimmy_cli.kanban.kb.get_task", lambda conn, tid: fake_task)
+        monkeypatch.setattr("jimmy_cli.kanban.kb.complete_task", fake_complete_task)
+        monkeypatch.setattr("jimmy_cli.kanban.kb.connect_closing", fake_connect_closing)
+        monkeypatch.setattr("jimmy_cli.kanban._worker_run_id_for", lambda _: None)
 
         _aux_client = (object(), "judge-model") if judge_available else (None, None)
         monkeypatch.setattr(
@@ -183,7 +183,7 @@ class TestCLIJudgeGate:
         # Match the real judge_goal contract:
         # (verdict, reason, parse_failed, wait_directive, transport_failed)
         monkeypatch.setattr(
-            "hermes_cli.goals.judge_goal",
+            "jimmy_cli.goals.judge_goal",
             lambda **kw: (verdict, reason, False, None, False),
         )
 

@@ -1,4 +1,4 @@
-"""Shared helpers for attaching Hermes to a local Chromium-family CDP port."""
+"""Shared helpers for attaching Jimmy to a local Chromium-family CDP port."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ def get_chrome_debug_candidates(system: str) -> list[str]:
 
 
 def chrome_debug_data_dir() -> str:
-    return str(get_hermes_home() / "chrome-debug")
+    return str(get_jimmy_home() / "chrome-debug")
 
 
 def _chrome_debug_args(port: int) -> list[str]:

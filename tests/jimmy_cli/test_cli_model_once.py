@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from hermes_cli.model_switch import ModelSwitchResult
+from jimmy_cli.model_switch import ModelSwitchResult
 
 
 class _FakeAgent:
@@ -38,7 +38,7 @@ class _StubCLI:
     ):
         import cli as cli_mod
 
-        return cli_mod.HermesCLI._confirm_and_apply_cli_model_switch(
+        return cli_mod.JimmyCLI._confirm_and_apply_cli_model_switch(
             self, result, persist_global, one_turn, custom_provs
         )
 
@@ -48,13 +48,13 @@ def test_cli_model_once_records_restore_and_does_not_persist(monkeypatch):
 
     stub = _StubCLI()
     stub.agent = _FakeAgent()
-    stub._snapshot_model_runtime = cli_mod.HermesCLI._snapshot_model_runtime.__get__(stub)
+    stub._snapshot_model_runtime = cli_mod.JimmyCLI._snapshot_model_runtime.__get__(stub)
     printed = []
 
     monkeypatch.setattr(cli_mod, "_cprint", lambda s, *a, **k: printed.append(str(s)))
     monkeypatch.setattr(cli_mod, "save_config_value", lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not persist")))
     monkeypatch.setattr(
-        "hermes_cli.inventory.load_picker_context",
+        "jimmy_cli.inventory.load_picker_context",
         lambda: SimpleNamespace(
             user_providers=None,
             custom_providers=None,
@@ -62,7 +62,7 @@ def test_cli_model_once_records_restore_and_does_not_persist(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        "hermes_cli.model_switch.switch_model",
+        "jimmy_cli.model_switch.switch_model",
         lambda **_: ModelSwitchResult(
             success=True,
             new_model="claude-sonnet-4.6",
@@ -73,9 +73,9 @@ def test_cli_model_once_records_restore_and_does_not_persist(monkeypatch):
             provider_label="Anthropic",
         ),
     )
-    monkeypatch.setattr("hermes_cli.model_switch.resolve_display_context_length", lambda *a, **k: None)
+    monkeypatch.setattr("jimmy_cli.model_switch.resolve_display_context_length", lambda *a, **k: None)
 
-    cli_mod.HermesCLI._handle_model_switch(
+    cli_mod.JimmyCLI._handle_model_switch(
         stub,
         "/model claude-sonnet-4.6 --provider anthropic --once",
     )
@@ -103,7 +103,7 @@ def test_cli_restore_model_runtime_snapshot_restores_agent():
         "api_mode": "chat_completions",
     }
 
-    cli_mod.HermesCLI._restore_model_runtime_snapshot(stub, snapshot)
+    cli_mod.JimmyCLI._restore_model_runtime_snapshot(stub, snapshot)
 
     assert stub.model == "old/model"
     assert stub.provider == "openrouter"
@@ -144,7 +144,7 @@ def test_cli_restore_model_runtime_prefers_primary_runtime():
         },
     }
 
-    cli_mod.HermesCLI._restore_model_runtime_snapshot(stub, snapshot)
+    cli_mod.JimmyCLI._restore_model_runtime_snapshot(stub, snapshot)
 
     assert stub.agent.model == "old/model"
     assert stub.agent.provider == "openrouter"

@@ -1,19 +1,19 @@
 """Tests for the configurable default interface (cli vs tui).
 
-`hermes` launches the classic prompt_toolkit REPL by default, but users can
+`jimmy` launches the classic prompt_toolkit REPL by default, but users can
 flip ``display.interface: tui`` in config.yaml to make the modern Ink TUI the
-default for bare ``hermes`` / ``hermes chat``. Explicit flags always win:
+default for bare ``jimmy`` / ``jimmy chat``. Explicit flags always win:
 
     --cli                forces the classic REPL (highest precedence)
     --tui                forces the TUI
     (no TTY)             forces the classic REPL — ambient prefs don't apply
-    HERMES_TUI=1         the env default
+    JIMMY_TUI=1         the env default
     display.interface    the configured default
     (unset)              classic REPL
 
 The no-TTY gate exists because ambient TUI preferences must never hijack
 non-interactive invocations: kanban workers / cron / pipelines run
-``hermes … chat -q`` on a pipe, and the TUI's no-TTY bail-out exits 0
+``jimmy … chat -q`` on a pipe, and the TUI's no-TTY bail-out exits 0
 without doing the work (a kanban worker then dies with "protocol
 violation" on every attempt).
 
@@ -23,7 +23,7 @@ These tests pin that precedence at every layer that makes the decision:
     ``cmd_chat`` and the Termux fast-TUI path.
   * ``_wants_tui_early(argv)``  — the dependency-free early resolver used by
     mouse-residue suppression and the Termux fast paths, before argparse and
-    ``hermes_cli.config`` are importable.
+    ``jimmy_cli.config`` are importable.
   * the argument parser   — both ``--cli`` and ``--tui`` parse at the top
     level and under the ``chat`` subcommand and are relaunch-inherited.
 """
@@ -35,15 +35,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from hermes_cli import main as m
+from jimmy_cli import main as m
 
 
 @pytest.fixture(autouse=True)
 def _reset_early_cache(monkeypatch):
     # The early resolver memoizes the config read; clear it so each test sees
-    # a fresh value, and make sure no stray HERMES_TUI leaks in.
+    # a fresh value, and make sure no stray JIMMY_TUI leaks in.
     monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
-    monkeypatch.delenv("HERMES_TUI", raising=False)
+    monkeypatch.delenv("JIMMY_TUI", raising=False)
     yield
     monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
 
@@ -63,7 +63,7 @@ def _fake_tty(monkeypatch, interactive: bool):
 
 
 def _patch_config(monkeypatch, interface):
-    import hermes_cli.config as cfg
+    import jimmy_cli.config as cfg
 
     monkeypatch.setattr(
         cfg, "load_config", lambda: {"display": {"interface": interface}}
@@ -80,7 +80,7 @@ class TestResolveUseTui:
 
 
     def test_load_config_failure_falls_back_to_cli(self, monkeypatch):
-        import hermes_cli.config as cfg
+        import jimmy_cli.config as cfg
 
         def boom():
             raise RuntimeError("config unreadable")
@@ -102,7 +102,7 @@ class TestWantsTuiEarly:
             (tmp_path / "config.yaml").write_text(
                 f"display:\n  interface: {interface}\n"
             )
-            monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+            monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
             monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
 
         return _make
@@ -113,15 +113,15 @@ class TestWantsTuiEarly:
         assert m._wants_tui_early([]) is False
 
     def test_missing_config_defaults_to_cli(self, tmp_path, monkeypatch):
-        # HERMES_HOME points at an empty dir — no config.yaml.
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        # JIMMY_HOME points at an empty dir — no config.yaml.
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
         monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
         assert m._wants_tui_early([]) is False
 
     def test_unreadable_config_defaults_to_cli(self, tmp_path, monkeypatch):
         # Garbage YAML must not crash the hot path; falls back to cli.
         (tmp_path / "config.yaml").write_text("this: : : not valid yaml\n")
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
         monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
         assert m._wants_tui_early([]) is False
 
@@ -131,7 +131,7 @@ class TestWantsTuiEarly:
 # ---------------------------------------------------------------------------
 class TestParserFlags:
     def _parser(self):
-        from hermes_cli._parser import build_top_level_parser
+        from jimmy_cli._parser import build_top_level_parser
 
         parser, _subparsers, _chat = build_top_level_parser()
         return parser
@@ -146,7 +146,7 @@ class TestParserFlags:
         assert args.tui is True
 
     def test_cli_and_tui_are_relaunch_inherited(self):
-        from hermes_cli.relaunch import _INHERITED_FLAGS_TABLE
+        from jimmy_cli.relaunch import _INHERITED_FLAGS_TABLE
 
         inherited = {flag for flag, _takes_value in _INHERITED_FLAGS_TABLE}
         assert "--cli" in inherited
@@ -157,6 +157,6 @@ class TestParserFlags:
 # config default — shipped default preserves classic behavior
 # ---------------------------------------------------------------------------
 def test_default_config_interface_is_cli():
-    from hermes_cli.config import DEFAULT_CONFIG
+    from jimmy_cli.config import DEFAULT_CONFIG
 
     assert DEFAULT_CONFIG["display"]["interface"] == "cli"

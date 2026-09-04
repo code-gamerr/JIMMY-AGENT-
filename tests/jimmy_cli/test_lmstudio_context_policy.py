@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from hermes_cli import models
+from jimmy_cli import models
 
 
 MODEL = "publisher/model"

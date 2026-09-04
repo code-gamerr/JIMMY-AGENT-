@@ -1,4 +1,4 @@
-"""Tests for hermes_cli.tools_config platform tool persistence."""
+"""Tests for jimmy_cli.tools_config platform tool persistence."""
 
 import logging
 import subprocess
@@ -8,9 +8,9 @@ from unittest.mock import patch
 import pytest
 
 from tools.browser_tool import AGENT_BROWSER_NPX_SPEC
-from hermes_cli.nous_account import NousPortalAccountInfo, NousToolAccessInfo
-from hermes_cli.nous_subscription import NousSubscriptionFeatures
-from hermes_cli.tools_config import (
+from jimmy_cli.nous_account import NousPortalAccountInfo, NousToolAccessInfo
+from jimmy_cli.nous_subscription import NousSubscriptionFeatures
+from jimmy_cli.tools_config import (
     _DEFAULT_OFF_TOOLSETS,
     _RECENTLY_SHIPPED_TOOLSETS,
     _apply_toolset_change,
@@ -37,26 +37,26 @@ from hermes_cli.tools_config import (
 
 def test_all_invalid_platform_toolsets_logs_runtime_warning(caplog):
     """#38798: an explicit platform config whose toolset names are all invalid
-    (e.g. 'hermes' instead of 'hermes-cli') must warn at resolve time so an
+    (e.g. 'jimmy' instead of 'jimmy-cli') must warn at resolve time so an
     already-corrupted config is caught at runtime, not just during migration."""
-    import hermes_cli.tools_config as _tc
+    import jimmy_cli.tools_config as _tc
     # The runtime warning fires once per platform per process; clear the guard
     # so this test is deterministic regardless of prior resolutions.
     _tc._warned_invalid_platform_toolsets.discard("cli")
-    config = {"platform_toolsets": {"cli": ["hermes"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy"]}}
 
-    with caplog.at_level(logging.WARNING, logger="hermes_cli.tools_config"):
+    with caplog.at_level(logging.WARNING, logger="jimmy_cli.tools_config"):
         _get_platform_tools(config, "cli")
 
     warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert any("#38798" in m and "hermes" in m for m in warnings), warnings
+    assert any("#38798" in m and "jimmy" in m for m in warnings), warnings
 
 
 def test_valid_platform_toolsets_no_runtime_warning(caplog):
     """A correctly-configured platform must not emit the #38798 warning."""
-    config = {"platform_toolsets": {"cli": ["hermes-cli"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy-cli"]}}
 
-    with caplog.at_level(logging.WARNING, logger="hermes_cli.tools_config"):
+    with caplog.at_level(logging.WARNING, logger="jimmy_cli.tools_config"):
         _get_platform_tools(config, "cli")
 
     assert not any("#38798" in r.getMessage() for r in caplog.records)
@@ -66,9 +66,9 @@ def test_partially_valid_platform_toolsets_no_runtime_warning(caplog):
     """When at least one configured toolset is valid, tools still resolve, so
     the runtime zero-tools warning must not fire (the migration-time check still
     flags the individual bad name)."""
-    config = {"platform_toolsets": {"cli": ["hermes-cli", "bogus"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy-cli", "bogus"]}}
 
-    with caplog.at_level(logging.WARNING, logger="hermes_cli.tools_config"):
+    with caplog.at_level(logging.WARNING, logger="jimmy_cli.tools_config"):
         _get_platform_tools(config, "cli")
 
     assert not any("#38798" in r.getMessage() for r in caplog.records)
@@ -119,7 +119,7 @@ def test_get_platform_tools_homeassistant_uses_active_profile_token(monkeypatch)
 
 # ─── #35527: platform-restricted default-off toolsets (discord/discord_admin)
 # are stripped by _DEFAULT_OFF_TOOLSETS even when the user explicitly opts in
-# via the platform's native composite. The composite ``hermes-discord``
+# via the platform's native composite. The composite ``jimmy-discord``
 # contains both ``discord`` and ``discord_admin`` tools, so configuring it is
 # an explicit opt-in that should survive the default-off strip. ───────────────
 
@@ -128,7 +128,7 @@ def test_discord_toolsets_do_not_leak_to_other_platforms():
     """Layer 4 (guard): discord/discord_admin are platform-restricted — they
     must never appear on a non-discord platform even when that platform is
     explicitly configured."""
-    config = {"platform_toolsets": {"telegram": ["hermes-telegram", "discord"]}}
+    config = {"platform_toolsets": {"telegram": ["jimmy-telegram", "discord"]}}
     enabled = _get_platform_tools(config, "telegram")
     assert "discord" not in enabled
     assert "discord_admin" not in enabled
@@ -141,7 +141,7 @@ def test_discord_toolsets_do_not_leak_to_other_platforms():
 
 
 def test_toolset_has_keys_for_vision_accepts_codex_auth(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     (tmp_path / "auth.json").write_text(
         '{"active_provider":"openai-codex","providers":{"openai-codex":{"tokens":{"access_token": "codex-...oken","refresh_token": "codex-...oken"}}}}'
     )
@@ -160,7 +160,7 @@ def test_toolset_has_keys_for_vision_accepts_codex_auth(tmp_path, monkeypatch):
 def test_save_platform_tools_preserves_mcp_server_names():
     """Ensure MCP server names are preserved when saving platform tools.
 
-    Regression test for https://github.com/NousResearch/hermes-agent/issues/1247
+    Regression test for https://github.com/Jimmy/jimmy-agent/issues/1247
     """
     config = {
         "platform_toolsets": {
@@ -170,7 +170,7 @@ def test_save_platform_tools_preserves_mcp_server_names():
 
     new_selection = {"web", "browser"}
 
-    with patch("hermes_cli.tools_config.save_config"):
+    with patch("jimmy_cli.tools_config.save_config"):
         _save_platform_tools(config, "cli", new_selection)
 
     saved_toolsets = config["platform_toolsets"]["cli"]
@@ -209,7 +209,7 @@ def test_first_install_nous_auto_configures_video_gen(monkeypatch):
     video_gen.use_gateway so the FAL plugin can route through the gateway
     at runtime.  Regression test for the bug where video_gen was marked as
     auto-configured but no config was actually written."""
-    monkeypatch.setattr("hermes_cli.nous_subscription.managed_nous_tools_enabled", lambda: True)
+    monkeypatch.setattr("jimmy_cli.nous_subscription.managed_nous_tools_enabled", lambda: True)
     config = {
         "model": {"provider": "nous"},
         "platform_toolsets": {"cli": []},
@@ -230,16 +230,16 @@ def test_first_install_nous_auto_configures_video_gen(monkeypatch):
         monkeypatch.delenv(env_var, raising=False)
 
     monkeypatch.setattr(
-        "hermes_cli.tools_config._prompt_toolset_checklist",
+        "jimmy_cli.tools_config._prompt_toolset_checklist",
         lambda *args, **kwargs: {"video_gen"},
     )
-    monkeypatch.setattr("hermes_cli.tools_config.save_config", lambda config: None)
+    monkeypatch.setattr("jimmy_cli.tools_config.save_config", lambda config: None)
     monkeypatch.setattr(
-        "hermes_cli.tools_config._get_enabled_platforms",
+        "jimmy_cli.tools_config._get_enabled_platforms",
         lambda: ["cli"],
     )
     monkeypatch.setattr(
-        "hermes_cli.nous_subscription.get_nous_portal_account_info",
+        "jimmy_cli.nous_subscription.get_nous_portal_account_info",
         lambda *args, **kwargs: NousPortalAccountInfo(
             logged_in=True,
             source="jwt",
@@ -250,7 +250,7 @@ def test_first_install_nous_auto_configures_video_gen(monkeypatch):
 
     configured = []
     monkeypatch.setattr(
-        "hermes_cli.tools_config._configure_toolset",
+        "jimmy_cli.tools_config._configure_toolset",
         lambda ts_key, config: configured.append(ts_key),
     )
 
@@ -269,7 +269,7 @@ class TestPlatformToolsetConsistency:
 
     def test_all_platforms_have_toolset_definitions(self):
         """Each platform's default_toolset must exist in TOOLSETS."""
-        from hermes_cli.tools_config import PLATFORMS
+        from jimmy_cli.tools_config import PLATFORMS
         from toolsets import TOOLSETS
 
         for platform, meta in PLATFORMS.items():
@@ -280,11 +280,11 @@ class TestPlatformToolsetConsistency:
             )
 
     def test_gateway_toolset_includes_all_messaging_platforms(self):
-        """hermes-gateway includes list should cover all messaging platforms."""
-        from hermes_cli.tools_config import PLATFORMS
+        """jimmy-gateway includes list should cover all messaging platforms."""
+        from jimmy_cli.tools_config import PLATFORMS
         from toolsets import TOOLSETS
 
-        gateway_includes = set(TOOLSETS["hermes-gateway"]["includes"])
+        gateway_includes = set(TOOLSETS["jimmy-gateway"]["includes"])
         # Exclude non-messaging platforms from the check
         non_messaging = {"cli", "api_server", "cron"}
         for platform, meta in PLATFORMS.items():
@@ -293,13 +293,13 @@ class TestPlatformToolsetConsistency:
             ts_name = meta["default_toolset"]
             assert ts_name in gateway_includes, (
                 f"Platform {platform!r} toolset {ts_name!r} missing from "
-                f"hermes-gateway includes"
+                f"jimmy-gateway includes"
             )
 
     def test_skills_config_covers_tools_config_platforms(self):
         """skills_config.PLATFORMS should have entries for all gateway platforms."""
-        from hermes_cli.tools_config import PLATFORMS as TOOLS_PLATFORMS
-        from hermes_cli.skills_config import PLATFORMS as SKILLS_PLATFORMS
+        from jimmy_cli.tools_config import PLATFORMS as TOOLS_PLATFORMS
+        from jimmy_cli.skills_config import PLATFORMS as SKILLS_PLATFORMS
 
         non_messaging = {"api_server"}
         for platform in TOOLS_PLATFORMS:
@@ -317,7 +317,7 @@ def test_numeric_mcp_server_name_does_not_crash_sorted():
     _get_platform_tools must normalise them to str so that sorted()
     on the returned set never raises TypeError on mixed int/str.
 
-    Regression test for https://github.com/NousResearch/hermes-agent/issues/6901
+    Regression test for https://github.com/Jimmy/jimmy-agent/issues/6901
     """
     config = {
         "platform_toolsets": {"cli": ["web", 12306]},
@@ -352,7 +352,7 @@ class TestAgentBrowserPostSetup:
 
     agent-browser is no longer a root package.json dependency (there's no
     local `npm install` step anymore); it resolves at runtime via
-    tools.browser_tool._find_agent_browser (PATH -> Homebrew/Hermes-managed
+    tools.browser_tool._find_agent_browser (PATH -> Homebrew/Jimmy-managed
     node -> local .bin -> npx). This class exercises the Chromium-install
     branch of _run_post_setup, which now delegates to that same resolution
     cascade instead of hand-rolling its own node_modules/.bin/agent-browser
@@ -366,13 +366,13 @@ class TestAgentBrowserPostSetup:
         Chromium-branch tests never bootstrap uv / hit the network, and so
         their print/subprocess assertions stay scoped to the agent-browser
         logic under test."""
-        with patch("hermes_cli.tools_config._ensure_browser_use_cli") as stub:
+        with patch("jimmy_cli.tools_config._ensure_browser_use_cli") as stub:
             yield stub
 
     def test_warns_when_neither_npx_nor_agent_browser_on_path(self):
         with patch("shutil.which", return_value=None), patch(
             "subprocess.run"
-        ) as run, patch("hermes_cli.tools_config._print_warning") as warn:
+        ) as run, patch("jimmy_cli.tools_config._print_warning") as warn:
             _run_post_setup("agent_browser")
 
         run.assert_not_called()
@@ -400,7 +400,7 @@ class TestAgentBrowserPostSetup:
         ) as run, patch(
             "tools.browser_tool._chromium_installed", return_value=True
         ), patch(
-            "hermes_cli.tools_config._print_success"
+            "jimmy_cli.tools_config._print_success"
         ) as success:
             _run_post_setup("agent_browser")
 
@@ -418,7 +418,7 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._running_in_docker", return_value=True
         ), patch(
-            "hermes_cli.tools_config._print_warning"
+            "jimmy_cli.tools_config._print_warning"
         ) as warn:
             _run_post_setup("agent_browser")
 
@@ -439,7 +439,7 @@ class TestAgentBrowserPostSetup:
             "tools.browser_tool._find_agent_browser",
             side_effect=FileNotFoundError("agent-browser CLI not found"),
         ), patch(
-            "hermes_cli.tools_config._print_warning"
+            "jimmy_cli.tools_config._print_warning"
         ) as warn:
             _run_post_setup("agent_browser")
 
@@ -466,7 +466,7 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._find_agent_browser", return_value="npx agent-browser"
         ), patch(
-            "hermes_cli.tools_config._print_success"
+            "jimmy_cli.tools_config._print_success"
         ):
             run.return_value = SimpleNamespace(returncode=0, stdout="", stderr="")
             _run_post_setup("agent_browser")
@@ -477,12 +477,12 @@ class TestAgentBrowserPostSetup:
         ]
 
     def test_installs_chromium_via_npx_resolved_only_through_extended_path(self):
-        """Hermes-managed-Node-only setups: npx resolves via
+        """Jimmy-managed-Node-only setups: npx resolves via
         _find_agent_browser's extended-PATH fallback, not a bare PATH lookup.
         The install command must use that same resolved npx, not silently
         hand subprocess.run a None argument from a bare shutil.which('npx')
         re-derivation (#43564 regression — Copilot review, task #9)."""
-        hermes_npx = "/home/user/.hermes/node/bin/npx"
+        jimmy_npx = "/home/user/.jimmy/node/bin/npx"
         with patch("shutil.which", return_value=None), patch(
             "subprocess.run"
         ) as run, patch(
@@ -492,16 +492,16 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._find_agent_browser", return_value="npx agent-browser"
         ), patch(
-            "tools.browser_tool._resolve_npx_bin", return_value=hermes_npx
+            "tools.browser_tool._resolve_npx_bin", return_value=jimmy_npx
         ), patch(
-            "hermes_cli.tools_config._print_success"
+            "jimmy_cli.tools_config._print_success"
         ):
             run.return_value = SimpleNamespace(returncode=0, stdout="", stderr="")
             _run_post_setup("agent_browser")
 
         run.assert_called_once()
         assert run.call_args.args[0] == [
-            hermes_npx, "--ignore-scripts", "-y", AGENT_BROWSER_NPX_SPEC, "install", "--with-deps",
+            jimmy_npx, "--ignore-scripts", "-y", AGENT_BROWSER_NPX_SPEC, "install", "--with-deps",
         ]
 
     def test_warns_instead_of_crashing_when_npx_unresolvable_after_all(self):
@@ -520,7 +520,7 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._resolve_npx_bin", return_value=None
         ), patch(
-            "hermes_cli.tools_config._print_warning"
+            "jimmy_cli.tools_config._print_warning"
         ) as warn:
             _run_post_setup("agent_browser")  # must not raise
 
@@ -541,7 +541,7 @@ class TestAgentBrowserPostSetup:
             "tools.browser_tool._find_agent_browser",
             return_value="/usr/local/bin/agent-browser",
         ), patch(
-            "hermes_cli.tools_config._print_success"
+            "jimmy_cli.tools_config._print_success"
         ):
             run.return_value = SimpleNamespace(returncode=0, stdout="", stderr="")
             _run_post_setup("agent_browser")
@@ -566,7 +566,7 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._find_agent_browser", return_value="npx agent-browser"
         ), patch(
-            "hermes_cli.tools_config._print_success"
+            "jimmy_cli.tools_config._print_success"
         ):
             _bt._cached_chromium_installed = True
             _run_post_setup("agent_browser")
@@ -593,9 +593,9 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._find_agent_browser", return_value="npx agent-browser"
         ), patch(
-            "hermes_cli.tools_config._print_warning"
+            "jimmy_cli.tools_config._print_warning"
         ) as warn, patch(
-            "hermes_cli.tools_config._print_info"
+            "jimmy_cli.tools_config._print_info"
         ) as info:
             _bt._cached_chromium_installed = "sentinel"
             _run_post_setup("agent_browser")
@@ -619,7 +619,7 @@ class TestAgentBrowserPostSetup:
         ), patch(
             "tools.browser_tool._find_agent_browser", return_value="npx agent-browser"
         ), patch(
-            "hermes_cli.tools_config._print_warning"
+            "jimmy_cli.tools_config._print_warning"
         ) as warn:
             _run_post_setup("agent_browser")  # must not raise
 
@@ -634,7 +634,7 @@ class TestBrowserUseCliInstalledForAllNonCamofoxBackends:
 
     @pytest.mark.parametrize("key", ["agent_browser", "browserbase", "browser_use_cli"])
     def test_browser_post_setup_attempts_cli_install(self, key):
-        with patch("hermes_cli.tools_config._ensure_browser_use_cli") as ensure, patch(
+        with patch("jimmy_cli.tools_config._ensure_browser_use_cli") as ensure, patch(
             "shutil.which", return_value=None
         ), patch("subprocess.run"):
             _run_post_setup(key)
@@ -644,8 +644,8 @@ class TestBrowserUseCliInstalledForAllNonCamofoxBackends:
         """Camofox is Firefox-based with no CDP surface; the CDP-only
         browser-use harness cannot drive it, so its setup must not pull
         the CLI in."""
-        with patch("hermes_cli.tools_config._ensure_browser_use_cli") as ensure, patch(
-            "hermes_constants.find_node_executable", return_value=None
+        with patch("jimmy_cli.tools_config._ensure_browser_use_cli") as ensure, patch(
+            "jimmy_constants.find_node_executable", return_value=None
         ), patch("subprocess.run"):
             _run_post_setup("camofox")
         ensure.assert_not_called()
@@ -653,14 +653,14 @@ class TestBrowserUseCliInstalledForAllNonCamofoxBackends:
     def test_ensure_helper_always_delegates_to_install_cli(self):
         """MANAGED-FIRST: a browser-use on PATH must not short-circuit the
         helper — install_cli() owns the managed-copy check and provisions
-        $HERMES_HOME/bin when only side installs exist."""
+        $JIMMY_HOME/bin when only side installs exist."""
         with patch(
-            "hermes_cli.tools_config.shutil.which", return_value="/usr/bin/browser-use"
+            "jimmy_cli.tools_config.shutil.which", return_value="/usr/bin/browser-use"
         ), patch(
             "tools.browser_use_cli.install_cli",
             return_value=(True, "browser-use CLI already installed (/managed/bin/browser-use)"),
         ) as install:
-            from hermes_cli.tools_config import _ensure_browser_use_cli
+            from jimmy_cli.tools_config import _ensure_browser_use_cli
 
             _ensure_browser_use_cli()
         install.assert_called_once()
@@ -668,14 +668,14 @@ class TestBrowserUseCliInstalledForAllNonCamofoxBackends:
     def test_ensure_helper_install_failure_is_non_fatal(self):
         """A failed install must warn and fall back, never raise — the
         uvx zero-install path and the built-in tools remain available."""
-        from hermes_cli.tools_config import _ensure_browser_use_cli
+        from jimmy_cli.tools_config import _ensure_browser_use_cli
 
         with patch(
-            "hermes_cli.tools_config.shutil.which", return_value=None
+            "jimmy_cli.tools_config.shutil.which", return_value=None
         ), patch(
             "tools.browser_use_cli.install_cli",
             return_value=(False, "`uv tool install browser-use` failed:\nboom"),
-        ), patch("hermes_cli.tools_config._print_warning") as warn:
+        ), patch("jimmy_cli.tools_config._print_warning") as warn:
             _ensure_browser_use_cli()  # must not raise
 
         assert any("failed" in c.args[0] for c in warn.call_args_list)
@@ -685,12 +685,12 @@ class TestImagegenBackendRegistry:
     """IMAGEGEN_BACKENDS tags drive the model picker flow in tools_config."""
 
     def test_fal_backend_registered(self):
-        from hermes_cli.tools_config import IMAGEGEN_BACKENDS
+        from jimmy_cli.tools_config import IMAGEGEN_BACKENDS
         assert "fal" in IMAGEGEN_BACKENDS
 
     def test_fal_catalog_loads_lazily(self):
         """catalog_fn should defer import to avoid import cycles."""
-        from hermes_cli.tools_config import IMAGEGEN_BACKENDS
+        from jimmy_cli.tools_config import IMAGEGEN_BACKENDS
         catalog, default = IMAGEGEN_BACKENDS["fal"]["catalog_fn"]()
         assert default == "fal-ai/flux-2/klein/9b"
         assert "fal-ai/flux-2/klein/9b" in catalog
@@ -699,7 +699,7 @@ class TestImagegenBackendRegistry:
     def test_image_gen_providers_tagged_with_fal_backend(self):
         """Both Nous Subscription and FAL.ai providers must carry the
         imagegen_backend tag so _configure_provider fires the picker."""
-        from hermes_cli.tools_config import TOOL_CATEGORIES
+        from jimmy_cli.tools_config import TOOL_CATEGORIES
         providers = TOOL_CATEGORIES["image_gen"]["providers"]
         for p in providers:
             assert p.get("imagegen_backend") == "fal", (
@@ -712,10 +712,10 @@ class TestImagegenModelPicker:
     curses fallback semantics (returns default when stdin isn't a TTY)."""
 
     def test_picker_writes_chosen_model_to_config(self):
-        from hermes_cli.tools_config import _configure_imagegen_model
+        from jimmy_cli.tools_config import _configure_imagegen_model
         config = {}
         # Force _prompt_choice to pick index 1 (second-in-ordered-list).
-        with patch("hermes_cli.tools_config._prompt_choice", return_value=1):
+        with patch("jimmy_cli.tools_config._prompt_choice", return_value=1):
             _configure_imagegen_model("fal", config)
         # ordered[0] == current (default klein), ordered[1] == first non-default
         assert config["image_gen"]["model"] != "fal-ai/flux-2/klein/9b"
@@ -724,7 +724,7 @@ class TestImagegenModelPicker:
     def test_picker_with_gpt_image_does_not_prompt_quality(self):
         """GPT-Image quality is pinned to medium in the tool's defaults —
         no follow-up prompt, no config write for quality_setting."""
-        from hermes_cli.tools_config import (
+        from jimmy_cli.tools_config import (
             _configure_imagegen_model,
             IMAGEGEN_BACKENDS,
         )
@@ -740,7 +740,7 @@ class TestImagegenModelPicker:
             return gpt_idx
 
         config = {}
-        with patch("hermes_cli.tools_config._prompt_choice", side_effect=fake_prompt):
+        with patch("jimmy_cli.tools_config._prompt_choice", side_effect=fake_prompt):
             _configure_imagegen_model("fal", config)
 
         assert call_count["n"] == 1, (
@@ -753,16 +753,16 @@ class TestImagegenModelPicker:
     def test_picker_repairs_corrupt_config_section(self):
         """When image_gen is a non-dict (user-edit YAML), the picker should
         replace it with a fresh dict rather than crash."""
-        from hermes_cli.tools_config import _configure_imagegen_model
+        from jimmy_cli.tools_config import _configure_imagegen_model
         config = {"image_gen": "some-garbage-string"}
-        with patch("hermes_cli.tools_config._prompt_choice", return_value=0):
+        with patch("jimmy_cli.tools_config._prompt_choice", return_value=0):
             _configure_imagegen_model("fal", config)
         assert isinstance(config["image_gen"], dict)
         assert config["image_gen"]["model"] == "fal-ai/flux-2/klein/9b"
 
     def test_plugin_picker_falls_back_when_default_is_missing_from_catalog(self):
         """A stale cross-provider model must not become an unindexable row."""
-        from hermes_cli.tools_config import _configure_imagegen_model_for_plugin
+        from jimmy_cli.tools_config import _configure_imagegen_model_for_plugin
 
         catalog = {
             "openai/gpt-5.4-image-2": {"strengths": "quality"},
@@ -771,10 +771,10 @@ class TestImagegenModelPicker:
         config = {"image_gen": {"model": "gpt-image-2-medium"}}
         with (
             patch(
-                "hermes_cli.tools_config._plugin_image_gen_catalog",
+                "jimmy_cli.tools_config._plugin_image_gen_catalog",
                 return_value=(catalog, "also-missing"),
             ),
-            patch("hermes_cli.tools_config._prompt_choice", return_value=0),
+            patch("jimmy_cli.tools_config._prompt_choice", return_value=0),
         ):
             _configure_imagegen_model_for_plugin("openrouter", config)
 
@@ -788,10 +788,10 @@ class TestImagegenModelPicker:
 def test_get_effective_configurable_toolsets_dedupes_bundled_plugins():
     """Bundled plugins (plugins/spotify) share their toolset key with the
     built-in CONFIGURABLE_TOOLSETS entry. The effective list must not list
-    them twice — otherwise `hermes tools` → "reconfigure existing" shows
+    them twice — otherwise `jimmy tools` → "reconfigure existing" shows
     the same toolset two rows in a row.
     """
-    from hermes_cli.tools_config import _get_effective_configurable_toolsets
+    from jimmy_cli.tools_config import _get_effective_configurable_toolsets
 
     all_ts = _get_effective_configurable_toolsets()
     keys = [ts_key for ts_key, _, _ in all_ts]
@@ -824,13 +824,13 @@ def test_get_effective_configurable_toolsets_dedupes_bundled_plugins():
 
 
 # ── Checklist diff scope: non-configurable toolsets (kanban) must not be
-#    reported as added/removed by `hermes tools` ──────────────────────────
+#    reported as added/removed by `jimmy tools` ──────────────────────────
 
 
 
 
 def test_kanban_not_reported_as_removed_in_diff():
-    """Reproduces the false-signal bug: `hermes tools` printed ``- kanban``
+    """Reproduces the false-signal bug: `jimmy tools` printed ``- kanban``
     when saving a platform that resolves kanban as enabled, even though the
     checklist never offered kanban as a toggle.
 
@@ -859,9 +859,9 @@ def test_kanban_not_reported_as_removed_in_diff():
 
 def test_vision_picker_custom_endpoint(tmp_path, monkeypatch):
     """Custom endpoint writes base_url+model to config and the key to env."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    import hermes_cli.tools_config as tc
-    from hermes_cli.config import load_config
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+    import jimmy_cli.tools_config as tc
+    from jimmy_cli.config import load_config
 
     seq = iter([2])  # Custom OpenAI-compatible endpoint
     prompts = iter(["https://my.endpoint/v1", "sk-secret", "my-vision-model"])
@@ -902,7 +902,7 @@ def _fake_features(*, logged_in: bool, paid: bool = True):
 
 
 def test_visible_providers_reuses_logged_out_feature_snapshot(monkeypatch):
-    import hermes_cli.tools_config as tools_config
+    import jimmy_cli.tools_config as tools_config
 
     account = NousPortalAccountInfo(
         logged_in=False,
@@ -934,7 +934,7 @@ def test_visible_providers_reuses_logged_out_feature_snapshot(monkeypatch):
 
 
 def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
-    import hermes_cli.tools_config as tools_config
+    import jimmy_cli.tools_config as tools_config
 
     account = NousPortalAccountInfo(
         logged_in=True,
@@ -974,7 +974,7 @@ def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
 # ── Windows console-flash guard for post-setup subprocess spawns ──────────────
 #
 # The desktop GUI runs post-setup hooks through a detached, console-less
-# `hermes tools post-setup <key>` child. On Windows each console child (npm,
+# `jimmy tools post-setup <key>` child. On Windows each console child (npm,
 # npx, pip, powershell) spawned without CREATE_NO_WINDOW materializes a brand
 # new console window — the "terminal flash" reported on the Capabilities
 # browser-setup journey. `_post_setup_no_window_flags` is the single wrapper
@@ -993,10 +993,10 @@ def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
 # ("browserbase") only the CLI, and camofox its npm package.
 
 
-# ── Toolsets that shipped after a platform's last `hermes tools` save ────────
+# ── Toolsets that shipped after a platform's last `jimmy tools` save ────────
 #
 # Saving the picker (or one toggle in the desktop Toolsets UI) replaces a
-# platform's composite (``[hermes-cli]``) with a frozen explicit list, and
+# platform's composite (``[jimmy-cli]``) with a frozen explicit list, and
 # nothing ever adds to that list — so a toolset shipped later stays off
 # forever, while everyone still on the composite inherits it on upgrade.
 # ``_RECENTLY_SHIPPED_TOOLSETS`` closes that gap for toolsets new enough that
@@ -1013,7 +1013,7 @@ _requires_recently_shipped = pytest.mark.skipif(
 
 def _saved_list_from_before(platform="cli"):
     """A saved explicit list as it looked before the new toolsets existed."""
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         _CONFIG_ONLY_TOOLSETS,
         _toolset_allowed_for_platform,
     )
@@ -1037,7 +1037,7 @@ def test_saved_list_gains_toolsets_that_shipped_after_it_was_written():
     """The bug: a frozen list never gained bfl, so composite users got Nous
     Portal video generation on upgrade and picker users silently did not."""
     on_composite = _get_platform_tools(
-        {"platform_toolsets": {"cli": ["hermes-cli"]}},
+        {"platform_toolsets": {"cli": ["jimmy-cli"]}},
         "cli",
         include_default_mcp_servers=False,
     )
@@ -1052,9 +1052,9 @@ def test_saved_list_gains_toolsets_that_shipped_after_it_was_written():
 def test_unchecking_the_new_toolset_sticks():
     """Saving records it as offered, so the next read reads absence as a
     decline instead of turning it back on."""
-    config = {"platform_toolsets": {"cli": ["hermes-cli"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy-cli"]}}
     enabled = _get_platform_tools(config, "cli", include_default_mcp_servers=False)
-    with patch("hermes_cli.tools_config.save_config"):
+    with patch("jimmy_cli.tools_config.save_config"):
         _save_platform_tools(config, "cli", enabled - _RECENTLY_SHIPPED_TOOLSETS)
 
     reread = _get_platform_tools(config, "cli", include_default_mcp_servers=False)
@@ -1076,7 +1076,7 @@ def test_agent_disabled_toolsets_still_wins():
 @_requires_recently_shipped
 def test_agent_disabled_toolsets_json_array_string_form_still_wins():
     """#86661: the suppression list may arrive as a JSON-array string (e.g.
-    `hermes config set agent.disabled_toolsets '["memory"]'`). It must be
+    `jimmy config set agent.disabled_toolsets '["memory"]'`). It must be
     parsed, not treated as one dead toolset name that filters nothing."""
     config = _saved_list_from_before()
     import json as _json
@@ -1106,16 +1106,16 @@ def test_agent_disabled_toolsets_python_literal_string_form_still_wins():
 @_requires_recently_shipped
 def test_platforms_whose_composite_excludes_it_are_left_narrow():
     """Parity is the justification, so don't widen a deliberately small
-    composite (hermes-acp, hermes-webhook) that never carried the toolset."""
+    composite (jimmy-acp, jimmy-webhook) that never carried the toolset."""
     from toolsets import TOOLSETS, resolve_toolset
 
     narrow = [
         platform
         for platform in ("acp", "webhook")
-        if f"hermes-{platform}" in TOOLSETS
+        if f"jimmy-{platform}" in TOOLSETS
         and not any(
             set(resolve_toolset(ts, include_registry=False))
-            <= set(resolve_toolset(f"hermes-{platform}"))
+            <= set(resolve_toolset(f"jimmy-{platform}"))
             for ts in _RECENTLY_SHIPPED_TOOLSETS
         )
     ]
@@ -1138,7 +1138,7 @@ def test_platforms_whose_composite_excludes_it_are_left_narrow():
 def test_explicit_plugin_toolset_admitted_in_platform_toolsets(monkeypatch):
     """When a plugin toolset key is explicitly listed under
     ``platform_toolsets.<platform>`` (alongside a composite like
-    ``hermes-cli``), it MUST be admitted as a configurable key instead of
+    ``jimmy-cli``), it MUST be admitted as a configurable key instead of
     being silently dropped by the has_explicit_config filter.
 
     Reproduces the second half of #81163: even after the eager register_tools
@@ -1149,8 +1149,8 @@ def test_explicit_plugin_toolset_admitted_in_platform_toolsets(monkeypatch):
     # Force a plugin toolset key to be present without depending on the a2a
     # plugin being installed on disk. _get_plugin_toolset_keys() calls
     # discover_plugins(); we patch its source so the test is hermetic.
-    import hermes_cli.plugins as _plugins_mod
-    import hermes_cli.tools_config as _tc_mod
+    import jimmy_cli.plugins as _plugins_mod
+    import jimmy_cli.tools_config as _tc_mod
 
     class _StubMgr:
         _plugin_tool_names = {"dplat_call"}
@@ -1187,9 +1187,9 @@ def test_explicit_plugin_toolset_admitted_in_platform_toolsets(monkeypatch):
     )
 
     # An explicit platform_toolsets list with a plugin key alongside the
-    # standard composite — exactly the "I want hermes-cli AND a2a in my CLI
+    # standard composite — exactly the "I want jimmy-cli AND a2a in my CLI
     # session" config the issue's user was trying to write.
-    config = {"platform_toolsets": {"cli": ["hermes-cli", "dplat_client"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy-cli", "dplat_client"]}}
 
     enabled = _get_platform_tools(config, "cli")
 
@@ -1201,19 +1201,19 @@ def test_explicit_plugin_toolset_admitted_in_platform_toolsets(monkeypatch):
 
 def test_explicit_plugin_toolset_admitted_against_real_a2a_plugin(monkeypatch):
     """End-to-end Layer 2 regression: with the bundled a2a plugin enabled and
-    a real config like ``platform_toolsets.cli: [hermes-cli, a2a]``, ``a2a``
+    a real config like ``platform_toolsets.cli: [jimmy-cli, a2a]``, ``a2a``
     must appear in the resolved enabled toolset set. Before the fix, the
     filter dropped all non-CONFIGURABLE keys (a2a included)."""
     # Discover real plugins so _get_plugin_toolset_keys() sees the a2a key.
     # If the worktree lacks bundled plugin manifests, skip — this test
     # exercises real bundled state and is meaningless without it.
-    from hermes_cli.plugins import discover_plugins, get_plugin_toolsets
+    from jimmy_cli.plugins import discover_plugins, get_plugin_toolsets
     discover_plugins()
     plugin_ts_keys = {k for k, _, _ in get_plugin_toolsets()}
     if "a2a" not in plugin_ts_keys:
         pytest.skip("bundled a2a plugin not discoverable in this worktree")
 
-    config = {"platform_toolsets": {"cli": ["hermes-cli", "a2a"]}}
+    config = {"platform_toolsets": {"cli": ["jimmy-cli", "a2a"]}}
     enabled = _get_platform_tools(config, "cli")
     assert "a2a" in enabled, (
         f"plugin-provided 'a2a' toolset dropped by _get_platform_tools "

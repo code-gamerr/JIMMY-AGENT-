@@ -1,4 +1,4 @@
-"""CLI subcommand: ``hermes pets <subcommand>``.
+"""CLI subcommand: ``jimmy pets <subcommand>``.
 
 Thin shell around :mod:`agent.pet`.  Browses the public petdex gallery,
 installs pets into the profile's ``pets/`` directory, selects the active
@@ -31,7 +31,7 @@ def _cmd_list(args) -> int:
     if getattr(args, "installed", False):
         pets = store.installed_pets()
         if not pets:
-            _print("No pets installed. Try: hermes pets install boba")
+            _print("No pets installed. Try: jimmy pets install boba")
             return 0
         _print(f"Installed pets ({len(pets)}):")
         for pet in pets:
@@ -64,7 +64,7 @@ def _cmd_list(args) -> int:
         _print(f"  {mark} {entry.slug:<28} {entry.display_name}  ({entry.kind})")
     if limit and len(entries) > limit:
         _print(f"  … {len(entries) - limit} more (use --limit 0 or --query to filter)")
-    _print("\nInstall one with: hermes pets install <slug>")
+    _print("\nInstall one with: jimmy pets install <slug>")
     return 0
 
 
@@ -85,7 +85,7 @@ def _cmd_install(args) -> int:
         _set_active(slug)
         _print(f"✓ {pet.display_name} is now the active pet (display.pet.slug={slug}, enabled)")
     else:
-        _print(f"  Make it active with: hermes pets select {slug}")
+        _print(f"  Make it active with: jimmy pets select {slug}")
     return 0
 
 
@@ -107,7 +107,7 @@ def _cmd_select(args) -> int:
     if not slug:
         pets = store.installed_pets()
         if not pets:
-            _err("✗ no pets installed — run: hermes pets install boba")
+            _err("✗ no pets installed — run: jimmy pets install boba")
             return 1
         slug = _interactive_pick(pets)
         if not slug:
@@ -115,7 +115,7 @@ def _cmd_select(args) -> int:
 
     pet = store.load_pet(slug)
     if pet is None or not pet.exists:
-        _err(f"✗ '{slug}' is not installed — run: hermes pets install {slug}")
+        _err(f"✗ '{slug}' is not installed — run: jimmy pets install {slug}")
         return 1
 
     _set_active(slug)
@@ -156,7 +156,7 @@ def _cmd_show(args) -> int:
     slug = (getattr(args, "slug", "") or "").strip() or str(cfg.get("slug", "") or "")
     pet = store.resolve_active_pet(slug)
     if pet is None:
-        _err("✗ no pet to show — run: hermes pets install boba")
+        _err("✗ no pet to show — run: jimmy pets install boba")
         return 1
 
     mode_cfg = getattr(args, "mode", None) or str(cfg.get("render_mode", "auto") or "auto")
@@ -270,13 +270,13 @@ def _cmd_doctor(args) -> int:
 
     ok = True
     if not pets:
-        _print("  → no pets installed. Run: hermes pets install boba")
+        _print("  → no pets installed. Run: jimmy pets install boba")
         ok = False
     elif active is None:
-        _print("  → active pet unresolved. Run: hermes pets select <slug>")
+        _print("  → active pet unresolved. Run: jimmy pets select <slug>")
         ok = False
     elif not enabled:
-        _print("  → pet display is disabled. Run: hermes pets select " + active.slug)
+        _print("  → pet display is disabled. Run: jimmy pets select " + active.slug)
 
     try:
         import PIL  # noqa: F401
@@ -293,7 +293,7 @@ def _cmd_doctor(args) -> int:
 # ─────────────────────────────────────────────────────────────────────────
 
 def _pet_config() -> dict:
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     cfg = load_config()
     display = cfg.get("display", {}) if isinstance(cfg.get("display"), dict) else {}
@@ -308,7 +308,7 @@ def _has_active_pet() -> bool:
 
 
 def _set_active(slug: str) -> None:
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     display = cfg.setdefault("display", {})
@@ -319,7 +319,7 @@ def _set_active(slug: str) -> None:
 
 
 def _set_enabled(enabled: bool) -> None:
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     display = cfg.setdefault("display", {})
@@ -329,7 +329,7 @@ def _set_enabled(enabled: bool) -> None:
 
 
 def _set_scale(scale: float) -> None:
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     display = cfg.setdefault("display", {})
@@ -408,7 +408,7 @@ def _clear_active_if(slug: str) -> bool:
 
     Returns whether anything changed, so callers don't write config needlessly.
     """
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     pet = cfg.setdefault("display", {}).setdefault("pet", {})
@@ -429,7 +429,7 @@ def _rename_active_if(old_slug: str, new_slug: str) -> bool:
     """
     if not new_slug or old_slug == new_slug:
         return False
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     cfg = load_config()
     pet = cfg.setdefault("display", {}).setdefault("pet", {})

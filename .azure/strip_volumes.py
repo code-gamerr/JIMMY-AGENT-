@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 
-p = Path(r"c:\Users\Arnav Singh\Documents\Codes\hermes-agent-main\.azure\ca-jimmy.yaml")
+p = Path(r"c:\Users\Arnav Singh\Documents\Codes\jimmy-agent-main\.azure\ca-jimmy.yaml")
 text = p.read_text(encoding="utf-8")
 text2 = re.sub(r"(?m)^      volumeMounts:\n(?:      - .*\n(?:        .*\n)*)+", "", text)
 text2 = re.sub(r"(?m)^    volumes:\n(?:    - .*\n(?:      .*\n)*)+", "", text2)

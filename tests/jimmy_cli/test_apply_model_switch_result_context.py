@@ -1,7 +1,7 @@
 """Regression test for the `/model` picker confirmation display.
 
 Bug (April 2026): after choosing a model from the interactive `/model` picker,
-``HermesCLI._apply_model_switch_result()`` printed ``ModelInfo.context_window``
+``JimmyCLI._apply_model_switch_result()`` printed ``ModelInfo.context_window``
 straight from models.dev, which always reports the vendor-wide value (e.g.
 gpt-5.5 = 1,050,000 on ``openai``). That ignored provider-specific caps — in
 particular, ChatGPT Codex OAuth enforces 272K on the same slug. The sibling
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from hermes_cli.model_switch import ModelSwitchResult
+from jimmy_cli.model_switch import ModelSwitchResult
 
 
 class _FakeModelInfo:
@@ -48,9 +48,9 @@ def _run_display(monkeypatch, result):
 
     captured: list[str] = []
     monkeypatch.setattr(cli_mod, "_cprint", lambda s, *a, **k: captured.append(str(s)))
-    # Avoid writing to ~/.hermes/config.yaml during the test.
+    # Avoid writing to ~/.jimmy/config.yaml during the test.
     monkeypatch.setattr(cli_mod, "save_config_value", lambda *a, **k: None)
-    cli_mod.HermesCLI._apply_model_switch_result(_StubCLI(), result, False)
+    cli_mod.JimmyCLI._apply_model_switch_result(_StubCLI(), result, False)
     return captured
 
 
@@ -164,8 +164,8 @@ def test_global_switch_clears_context_pin_owned_by_previous_route(monkeypatch):
             "agent.model_metadata.get_model_context_length",
             return_value=256_000,
         ),
-        patch("hermes_cli.config.load_config_readonly", return_value=configured),
+        patch("jimmy_cli.config.load_config_readonly", return_value=configured),
     ):
-        cli_mod.HermesCLI._apply_model_switch_result(cli, result, True)
+        cli_mod.JimmyCLI._apply_model_switch_result(cli, result, True)
 
     assert ("model.context_length", None) in writes

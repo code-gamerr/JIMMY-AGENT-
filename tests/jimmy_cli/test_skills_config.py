@@ -1,4 +1,4 @@
-"""Tests for hermes_cli/skills_config.py and skills_tool disabled filtering."""
+"""Tests for jimmy_cli/skills_config.py and skills_tool disabled filtering."""
 from unittest.mock import patch
 
 
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 class TestGetDisabledSkills:
     def test_empty_config(self):
-        from hermes_cli.skills_config import get_disabled_skills
+        from jimmy_cli.skills_config import get_disabled_skills
         assert get_disabled_skills({}) == set()
 
 
@@ -16,7 +16,7 @@ class TestGetDisabledSkills:
 
     def test_null_skills_section(self):
         """``skills:`` with no value (YAML null) must not crash (#13026)."""
-        from hermes_cli.skills_config import get_disabled_skills
+        from jimmy_cli.skills_config import get_disabled_skills
         assert get_disabled_skills({"skills": None}) == set()
         assert get_disabled_skills({"skills": None}, platform="telegram") == set()
 
@@ -28,9 +28,9 @@ class TestGetDisabledSkills:
 # ---------------------------------------------------------------------------
 
 class TestSaveDisabledSkills:
-    @patch("hermes_cli.skills_config.save_config")
+    @patch("jimmy_cli.skills_config.save_config")
     def test_saves_global_sorted(self, mock_save):
-        from hermes_cli.skills_config import save_disabled_skills
+        from jimmy_cli.skills_config import save_disabled_skills
         config = {}
         save_disabled_skills(config, {"skill-z", "skill-a"})
         assert config["skills"]["disabled"] == ["skill-a", "skill-z"]
@@ -44,7 +44,7 @@ class TestSaveDisabledSkills:
 class TestIsSkillDisabled:
 
 
-    @patch("hermes_cli.config.load_config")
+    @patch("jimmy_cli.config.load_config")
     def test_platform_disabled(self, mock_load):
         mock_load.return_value = {"skills": {
             "disabled": [],
@@ -55,8 +55,8 @@ class TestIsSkillDisabled:
 
 
 
-    @patch("hermes_cli.config.load_config")
-    @patch.dict("os.environ", {"HERMES_PLATFORM": "discord"})
+    @patch("jimmy_cli.config.load_config")
+    @patch.dict("os.environ", {"JIMMY_PLATFORM": "discord"})
     def test_env_var_platform(self, mock_load):
         mock_load.return_value = {"skills": {
             "platform_disabled": {"discord": ["discord-skill"]}
@@ -83,16 +83,16 @@ class TestGetDisabledSkillNames:
             "    telegram:\n"
             "      - tg-only-skill\n"
         )
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        monkeypatch.delenv("HERMES_PLATFORM", raising=False)
-        monkeypatch.delenv("HERMES_SESSION_PLATFORM", raising=False)
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+        monkeypatch.delenv("JIMMY_PLATFORM", raising=False)
+        monkeypatch.delenv("JIMMY_SESSION_PLATFORM", raising=False)
 
         from agent.skill_utils import get_disabled_skill_names
         result = get_disabled_skill_names(platform="telegram")
         assert result == {"tg-only-skill", "global-skill"}
 
     def test_session_platform_env_var(self, tmp_path, monkeypatch):
-        """HERMES_SESSION_PLATFORM should be used when HERMES_PLATFORM is unset."""
+        """JIMMY_SESSION_PLATFORM should be used when JIMMY_PLATFORM is unset."""
         config = tmp_path / "config.yaml"
         config.write_text(
             "skills:\n"
@@ -102,16 +102,16 @@ class TestGetDisabledSkillNames:
             "    discord:\n"
             "      - discord-skill\n"
         )
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        monkeypatch.delenv("HERMES_PLATFORM", raising=False)
-        monkeypatch.setenv("HERMES_SESSION_PLATFORM", "discord")
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+        monkeypatch.delenv("JIMMY_PLATFORM", raising=False)
+        monkeypatch.setenv("JIMMY_SESSION_PLATFORM", "discord")
 
         from agent.skill_utils import get_disabled_skill_names
         result = get_disabled_skill_names()
         assert result == {"discord-skill", "global-skill"}
 
-    def test_hermes_platform_takes_precedence(self, tmp_path, monkeypatch):
-        """HERMES_PLATFORM should win over HERMES_SESSION_PLATFORM."""
+    def test_jimmy_platform_takes_precedence(self, tmp_path, monkeypatch):
+        """JIMMY_PLATFORM should win over JIMMY_SESSION_PLATFORM."""
         config = tmp_path / "config.yaml"
         config.write_text(
             "skills:\n"
@@ -121,9 +121,9 @@ class TestGetDisabledSkillNames:
             "    discord:\n"
             "      - discord-skill\n"
         )
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        monkeypatch.setenv("HERMES_PLATFORM", "telegram")
-        monkeypatch.setenv("HERMES_SESSION_PLATFORM", "discord")
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_PLATFORM", "telegram")
+        monkeypatch.setenv("JIMMY_SESSION_PLATFORM", "discord")
 
         from agent.skill_utils import get_disabled_skill_names
         result = get_disabled_skill_names()
@@ -159,7 +159,7 @@ class TestFindAllSkillsFiltering:
 
 class TestGetCategories:
     def test_extracts_unique_categories(self):
-        from hermes_cli.skills_config import _get_categories
+        from jimmy_cli.skills_config import _get_categories
         skills = [
             {"name": "a", "category": "mlops", "description": ""},
             {"name": "b", "category": "coding", "description": ""},
@@ -169,6 +169,6 @@ class TestGetCategories:
         assert cats == ["coding", "mlops"]
 
     def test_none_becomes_uncategorized(self):
-        from hermes_cli.skills_config import _get_categories
+        from jimmy_cli.skills_config import _get_categories
         skills = [{"name": "a", "category": None, "description": ""}]
         assert "uncategorized" in _get_categories(skills)

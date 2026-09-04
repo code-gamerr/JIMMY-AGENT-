@@ -1,4 +1,4 @@
-"""Bounded product contract for the first Hermes shared-metrics slice."""
+"""Bounded product contract for the first Jimmy shared-metrics slice."""
 
 from __future__ import annotations
 
@@ -12,26 +12,26 @@ from agent.relay_runtime import (
     RUNTIME_SCHEMA_VERSION,
 )
 
-SCHEMA_KEY = "hermes.metrics.schema_version"
-SCHEMA_VERSION = "hermes.metrics.event.v2"
-MODEL_CALL_SCOPE = "hermes.model_call"
+SCHEMA_KEY = "jimmy.metrics.schema_version"
+SCHEMA_VERSION = "jimmy.metrics.event.v2"
+MODEL_CALL_SCOPE = "jimmy.model_call"
 MODEL_CALL_PROFILE_MODEL = "unknown"
-TASK_SCOPE = "hermes.task_run"
-TOOL_CALL_SCOPE = "hermes.tool_call"
-CLIENT_ACTIVE_MARK = "hermes.client.active"
-TOOL_APPROVAL_MARK = "hermes.tool_approval"
-SKILL_LIFECYCLE_MARK = "hermes.skill.lifecycle"
-SKILL_LOAD_MARK = "hermes.skill.load"
-SUBSCRIBER_NAME = "hermes.nemo_relay.shared_metrics"
-CLIENT_ACTIVE_METRIC = "hermes.client.active"
-LEGACY_MODEL_CALL_METRIC = "hermes.model_call.count"
-MODEL_ROUTE_METRIC = "hermes.model_route.count"
-TASK_STARTED_METRIC = "hermes.task_run.started"
-TASK_FINISHED_METRIC = "hermes.task_run.finished"
-TOOL_CALL_METRIC = "hermes.tool_call.count"
-TOOL_APPROVAL_METRIC = "hermes.tool_approval.count"
-SKILL_LIFECYCLE_METRIC = "hermes.skill.lifecycle.count"
-SKILL_LOAD_METRIC = "hermes.skill.load.count"
+TASK_SCOPE = "jimmy.task_run"
+TOOL_CALL_SCOPE = "jimmy.tool_call"
+CLIENT_ACTIVE_MARK = "jimmy.client.active"
+TOOL_APPROVAL_MARK = "jimmy.tool_approval"
+SKILL_LIFECYCLE_MARK = "jimmy.skill.lifecycle"
+SKILL_LOAD_MARK = "jimmy.skill.load"
+SUBSCRIBER_NAME = "jimmy.nemo_relay.shared_metrics"
+CLIENT_ACTIVE_METRIC = "jimmy.client.active"
+LEGACY_MODEL_CALL_METRIC = "jimmy.model_call.count"
+MODEL_ROUTE_METRIC = "jimmy.model_route.count"
+TASK_STARTED_METRIC = "jimmy.task_run.started"
+TASK_FINISHED_METRIC = "jimmy.task_run.finished"
+TOOL_CALL_METRIC = "jimmy.tool_call.count"
+TOOL_APPROVAL_METRIC = "jimmy.tool_approval.count"
+SKILL_LIFECYCLE_METRIC = "jimmy.skill.lifecycle.count"
+SKILL_LOAD_METRIC = "jimmy.skill.load.count"
 MODEL_IDENTIFIER_MAX_LENGTH = 256
 PROVIDER_IDENTIFIER_MAX_LENGTH = 64
 _METRIC_IDENTIFIER_CHARACTERS = frozenset(
@@ -205,7 +205,7 @@ CLIENT_INSTALL_METHODS: frozenset[str] = frozenset({
 })
 CLIENT_RESOURCE_KEYS: frozenset[str] = frozenset({
     "architecture",
-    "hermes_version",
+    "jimmy_version",
     "install_method",
     "os_family",
 })
@@ -236,7 +236,7 @@ def client_architecture(value: Any) -> str:
 
 
 def client_install_method(value: Any) -> str:
-    """Return an allowlisted Hermes installation method."""
+    """Return an allowlisted Jimmy installation method."""
     normalized = str(value or "").strip().lower()
     if normalized == "nix":
         return "nixos"
@@ -244,19 +244,19 @@ def client_install_method(value: Any) -> str:
 
 
 def client_resource(
-    hermes_version: Any,
+    jimmy_version: Any,
     *,
     os_name: Any,
     architecture: Any,
     install_method: Any,
 ) -> dict[str, str]:
     """Build the bounded client resource attached to aggregate packages."""
-    normalized_version = str(hermes_version or "").strip()
+    normalized_version = str(jimmy_version or "").strip()
     if not normalized_version or len(normalized_version) > 64:
         normalized_version = "unknown"
     return {
         "architecture": client_architecture(architecture),
-        "hermes_version": normalized_version,
+        "jimmy_version": normalized_version,
         "install_method": client_install_method(install_method),
         "os_family": client_os_family(os_name),
     }
@@ -266,7 +266,7 @@ def client_resource_is_valid(resource: Any) -> bool:
     """Return whether a package resource exactly matches the bounded contract."""
     if not isinstance(resource, dict) or set(resource) != CLIENT_RESOURCE_KEYS:
         return False
-    version = resource.get("hermes_version")
+    version = resource.get("jimmy_version")
     return (
         isinstance(version, str)
         and 0 < len(version) <= 64
@@ -456,7 +456,7 @@ def model_call_dimensions(event: Any) -> dict[str, str] | None:
 
 
 def _auxiliary_model_call_dimensions(event: Any) -> dict[str, str] | None:
-    """Project a terminal auxiliary route from its Hermes logical scope."""
+    """Project a terminal auxiliary route from its Jimmy logical scope."""
     metadata = getattr(event, "metadata", None)
     if (
         not isinstance(metadata, dict)
@@ -466,13 +466,13 @@ def _auxiliary_model_call_dimensions(event: Any) -> dict[str, str] | None:
     relay_metadata = set(metadata) - {
         RUNTIME_INSTANCE_KEY,
         RUNTIME_SCHEMA_KEY,
-        "hermes.call_role",
+        "jimmy.call_role",
     }
     if relay_metadata - {"otel.status_code"} or metadata.get(
         "otel.status_code", "OK"
     ) not in {"OK", "ERROR"}:
         return None
-    call_role = metadata.get("hermes.call_role")
+    call_role = metadata.get("jimmy.call_role")
     if not isinstance(call_role, str) or not call_role.startswith("auxiliary:"):
         return None
     if (
@@ -694,7 +694,7 @@ def execution_surface(kwargs: dict[str, Any]) -> str:
     if value in {"cron", "scheduler", "scheduled"}:
         return "scheduled_task"
     try:
-        from hermes_cli.platforms import get_all_platforms
+        from jimmy_cli.platforms import get_all_platforms
 
         if value in get_all_platforms():
             return "gateway"
@@ -759,7 +759,7 @@ def task_terminal_fields(
 
 
 def task_terminal_state(kwargs: dict[str, Any]) -> tuple[str, str, str]:
-    """Map Hermes terminal state to bounded task outcome dimensions."""
+    """Map Jimmy terminal state to bounded task outcome dimensions."""
     reason = str(kwargs.get("turn_exit_reason") or "").strip().lower()
     if kwargs.get("interrupted") or "interrupt" in reason or "cancel" in reason:
         return "cancelled", "user_cancelled", "user_cancelled"
@@ -809,7 +809,7 @@ def count_bucket(count: int) -> str:
 
 
 def tool_category(kwargs: dict[str, Any]) -> str:
-    """Map Hermes registry toolset metadata to a low-cardinality category."""
+    """Map Jimmy registry toolset metadata to a low-cardinality category."""
     toolset = str(kwargs.get("toolset") or "").strip().lower()
     if not toolset:
         return "unknown"
@@ -834,14 +834,14 @@ def tool_category(kwargs: dict[str, Any]) -> str:
     if toolset == "x_search":
         return "web"
     if toolset.startswith(
-        ("discord", "email", "feishu", "hermes-yuanbao", "slack", "sms")
+        ("discord", "email", "feishu", "jimmy-yuanbao", "slack", "sms")
     ):
         return "communication"
     return "other"
 
 
 def tool_outcome(kwargs: dict[str, Any]) -> str:
-    """Normalize the terminal Hermes tool status without inspecting its result."""
+    """Normalize the terminal Jimmy tool status without inspecting its result."""
     status = str(kwargs.get("status") or "").strip().lower()
     return {
         "blocked": "blocked",
@@ -941,7 +941,7 @@ def _non_negative_number(value: Any) -> float | None:
 
 
 def model_call_fields(kwargs: dict[str, Any]) -> dict[str, str]:
-    """Return the terminal model identity and provider route known to Hermes."""
+    """Return the terminal model identity and provider route known to Jimmy."""
     model = _metric_identifier(
         kwargs.get("response_model"),
         max_length=MODEL_IDENTIFIER_MAX_LENGTH,

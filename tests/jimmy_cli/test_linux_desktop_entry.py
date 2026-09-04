@@ -1,4 +1,4 @@
-"""Tests for the Linux XDG desktop entry installed by ``hermes desktop``."""
+"""Tests for the Linux XDG desktop entry installed by ``jimmy desktop``."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import linux_desktop_entry as lde
+from jimmy_cli import linux_desktop_entry as lde
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def xdg_home(tmp_path, monkeypatch) -> Path:
 
 
 def _make_project(tmp_path: Path) -> Path:
-    root = tmp_path / "hermes-agent"
+    root = tmp_path / "jimmy-agent"
     icon = root / "apps" / "desktop" / "assets" / "icon.png"
     icon.parent.mkdir(parents=True)
     icon.write_bytes(b"\x89PNG fake")
@@ -37,22 +37,22 @@ def _parse(entry_text: str) -> dict:
 
 def test_install_writes_entry_with_absolute_exec_and_icon(tmp_path, xdg_home, monkeypatch):
     root = _make_project(tmp_path)
-    hermes_bin = tmp_path / "bin" / "hermes"
-    hermes_bin.parent.mkdir()
-    hermes_bin.write_text("", encoding="utf-8")
+    jimmy_bin = tmp_path / "bin" / "jimmy"
+    jimmy_bin.parent.mkdir()
+    jimmy_bin.write_text("", encoding="utf-8")
     monkeypatch.setattr(
-        "hermes_cli.relaunch.resolve_hermes_bin", lambda: str(hermes_bin)
+        "jimmy_cli.relaunch.resolve_jimmy_bin", lambda: str(jimmy_bin)
     )
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda _dir: [])
 
     entry = lde.install_desktop_entry(root)
 
-    assert entry == xdg_home / "applications" / "hermes.desktop"
+    assert entry == xdg_home / "applications" / "jimmy.desktop"
     values = _parse(entry.read_text(encoding="utf-8"))
 
     # Exec must be the absolute path of the resolved binary. The launcher
-    # runs with a minimal PATH, so a bare `hermes` would not resolve.
-    assert values["Exec"] == f"{hermes_bin} desktop"
+    # runs with a minimal PATH, so a bare `jimmy` would not resolve.
+    assert values["Exec"] == f"{jimmy_bin} desktop"
     assert Path(values["Exec"].split(" ")[0]).is_absolute()
 
     # Icon must be an absolute path to the real icon in the checkout.
@@ -62,13 +62,13 @@ def test_install_writes_entry_with_absolute_exec_and_icon(tmp_path, xdg_home, mo
     assert icon_path.read_bytes() == b"\x89PNG fake"
 
     assert values["Type"] == "Application"
-    assert values["Name"] == "Hermes"
+    assert values["Name"] == "Jimmy"
     assert values["Terminal"] == "false"
 
 
 def test_installed_entry_is_executable(tmp_path, xdg_home, monkeypatch):
     root = _make_project(tmp_path)
-    monkeypatch.setattr("hermes_cli.relaunch.resolve_hermes_bin", lambda: "/usr/bin/hermes")
+    monkeypatch.setattr("jimmy_cli.relaunch.resolve_jimmy_bin", lambda: "/usr/bin/jimmy")
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda _dir: [])
 
     entry = lde.install_desktop_entry(root)
@@ -78,19 +78,19 @@ def test_installed_entry_is_executable(tmp_path, xdg_home, monkeypatch):
 
 def test_exec_falls_back_to_interpreter_module(tmp_path, xdg_home, monkeypatch):
     root = _make_project(tmp_path)
-    monkeypatch.setattr("hermes_cli.relaunch.resolve_hermes_bin", lambda: None)
+    monkeypatch.setattr("jimmy_cli.relaunch.resolve_jimmy_bin", lambda: None)
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda _dir: [])
 
     entry = lde.install_desktop_entry(root)
     exec_line = _parse(entry.read_text(encoding="utf-8"))["Exec"]
 
-    assert exec_line.endswith("-m hermes_cli.main desktop")
+    assert exec_line.endswith("-m jimmy_cli.main desktop")
     assert Path(exec_line.split(" ")[0]).is_absolute()
 
 
 def test_install_is_idempotent_and_skips_cache_refresh(tmp_path, xdg_home, monkeypatch):
     root = _make_project(tmp_path)
-    monkeypatch.setattr("hermes_cli.relaunch.resolve_hermes_bin", lambda: "/usr/bin/hermes")
+    monkeypatch.setattr("jimmy_cli.relaunch.resolve_jimmy_bin", lambda: "/usr/bin/jimmy")
     calls: list[Path] = []
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda d: calls.append(d) or [])
 
@@ -103,16 +103,16 @@ def test_install_is_idempotent_and_skips_cache_refresh(tmp_path, xdg_home, monke
 
 
 def test_install_without_source_icon_uses_themed_name(tmp_path, xdg_home, monkeypatch):
-    root = tmp_path / "hermes-agent"
+    root = tmp_path / "jimmy-agent"
     root.mkdir()
-    monkeypatch.setattr("hermes_cli.relaunch.resolve_hermes_bin", lambda: "/usr/bin/hermes")
+    monkeypatch.setattr("jimmy_cli.relaunch.resolve_jimmy_bin", lambda: "/usr/bin/jimmy")
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda _dir: [])
 
     entry = lde.install_desktop_entry(root)
 
     # A broken absolute path renders as no icon. The themed name resolves
-    # when Hermes is installed some other way.
-    assert _parse(entry.read_text(encoding="utf-8"))["Icon"] == "hermes"
+    # when Jimmy is installed some other way.
+    assert _parse(entry.read_text(encoding="utf-8"))["Icon"] == "jimmy"
 
 
 @pytest.mark.macos_only
@@ -193,10 +193,10 @@ def test_run_quiet_swallows_missing_binary(tmp_path):
 
 def test_exec_arg_quoting_handles_spaces(tmp_path, xdg_home, monkeypatch):
     root = _make_project(tmp_path)
-    spaced = tmp_path / "my apps" / "hermes"
+    spaced = tmp_path / "my apps" / "jimmy"
     spaced.parent.mkdir()
     spaced.write_text("", encoding="utf-8")
-    monkeypatch.setattr("hermes_cli.relaunch.resolve_hermes_bin", lambda: str(spaced))
+    monkeypatch.setattr("jimmy_cli.relaunch.resolve_jimmy_bin", lambda: str(spaced))
     monkeypatch.setattr(lde, "refresh_desktop_databases", lambda _dir: [])
 
     entry = lde.install_desktop_entry(root)

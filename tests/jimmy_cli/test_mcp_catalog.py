@@ -1,4 +1,4 @@
-"""Tests for hermes_cli.mcp_catalog and hermes_cli.mcp_picker.
+"""Tests for jimmy_cli.mcp_catalog and jimmy_cli.mcp_picker.
 
 Manifest parsing, install/uninstall config writes, and picker plumbing
 are exercised here. Anything that would actually clone a repo or
@@ -26,12 +26,12 @@ def _default_mock_probe(monkeypatch):
     try to talk to a real MCP server.
 
     Individual tests that exercise probe-success behaviour patch
-    ``hermes_cli.mcp_catalog._probe_tools`` themselves.
+    ``jimmy_cli.mcp_catalog._probe_tools`` themselves.
     """
     # Patch the catalog\'s probe wrapper, not the underlying
     # mcp_config._probe_single_server (so tests stay decoupled from that
     # module\'s plumbing).
-    import hermes_cli.mcp_catalog as mc
+    import jimmy_cli.mcp_catalog as mc
 
     monkeypatch.setattr(mc, "_probe_tools", lambda name: None)
 
@@ -41,28 +41,28 @@ def catalog_dir(tmp_path, monkeypatch):
     """Provide an isolated optional-mcps/ directory."""
     cat = tmp_path / "optional-mcps"
     cat.mkdir()
-    monkeypatch.setenv("HERMES_OPTIONAL_MCPS", str(cat))
+    monkeypatch.setenv("JIMMY_OPTIONAL_MCPS", str(cat))
     return cat
 
 
 @pytest.fixture(autouse=True)
-def _isolate_hermes_home(tmp_path, monkeypatch):
-    """Redirect all config I/O to a temp HERMES_HOME."""
-    hh = tmp_path / "hermes-home"
+def _isolate_jimmy_home(tmp_path, monkeypatch):
+    """Redirect all config I/O to a temp JIMMY_HOME."""
+    hh = tmp_path / "jimmy-home"
     hh.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(hh))
+    monkeypatch.setenv("JIMMY_HOME", str(hh))
     monkeypatch.setattr(
-        "hermes_cli.config.get_hermes_home", lambda: hh
+        "jimmy_cli.config.get_jimmy_home", lambda: hh
     )
     monkeypatch.setattr(
-        "hermes_cli.config.get_config_path", lambda: hh / "config.yaml"
+        "jimmy_cli.config.get_config_path", lambda: hh / "config.yaml"
     )
     monkeypatch.setattr(
-        "hermes_cli.config.get_env_path", lambda: hh / ".env"
+        "jimmy_cli.config.get_env_path", lambda: hh / ".env"
     )
-    # mcp_catalog grabs get_hermes_home() lazily through hermes_constants
+    # mcp_catalog grabs get_jimmy_home() lazily through jimmy_constants
     monkeypatch.setattr(
-        "hermes_constants.get_hermes_home", lambda: hh
+        "jimmy_constants.get_jimmy_home", lambda: hh
     )
     return hh
 
@@ -95,7 +95,7 @@ def _basic_manifest(name: str = "demo", **overrides) -> dict:
 
 def _entry(name: str):
     """Wrapper that asserts entry exists (satisfies type-checker + nicer failure msg)."""
-    from hermes_cli.mcp_catalog import get_entry
+    from jimmy_cli.mcp_catalog import get_entry
 
     e = get_entry(name)
     assert e is not None, f"catalog entry {name!r} missing"
@@ -110,7 +110,7 @@ def _entry(name: str):
 class TestManifestParsing:
     def test_minimal_valid(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest())
-        from hermes_cli.mcp_catalog import list_catalog
+        from jimmy_cli.mcp_catalog import list_catalog
 
         entries = list_catalog()
         assert len(entries) == 1
@@ -134,7 +134,7 @@ class TestManifestParsing:
                 }
             ),
         )
-        from hermes_cli.mcp_catalog import list_catalog
+        from jimmy_cli.mcp_catalog import list_catalog
 
         entries = list_catalog()
         assert len(entries) == 1
@@ -146,7 +146,7 @@ class TestManifestParsing:
 
     def test_suggest_keywords_only_is_valid(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest(suggest={"keywords": ["demo"]}))
-        from hermes_cli.mcp_catalog import list_catalog
+        from jimmy_cli.mcp_catalog import list_catalog
 
         entries = list_catalog()
         assert entries and entries[0].suggest is not None
@@ -154,14 +154,14 @@ class TestManifestParsing:
 
     def test_suggest_empty_block_rejected(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest(suggest={}))
-        from hermes_cli.mcp_catalog import list_catalog, catalog_diagnostics
+        from jimmy_cli.mcp_catalog import list_catalog, catalog_diagnostics
 
         assert list_catalog() == []
         assert any(kind == "invalid" for (_n, kind, _m) in catalog_diagnostics())
 
     def test_suggest_non_list_keywords_rejected(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest(suggest={"keywords": "jira"}))
-        from hermes_cli.mcp_catalog import list_catalog
+        from jimmy_cli.mcp_catalog import list_catalog
 
         assert list_catalog() == []
 
@@ -176,7 +176,7 @@ class TestManifestParsing:
             }
         )
         _write_manifest(catalog_dir, "demo", body)
-        from hermes_cli.mcp_catalog import list_catalog
+        from jimmy_cli.mcp_catalog import list_catalog
 
         e = list_catalog()[0]
         assert e.auth.type == "api_key"
@@ -195,7 +195,7 @@ class TestManifestParsing:
             },
         )
         _write_manifest(catalog_dir, "demo", body)
-        from hermes_cli.mcp_catalog import _build_server_config
+        from jimmy_cli.mcp_catalog import _build_server_config
 
         cfg = _build_server_config(_entry("demo"), None)
         assert cfg["url"] == "https://mcp.example.com/sse"
@@ -216,7 +216,7 @@ class TestManifestParsing:
             },
         )
         path = _write_manifest(catalog_dir, "demo", body)
-        from hermes_cli.mcp_catalog import CatalogError, _parse_manifest
+        from jimmy_cli.mcp_catalog import CatalogError, _parse_manifest
 
         with pytest.raises(CatalogError, match="MCP_DEMO_API_KEY"):
             _parse_manifest(path)
@@ -236,8 +236,8 @@ class TestManifestParsing:
 class TestInstall:
     def test_install_simple_stdio_writes_config(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest())
-        from hermes_cli.mcp_catalog import install_entry
-        from hermes_cli.config import load_config
+        from jimmy_cli.mcp_catalog import install_entry
+        from jimmy_cli.config import load_config
 
         install_entry(_entry("demo"), enable=True)
 
@@ -259,12 +259,12 @@ class TestInstall:
         )
         _write_manifest(catalog_dir, "demo", body)
 
-        from hermes_cli import mcp_catalog
+        from jimmy_cli import mcp_catalog
 
         monkeypatch.setattr(mcp_catalog, "_prompt_input", lambda *a, **kw: "secret-val")
 
-        from hermes_cli.mcp_catalog import install_entry
-        from hermes_cli.config import get_env_value, load_config
+        from jimmy_cli.mcp_catalog import install_entry
+        from jimmy_cli.config import get_env_value, load_config
 
         install_entry(_entry("demo"), enable=True)
 
@@ -281,12 +281,12 @@ class TestInstall:
         )
         _write_manifest(catalog_dir, "demo", body)
 
-        from hermes_cli import mcp_catalog
+        from jimmy_cli import mcp_catalog
 
         monkeypatch.setattr(mcp_catalog, "_prompt_input", lambda *a, **kw: "secret-val")
 
-        from hermes_cli.mcp_catalog import install_entry
-        from hermes_cli.config import load_config
+        from jimmy_cli.mcp_catalog import install_entry
+        from jimmy_cli.config import load_config
 
         install_entry(_entry("demo"), enable=True)
 
@@ -295,7 +295,7 @@ class TestInstall:
         assert server["headers"] == {"Authorization": "Bearer secret-val"}
         # The raw file must carry the ${...} template, never the secret —
         # load_config resolves it; config.yaml itself stays secret-free.
-        from hermes_cli.config import get_config_path
+        from jimmy_cli.config import get_config_path
 
         raw = get_config_path().read_text()
         assert "${MCP_DEMO_API_KEY}" in raw
@@ -312,8 +312,8 @@ class TestInstall:
 class TestUninstall:
     def test_uninstall_removes_server_block(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest())
-        from hermes_cli.mcp_catalog import install_entry, uninstall_entry
-        from hermes_cli.config import load_config
+        from jimmy_cli.mcp_catalog import install_entry, uninstall_entry
+        from jimmy_cli.config import load_config
 
         install_entry(_entry("demo"), enable=True)
         assert "demo" in load_config().get("mcp_servers", {})
@@ -322,7 +322,7 @@ class TestUninstall:
         assert "demo" not in load_config().get("mcp_servers", {})
 
     def test_uninstall_missing_returns_false(self):
-        from hermes_cli.mcp_catalog import uninstall_entry
+        from jimmy_cli.mcp_catalog import uninstall_entry
 
         assert uninstall_entry("nonexistent") is False
 
@@ -334,7 +334,7 @@ class TestUninstall:
 
 class TestPicker:
     def test_show_catalog_empty(self, catalog_dir, capsys):
-        from hermes_cli.mcp_picker import show_catalog
+        from jimmy_cli.mcp_picker import show_catalog
 
         show_catalog()
         out = capsys.readouterr().out
@@ -343,8 +343,8 @@ class TestPicker:
 
     def test_install_by_name_success(self, catalog_dir):
         _write_manifest(catalog_dir, "demo", _basic_manifest())
-        from hermes_cli.mcp_picker import install_by_name
-        from hermes_cli.config import load_config
+        from jimmy_cli.mcp_picker import install_by_name
+        from jimmy_cli.config import load_config
 
         rc = install_by_name("demo")
         assert rc == 0
@@ -355,7 +355,7 @@ class TestPicker:
         # Force isatty false
         import sys as _sys
         monkeypatch.setattr(_sys.stdin, "isatty", lambda: False)
-        from hermes_cli.mcp_picker import run_picker
+        from jimmy_cli.mcp_picker import run_picker
 
         run_picker()
         out = capsys.readouterr().out
@@ -378,8 +378,8 @@ class TestToolSelection:
             tools={"default_enabled": ["a", "b", "c"]},
         )
         _write_manifest(catalog_dir, "demo", body)
-        from hermes_cli.mcp_catalog import install_entry
-        from hermes_cli.config import load_config
+        from jimmy_cli.mcp_catalog import install_entry
+        from jimmy_cli.config import load_config
 
         install_entry(_entry("demo"), enable=True)
         server = load_config()["mcp_servers"]["demo"]
@@ -398,14 +398,14 @@ class TestToolSelection:
         )
         _write_manifest(catalog_dir, "demo", body)
 
-        import hermes_cli.mcp_catalog as mc
+        import jimmy_cli.mcp_catalog as mc
         probed = self._make_probed("alpha", "beta", "gamma")
         monkeypatch.setattr(mc, "_probe_tools", lambda name: probed)
         import sys as _sys
         monkeypatch.setattr(_sys.stdin, "isatty", lambda: False)
 
-        from hermes_cli.mcp_catalog import install_entry
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.mcp_catalog import install_entry
+        from jimmy_cli.config import load_config, save_config
 
         # First install
         install_entry(_entry("demo"), enable=True)
@@ -435,7 +435,7 @@ class TestCatalogDiagnostics:
         # Plus one valid entry
         _write_manifest(catalog_dir, "demo", _basic_manifest())
 
-        from hermes_cli.mcp_catalog import list_catalog, catalog_diagnostics
+        from jimmy_cli.mcp_catalog import list_catalog, catalog_diagnostics
 
         entries = list_catalog()
         assert [e.name for e in entries] == ["demo"]
@@ -451,7 +451,7 @@ class TestCatalogDiagnostics:
         body["transport"] = {"type": "unsupported"}
         _write_manifest(catalog_dir, "broken", body)
 
-        from hermes_cli.mcp_catalog import list_catalog, catalog_diagnostics
+        from jimmy_cli.mcp_catalog import list_catalog, catalog_diagnostics
 
         entries = list_catalog()
         assert entries == []
@@ -471,7 +471,7 @@ class TestCustomMcpRows:
         picker text dump with a 'custom' status."""
         _write_manifest(catalog_dir, "demo", _basic_manifest())
 
-        from hermes_cli.config import load_config, save_config
+        from jimmy_cli.config import load_config, save_config
         cfg = load_config()
         cfg.setdefault("mcp_servers", {})["my-custom"] = {
             "command": "npx",
@@ -480,7 +480,7 @@ class TestCustomMcpRows:
         }
         save_config(cfg)
 
-        from hermes_cli.mcp_picker import show_catalog
+        from jimmy_cli.mcp_picker import show_catalog
         show_catalog()
         out = capsys.readouterr().out
         assert "demo" in out
@@ -513,8 +513,8 @@ class TestGitInstallShaRef:
         )
         _write_manifest(catalog_dir, "demo", body)
 
-        from hermes_cli import mcp_catalog
-        from hermes_cli.mcp_catalog import _do_git_install
+        from jimmy_cli import mcp_catalog
+        from jimmy_cli.mcp_catalog import _do_git_install
 
         calls = []
 
@@ -530,7 +530,7 @@ class TestGitInstallShaRef:
         monkeypatch.setattr(mcp_catalog.subprocess, "run", fake_run)
         monkeypatch.setattr(mcp_catalog.shutil, "which", lambda x: "/usr/bin/git")
 
-        from hermes_cli.mcp_catalog import get_entry
+        from jimmy_cli.mcp_catalog import get_entry
         entry = get_entry("demo")
         assert entry is not None
         _do_git_install(entry)
@@ -571,7 +571,7 @@ class TestToolsConfigIncludeMode:
             },
         }
 
-        import hermes_cli.tools_config as tc
+        import jimmy_cli.tools_config as tc
         # Mock the probe to return three tools
         monkeypatch.setattr(
             "tools.mcp_tool.probe_mcp_server_tools",
@@ -579,7 +579,7 @@ class TestToolsConfigIncludeMode:
         )
         # Mock the checklist to return just the first tool
         monkeypatch.setattr(
-            "hermes_cli.curses_ui.curses_checklist",
+            "jimmy_cli.curses_ui.curses_checklist",
             lambda title, labels, pre_selected, **kw: {0},
         )
         # Mock save_config so we can inspect the write
@@ -606,10 +606,10 @@ class TestShippedCatalog:
         manifest. Intentionally NOT a snapshot of catalog names (those are
         expected to change as PRs land).
         """
-        # Use the actual repo's optional-mcps directory (no HERMES_OPTIONAL_MCPS
+        # Use the actual repo's optional-mcps directory (no JIMMY_OPTIONAL_MCPS
         # override) so this test catches real manifests.
-        monkeypatch.delenv("HERMES_OPTIONAL_MCPS", raising=False)
-        from hermes_cli.mcp_catalog import _catalog_root, _parse_manifest
+        monkeypatch.delenv("JIMMY_OPTIONAL_MCPS", raising=False)
+        from jimmy_cli.mcp_catalog import _catalog_root, _parse_manifest
 
         root = _catalog_root()
         if not root.exists():
@@ -626,7 +626,7 @@ class TestShippedCatalog:
 
     def test_all_shipped_manifests_are_version_locked(self, monkeypatch):
         """Contract: catalog entries follow the same supply-chain rules as
-        pyproject dependencies — everything Hermes fetches/launches is pinned
+        pyproject dependencies — everything Jimmy fetches/launches is pinned
         to an exact version.
 
         - git installs must pin a full 40-char commit SHA (branches and tags
@@ -639,8 +639,8 @@ class TestShippedCatalog:
         pin at the transport layer (the server runs elsewhere / comes from the
         SHA-pinned clone), so they're exempt.
         """
-        monkeypatch.delenv("HERMES_OPTIONAL_MCPS", raising=False)
-        from hermes_cli.mcp_catalog import _catalog_root, _parse_manifest
+        monkeypatch.delenv("JIMMY_OPTIONAL_MCPS", raising=False)
+        from jimmy_cli.mcp_catalog import _catalog_root, _parse_manifest
 
         root = _catalog_root()
         if not root.exists():

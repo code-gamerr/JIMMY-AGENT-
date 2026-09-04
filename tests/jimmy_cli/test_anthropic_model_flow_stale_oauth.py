@@ -1,13 +1,13 @@
-"""Tests for Bug #12905 fix — stale OAuth token detection in hermes model flow.
+"""Tests for Bug #12905 fix — stale OAuth token detection in jimmy model flow.
 
-Bug 3: `hermes model` with `provider=anthropic` skips OAuth re-authentication
-when a stale ANTHROPIC_TOKEN exists in ~/.hermes/.env but no valid
+Bug 3: `jimmy model` with `provider=anthropic` skips OAuth re-authentication
+when a stale ANTHROPIC_TOKEN exists in ~/.jimmy/.env but no valid
 Claude Code credentials are available. The fast-path silently proceeds to
 model selection with a broken token instead of offering re-auth.
 """
 
 
-from hermes_cli.config import save_env_value
+from jimmy_cli.config import save_env_value
 
 
 class TestStaleOAuthTokenDetection:
@@ -19,7 +19,7 @@ class TestStaleOAuthTokenDetection:
         valid Claude Code credentials anywhere. The flow MUST offer re-auth
         instead of silently skipping to model selection.
         """
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
 
         # Pre-load .env with an expired OAuth token (sk-ant- prefix = OAuth)
         save_env_value("ANTHROPIC_TOKEN", "sk-ant-oat-ExpiredToken00000")
@@ -51,9 +51,9 @@ class TestStaleOAuthTokenDetection:
 
         # Simulate user types "3" (Cancel) when prompted for re-auth
         monkeypatch.setattr("builtins.input", lambda _: "3")
-        monkeypatch.setattr("hermes_cli.secret_prompt.masked_secret_prompt", lambda _: "")
+        monkeypatch.setattr("jimmy_cli.secret_prompt.masked_secret_prompt", lambda _: "")
 
-        from hermes_cli.main import _model_flow_anthropic
+        from jimmy_cli.main import _model_flow_anthropic
         cfg = {}
 
         _model_flow_anthropic(cfg)
@@ -70,7 +70,7 @@ class TestStaleOAuthTokenDetection:
         flagged as stale even when cc_creds are invalid. Regular API keys don't
         expire the same way OAuth tokens do.
         """
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
 
         # Regular API key — NOT an OAuth token
         save_env_value("ANTHROPIC_API_KEY", "sk-ant-api03-RegularPayPerTokenKey")
@@ -92,7 +92,7 @@ class TestStaleOAuthTokenDetection:
         # Simulate user picks "1" (use existing)
         monkeypatch.setattr("builtins.input", lambda _: "1")
 
-        from hermes_cli.main import _model_flow_anthropic
+        from jimmy_cli.main import _model_flow_anthropic
         cfg = {}
 
         _model_flow_anthropic(cfg)

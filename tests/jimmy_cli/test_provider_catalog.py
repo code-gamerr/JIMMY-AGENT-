@@ -1,13 +1,13 @@
-"""Tests for the unified provider catalog (hermes_cli.provider_catalog).
+"""Tests for the unified provider catalog (jimmy_cli.provider_catalog).
 
 These are invariant tests, not snapshots: they assert the parity *contract*
-between what ``hermes model`` shows (``CANONICAL_PROVIDERS``) and what the
+between what ``jimmy model`` shows (``CANONICAL_PROVIDERS``) and what the
 catalog exposes, plus how each provider's ``auth_type`` maps to a desktop tab —
 never a specific provider count or a frozen vendor list (both change over time).
 """
 
-from hermes_cli.models import CANONICAL_PROVIDERS
-from hermes_cli.provider_catalog import (
+from jimmy_cli.models import CANONICAL_PROVIDERS
+from jimmy_cli.provider_catalog import (
     ProviderDescriptor,
     provider_catalog,
     provider_catalog_by_slug,

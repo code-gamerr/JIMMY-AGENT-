@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hermes_cli.config import (
+from jimmy_cli.config import (
     get_container_exec_info,
 )
 
@@ -23,33 +23,33 @@ from hermes_cli.config import (
 
 @pytest.fixture
 def container_env(tmp_path, monkeypatch):
-    """Set up a fake HERMES_HOME with .container-mode file."""
-    hermes_home = tmp_path / ".hermes"
-    hermes_home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
-    monkeypatch.delenv("HERMES_DEV", raising=False)
+    """Set up a fake JIMMY_HOME with .container-mode file."""
+    jimmy_home = tmp_path / ".jimmy"
+    jimmy_home.mkdir()
+    monkeypatch.setenv("JIMMY_HOME", str(jimmy_home))
+    monkeypatch.delenv("JIMMY_DEV", raising=False)
 
-    container_mode = hermes_home / ".container-mode"
+    container_mode = jimmy_home / ".container-mode"
     container_mode.write_text(
         "# Written by NixOS activation script. Do not edit manually.\n"
         "backend=podman\n"
-        "container_name=hermes-agent\n"
-        "exec_user=hermes\n"
-        "hermes_bin=/data/current-package/bin/hermes\n"
+        "container_name=jimmy-agent\n"
+        "exec_user=jimmy\n"
+        "jimmy_bin=/data/current-package/bin/jimmy\n"
     )
-    return hermes_home
+    return jimmy_home
 
 
 def test_get_container_exec_info_returns_metadata(container_env):
     """Reads .container-mode and returns all fields including exec_user."""
-    with patch("hermes_constants.is_container", return_value=False):
+    with patch("jimmy_constants.is_container", return_value=False):
         info = get_container_exec_info()
 
     assert info is not None
     assert info["backend"] == "podman"
-    assert info["container_name"] == "hermes-agent"
-    assert info["exec_user"] == "hermes"
-    assert info["hermes_bin"] == "/data/current-package/bin/hermes"
+    assert info["container_name"] == "jimmy-agent"
+    assert info["exec_user"] == "jimmy"
+    assert info["jimmy_bin"] == "/data/current-package/bin/jimmy"
 
 
 
@@ -67,9 +67,9 @@ def test_get_container_exec_info_returns_metadata(container_env):
 def docker_container_info():
     return {
         "backend": "docker",
-        "container_name": "hermes-agent",
-        "exec_user": "hermes",
-        "hermes_bin": "/data/current-package/bin/hermes",
+        "container_name": "jimmy-agent",
+        "exec_user": "jimmy",
+        "jimmy_bin": "/data/current-package/bin/jimmy",
     }
 
 
@@ -77,16 +77,16 @@ def docker_container_info():
 def podman_container_info():
     return {
         "backend": "podman",
-        "container_name": "hermes-agent",
-        "exec_user": "hermes",
-        "hermes_bin": "/data/current-package/bin/hermes",
+        "container_name": "jimmy-agent",
+        "exec_user": "jimmy",
+        "jimmy_bin": "/data/current-package/bin/jimmy",
     }
 
 
 def test_exec_in_container_calls_execvp(docker_container_info):
     """Verifies os.execvp is called with correct args: runtime, tty flags,
     user, env vars, container name, binary, and CLI args."""
-    from hermes_cli.main import _exec_in_container
+    from jimmy_cli.main import _exec_in_container
 
     with patch("shutil.which", return_value="/usr/bin/docker"), \
          patch("subprocess.run") as mock_run, \
@@ -105,13 +105,13 @@ def test_exec_in_container_calls_execvp(docker_container_info):
     assert cmd[1] == "exec"
     assert "-it" in cmd
     idx_u = cmd.index("-u")
-    assert cmd[idx_u + 1] == "hermes"
+    assert cmd[idx_u + 1] == "jimmy"
     e_indices = [i for i, v in enumerate(cmd) if v == "-e"]
     e_values = [cmd[i + 1] for i in e_indices]
     assert "TERM=xterm-256color" in e_values
     assert "LANG=en_US.UTF-8" in e_values
-    assert "hermes-agent" in cmd
-    assert "/data/current-package/bin/hermes" in cmd
+    assert "jimmy-agent" in cmd
+    assert "/data/current-package/bin/jimmy" in cmd
     assert "chat" in cmd
 
 

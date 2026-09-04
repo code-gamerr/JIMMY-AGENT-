@@ -1,0 +1,4 @@
+{"ts": "2026-09-03T17:34:36.280462+00:00", "action": "task.created", "detail": {"task_id": "28700ea4be31", "agent": "ecc"}}
+{"ts": "2026-09-03T17:34:36.309459+00:00", "action": "task.created", "detail": {"task_id": "92a615b2d302", "agent": "munder"}}
+{"ts": "2026-09-03T17:34:40.958092+00:00", "action": "task.finished", "detail": {"task_id": "92a615b2d302", "success": false, "agent": "munder"}}
+{"ts": "2026-09-03T17:34:43.976279+00:00", "action": "task.finished", "detail": {"task_id": "28700ea4be31", "success": true, "agent": "ecc"}}

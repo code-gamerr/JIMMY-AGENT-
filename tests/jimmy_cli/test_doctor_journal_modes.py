@@ -1,6 +1,6 @@
 """Tests for doctor's per-database journal-mode report.
 
-`hermes doctor` lists each Hermes-managed database with its journal mode and
+`jimmy doctor` lists each Jimmy-managed database with its journal mode and
 flags databases that are in WAL while the linked SQLite carries the WAL-reset
 bug (https://sqlite.org/wal.html#walresetbug). The probe reads the file header
 only — it never opens the database through the SQLite engine, because even a
@@ -13,8 +13,8 @@ import sqlite3
 
 import pytest
 
-import hermes_cli.doctor as doctor
-from hermes_cli.sqlite_safe_read import (
+import jimmy_cli.doctor as doctor
+from jimmy_cli.sqlite_safe_read import (
     connect_tracked,
     has_live_connection,
     track_connection,
@@ -53,7 +53,7 @@ def clean_registry():
     fixture) would otherwise leave the registry dirty and make the *next*
     test's refusal assertion pass for the wrong reason.
     """
-    import hermes_cli.sqlite_safe_read as mod
+    import jimmy_cli.sqlite_safe_read as mod
 
     def _clear():
         with mod._live_lock:

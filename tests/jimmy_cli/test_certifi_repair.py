@@ -8,11 +8,11 @@ and the gateway is down on all platforms.
 
 Behavior contracts pinned here:
 
-1. The venv-repair import probes (early recovery + `hermes update`) must
+1. The venv-repair import probes (early recovery + `jimmy update`) must
    classify certifi as BROKEN when the module imports but ``cacert.pem`` is
    missing or corrupt — an attribute probe alone passes in that state.
-2. ``hermes doctor`` must fail the certificate check in that state, and
-   ``hermes doctor --fix`` must repair by force-reinstalling certifi and
+2. ``jimmy doctor`` must fail the certificate check in that state, and
+   ``jimmy doctor --fix`` must repair by force-reinstalling certifi and
    re-verifying.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-import hermes_cli._early_recovery as er
+import jimmy_cli._early_recovery as er
 
 
 def _fake_certifi(monkeypatch, bundle_path: Path):
@@ -70,13 +70,13 @@ class TestEarlyRecoveryCertifiBundleProbe:
 
 
 class TestUpdateProbeScriptChecksBundle:
-    """The subprocess probe used by `hermes update`'s venv repair must apply
+    """The subprocess probe used by `jimmy update`'s venv repair must apply
     the same bundle-file check inside the target venv's interpreter."""
 
     def _run_probe_script(self, monkeypatch, tmp_path, bundle_path):
         """Extract the generated probe script and run it in-process against a
         fake certifi that points at bundle_path."""
-        from hermes_cli import main as main_mod
+        from jimmy_cli import main as main_mod
 
         captured = {}
 
@@ -124,13 +124,13 @@ class TestUpdateProbeScriptChecksBundle:
 
 
 # =========================================================================
-# 2. hermes doctor: detection and --fix repair
+# 2. jimmy doctor: detection and --fix repair
 # =========================================================================
 
 
 class TestDoctorCertificates:
     def test_broken_bundle_fails_without_fix(self, monkeypatch, capsys, tmp_path):
-        from hermes_cli import doctor as doctor_mod
+        from jimmy_cli import doctor as doctor_mod
 
         monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "missing.pem"))
         issues = []
@@ -141,7 +141,7 @@ class TestDoctorCertificates:
         assert any("doctor --fix" in i for i in issues)
 
     def test_fix_reinstalls_certifi_and_reverifies(self, monkeypatch, capsys, tmp_path):
-        from hermes_cli import doctor as doctor_mod
+        from jimmy_cli import doctor as doctor_mod
 
         # First verification fails, post-reinstall verification succeeds.
         calls = {"verify": 0, "pip": []}
@@ -181,7 +181,7 @@ class TestDoctorCertificates:
 
 
     def test_healthy_bundle_never_touches_pip(self, monkeypatch, capsys):
-        from hermes_cli import doctor as doctor_mod
+        from jimmy_cli import doctor as doctor_mod
 
         def _fail_run(*a, **k):
             raise AssertionError("healthy bundle must not trigger a reinstall")
@@ -208,5 +208,5 @@ class TestSslGuardRepairHint:
         with pytest.raises(SSLConfigurationError) as excinfo:
             verify_ca_bundle()
         message = str(excinfo.value)
-        assert "hermes doctor --fix" in message
+        assert "jimmy doctor --fix" in message
         assert "certifi" in message

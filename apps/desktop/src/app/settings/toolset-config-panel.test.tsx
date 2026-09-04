@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router'
 import type * as ReactRouterDom from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ToolsetConfig } from '@/types/hermes'
+import type { ToolsetConfig } from '@/types/jimmy'
 
 // EnvVarField navigates to Settings → Keys via useNavigate, so every render
 // needs a router context. The navigate spy asserts the deep-link target.
@@ -39,12 +39,12 @@ const runToolsetPostSetup = vi.fn()
 const getActionStatus = vi.fn()
 const startOAuthLogin = vi.fn()
 const pollOAuthSession = vi.fn()
-const getHermesConfigRecord = vi.fn()
-const getHermesConfigSchema = vi.fn()
-const saveHermesConfig = vi.fn()
+const getJimmyConfigRecord = vi.fn()
+const getJimmyConfigSchema = vi.fn()
+const saveJimmyConfig = vi.fn()
 const getElevenLabsVoices = vi.fn()
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/jimmy', () => ({
   getToolsetConfig: (name: string) => getToolsetConfig(name),
   getToolsetModels: (name: string, provider?: string) => getToolsetModels(name, provider),
   selectToolsetModel: (name: string, model: string, provider?: string) => selectToolsetModel(name, model, provider),
@@ -59,9 +59,9 @@ vi.mock('@/hermes', () => ({
   getActionStatus: (name: string, lines?: number) => getActionStatus(name, lines),
   startOAuthLogin: (providerId: string) => startOAuthLogin(providerId),
   pollOAuthSession: (providerId: string, sessionId: string) => pollOAuthSession(providerId, sessionId),
-  getHermesConfigRecord: () => getHermesConfigRecord(),
-  getHermesConfigSchema: () => getHermesConfigSchema(),
-  saveHermesConfig: (config: unknown) => saveHermesConfig(config),
+  getJimmyConfigRecord: () => getJimmyConfigRecord(),
+  getJimmyConfigSchema: () => getJimmyConfigSchema(),
+  saveJimmyConfig: (config: unknown) => saveJimmyConfig(config),
   getElevenLabsVoices: () => getElevenLabsVoices(),
   // @/store/profile (pulled in transitively via use-config-record's
   // normalizeProfileKey import) calls this at module-init; the full-replacement
@@ -139,7 +139,7 @@ beforeEach(() => {
   selectToolsetProvider.mockResolvedValue({ ok: true, name: 'tts', provider: 'ElevenLabs' })
   setEnvVar.mockResolvedValue({ ok: true })
   deleteEnvVar.mockResolvedValue({ ok: true })
-  getHermesConfigRecord.mockResolvedValue({
+  getJimmyConfigRecord.mockResolvedValue({
     tts: {
       provider: 'edge',
       edge: { voice: 'en-US-AriaNeural' },
@@ -147,8 +147,8 @@ beforeEach(() => {
       elevenlabs: { voice_id: 'pNInz6obpgDQGcFmaJgB', model_id: 'eleven_multilingual_v2' }
     }
   })
-  getHermesConfigSchema.mockResolvedValue({ fields: {}, category_order: [] })
-  saveHermesConfig.mockResolvedValue({ ok: true })
+  getJimmyConfigSchema.mockResolvedValue({ fields: {}, category_order: [] })
+  saveJimmyConfig.mockResolvedValue({ ok: true })
   getElevenLabsVoices.mockResolvedValue({ available: false, voices: [] })
 })
 
@@ -193,8 +193,8 @@ describe('ToolsetConfigPanel', () => {
     // closed Select.
     const voiceInput = screen.getByDisplayValue('alloy')
     fireEvent.change(voiceInput, { target: { value: 'marin' } })
-    await waitFor(() => expect(saveHermesConfig).toHaveBeenCalled(), { timeout: 3000 })
-    const saved = saveHermesConfig.mock.calls.at(-1)?.[0] as Record<string, Record<string, Record<string, string>>>
+    await waitFor(() => expect(saveJimmyConfig).toHaveBeenCalled(), { timeout: 3000 })
+    const saved = saveJimmyConfig.mock.calls.at(-1)?.[0] as Record<string, Record<string, Record<string, string>>>
     expect(saved.tts.openai.voice).toBe('marin')
   })
 
@@ -867,7 +867,7 @@ describe('ToolsetConfigPanel', () => {
         flow: 'device_code',
         session_id: 'sess-1',
         user_code: 'NOUS-1234',
-        verification_url: 'https://portal.nousresearch.com/device?user_code=NOUS-1234',
+        verification_url: 'https://portal.jimmy-agent.com/device?user_code=NOUS-1234',
         poll_interval: 5,
         expires_in: 600
       })
@@ -896,7 +896,7 @@ describe('ToolsetConfigPanel', () => {
 
         await waitFor(() => expect(startOAuthLogin).toHaveBeenCalledWith('nous'))
         expect(openSpy).toHaveBeenCalledWith(
-          'https://portal.nousresearch.com/device?user_code=NOUS-1234',
+          'https://portal.jimmy-agent.com/device?user_code=NOUS-1234',
           '_blank',
           'noopener,noreferrer'
         )

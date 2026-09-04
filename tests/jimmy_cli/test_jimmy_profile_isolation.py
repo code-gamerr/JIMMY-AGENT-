@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 import plugins.dashboard_auth.basic as basic_plugin
-from hermes_cli.dashboard_auth.middleware import _enforce_bound_profile
+from jimmy_cli.dashboard_auth.middleware import _enforce_bound_profile
 
 
 def _request_with_query(query: str) -> Request:

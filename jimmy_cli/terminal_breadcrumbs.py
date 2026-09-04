@@ -1,8 +1,8 @@
-"""Per-terminal session breadcrumbs for ``hermes -c`` / ``--continue``.
+"""Per-terminal session breadcrumbs for ``jimmy -c`` / ``--continue``.
 
 Each CLI session writes a tiny breadcrumb file
-``$HERMES_HOME/terminal-sessions/<terminal-id>`` containing
-``{"session_id": ..., "cwd": ..., "ts": ...}``.  A bare ``hermes -c`` then
+``$JIMMY_HOME/terminal-sessions/<terminal-id>`` containing
+``{"session_id": ..., "cwd": ..., "ts": ...}``.  A bare ``jimmy -c`` then
 resumes the session that belongs to THIS terminal (tty / tmux pane / kitty
 window / wezterm pane / ...) instead of the globally most-recent session —
 so two terminals side by side each continue their own conversation.
@@ -44,9 +44,9 @@ _SANITIZE_RE = re.compile(r"[^A-Za-z0-9._-]")
 
 
 def _breadcrumbs_dir() -> Path:
-    from hermes_constants import get_hermes_home
+    from jimmy_constants import get_jimmy_home
 
-    return get_hermes_home() / "terminal-sessions"
+    return get_jimmy_home() / "terminal-sessions"
 
 
 def _sanitize(raw: str) -> str:
@@ -78,7 +78,7 @@ def get_terminal_id() -> Optional[str]:
 def is_enabled() -> bool:
     """Config gate: ``session.terminal_continue`` (default true)."""
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
 
         return bool((load_config().get("session") or {}).get("terminal_continue", True))
     except Exception:
@@ -165,7 +165,7 @@ def resolve_breadcrumb_session() -> Optional[str]:
         return None
     db = None
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         if not db.get_session(session_id):

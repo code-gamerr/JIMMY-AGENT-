@@ -1,6 +1,6 @@
-"""Tests for ``hermes approvals suggest`` (hermes_cli/approvals_suggest.py).
+"""Tests for ``jimmy approvals suggest`` (jimmy_cli/approvals_suggest.py).
 
-Approval history in Hermes is implied, not ledgered: the session DB
+Approval history in Jimmy is implied, not ledgered: the session DB
 (state.db) stores every assistant ``terminal`` tool call plus its paired
 ``role='tool'`` result. A dangerous-classified command whose result is not a
 BLOCKED/denied/pending marker ran with user consent. These tests build
@@ -18,7 +18,7 @@ from argparse import Namespace
 import pytest
 
 import tools.approval as approval_module
-from hermes_cli.approvals_suggest import (
+from jimmy_cli.approvals_suggest import (
     Proposal,
     apply_proposals,
     build_proposals,
@@ -262,7 +262,7 @@ class TestParserWiring:
     def test_build_approvals_parser_wires_suggest(self):
         import argparse
 
-        from hermes_cli.subcommands.approvals import build_approvals_parser
+        from jimmy_cli.subcommands.approvals import build_approvals_parser
 
         sentinel = object()
         parser = argparse.ArgumentParser()
@@ -284,7 +284,7 @@ class TestParserWiring:
     def test_suggest_defaults_are_dry_and_bounded(self):
         import argparse
 
-        from hermes_cli.subcommands.approvals import build_approvals_parser
+        from jimmy_cli.subcommands.approvals import build_approvals_parser
 
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers(dest="command")

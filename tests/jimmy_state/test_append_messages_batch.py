@@ -11,7 +11,7 @@ import sqlite3
 
 import pytest
 
-from hermes_state import (
+from jimmy_state import (
     CompressionSessionClosedError,
     SessionDB,
 )

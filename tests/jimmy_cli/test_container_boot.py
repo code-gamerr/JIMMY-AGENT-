@@ -1,8 +1,8 @@
-"""Tests for hermes_cli.container_boot — the cont-init.d-time
+"""Tests for jimmy_cli.container_boot — the cont-init.d-time
 reconciliation that recreates per-profile gateway s6 service slots
 from the persistent profiles directory.
 
-These tests run against a fake $HERMES_HOME under tmp_path; no real
+These tests run against a fake $JIMMY_HOME under tmp_path; no real
 s6 supervision tree is required. The in-container integration test
 covering end-to-end "docker restart" survival lives in
 tests/docker/test_container_restart.py.
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.container_boot import (
+from jimmy_cli.container_boot import (
     ReconcileAction,
     reconcile_profile_gateways,
 )
@@ -31,7 +31,7 @@ def _hermetic_container_argv(monkeypatch: pytest.MonkeyPatch) -> None:
 
     ``_read_container_argv()`` walks the entire ``/proc`` table looking for
     a process whose argv contains ``main-wrapper.sh`` (the s6-overlay v3
-    fallback). On a host that is *also* running hermes containers, those
+    fallback). On a host that is *also* running jimmy containers, those
     containers' ``main-wrapper.sh`` processes are visible in the host's
     ``/proc`` (shared PID view), so the scan would pick up a foreign
     ``gateway run`` argv and make ``_maybe_migrate_legacy_gateway_run_state``
@@ -43,13 +43,13 @@ def _hermetic_container_argv(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch ``_read_container_argv`` themselves (both override this).
     """
     monkeypatch.setattr(
-        "hermes_cli.container_boot._read_container_argv",
+        "jimmy_cli.container_boot._read_container_argv",
         lambda: (),
     )
 
 
 def _make_profile(
-    hermes_home: Path,
+    jimmy_home: Path,
     name: str,
     *,
     state: str | None,
@@ -57,12 +57,12 @@ def _make_profile(
     with_pid: bool = False,
     config: bool = True,
 ) -> Path:
-    """Create a fake profile directory under hermes_home/profiles/<name>/."""
-    p = hermes_home / "profiles" / name
+    """Create a fake profile directory under jimmy_home/profiles/<name>/."""
+    p = jimmy_home / "profiles" / name
     p.mkdir(parents=True)
     if config:
         # SOUL.md is what the reconciler keys on — it's always seeded by
-        # `hermes profile create`. See container_boot._render_run_script.
+        # `jimmy profile create`. See container_boot._render_run_script.
         (p / "SOUL.md").write_text("# fake profile\n")
     if state is not None or desired_state is not None:
         payload: dict[str, object] = {"timestamp": 1234567890}
@@ -80,22 +80,22 @@ def _make_profile(
 
 
 def _seed_default_root(
-    hermes_home: Path,
+    jimmy_home: Path,
     *,
     state: str | None = None,
     with_pid: bool = False,
 ) -> None:
     """Populate gateway_state.json / stale runtime files at the
-    HERMES_HOME root (the implicit default profile)."""
+    JIMMY_HOME root (the implicit default profile)."""
     if state is not None:
-        (hermes_home / "gateway_state.json").write_text(json.dumps({
+        (jimmy_home / "gateway_state.json").write_text(json.dumps({
             "gateway_state": state, "timestamp": 1234567890,
         }))
     if with_pid:
-        (hermes_home / "gateway.pid").write_text(json.dumps(
+        (jimmy_home / "gateway.pid").write_text(json.dumps(
             {"pid": 99999, "host": "old-container"},
         ))
-        (hermes_home / "processes.json").write_text("[]")
+        (jimmy_home / "processes.json").write_text("[]")
 
 
 def _named_actions(actions: list[ReconcileAction]) -> list[ReconcileAction]:
@@ -114,7 +114,7 @@ def test_running_profile_is_registered_and_autostarted(tmp_path: Path) -> None:
     _make_profile(tmp_path, "coder", state="running")
 
     actions = reconcile_profile_gateways(
-        hermes_home=tmp_path, scandir=scandir, dry_run=False,
+        jimmy_home=tmp_path, scandir=scandir, dry_run=False,
     )
 
     assert _named_actions(actions) == [ReconcileAction(
@@ -135,7 +135,7 @@ def test_registered_profile_has_finish_script(tmp_path: Path) -> None:
     _make_profile(tmp_path, "coder", state="running")
 
     reconcile_profile_gateways(
-        hermes_home=tmp_path, scandir=scandir, dry_run=False,
+        jimmy_home=tmp_path, scandir=scandir, dry_run=False,
     )
 
     finish = scandir / "gateway-coder" / "finish"
@@ -166,7 +166,7 @@ def test_register_service_overwrites_existing_slot(tmp_path: Path) -> None:
 
     # First pass.
     reconcile_profile_gateways(
-        hermes_home=tmp_path, scandir=scandir, dry_run=False,
+        jimmy_home=tmp_path, scandir=scandir, dry_run=False,
     )
     first_run = (scandir / "gateway-coder" / "run").read_text()
 
@@ -177,7 +177,7 @@ def test_register_service_overwrites_existing_slot(tmp_path: Path) -> None:
         '{"gateway_state": "stopped"}',
     )
     reconcile_profile_gateways(
-        hermes_home=tmp_path, scandir=scandir, dry_run=False,
+        jimmy_home=tmp_path, scandir=scandir, dry_run=False,
     )
 
     # Slot still exists, no .tmp remnants (staging dir is dot-prefixed,
@@ -215,7 +215,7 @@ def test_profiles_default_subdir_is_skipped_with_warning(
     _make_profile(tmp_path, "default", state="running")
 
     actions = reconcile_profile_gateways(
-        hermes_home=tmp_path, scandir=scandir, dry_run=False,
+        jimmy_home=tmp_path, scandir=scandir, dry_run=False,
     )
 
     # Only the root-profile default slot appears — not the colliding
@@ -253,11 +253,11 @@ def test_main_skips_reconcile_in_dashboard_container_s6v3(
     reconciled, and it started its own gateway-default (dual Telegram
     getUpdates 409). Asserting the slot is absent proves the skip fires.
     """
-    from hermes_cli import container_boot
+    from jimmy_cli import container_boot
 
     scandir = tmp_path / "run-service"; scandir.mkdir()
     _make_profile(tmp_path, "worker", state="running")
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     monkeypatch.setenv("S6_PROFILE_GATEWAY_SCANDIR", str(scandir))
     monkeypatch.setattr(
         container_boot,
@@ -267,7 +267,7 @@ def test_main_skips_reconcile_in_dashboard_container_s6v3(
             "-e",
             "/run/s6/basedir/scripts/rc.init",
             "top",
-            "/opt/hermes/docker/main-wrapper.sh",
+            "/opt/jimmy/docker/main-wrapper.sh",
             "dashboard",
             "--host",
             "0.0.0.0",

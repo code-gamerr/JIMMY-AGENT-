@@ -1,15 +1,15 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from hermes_cli import uninstall
+from jimmy_cli import uninstall
 
 
 def test_dry_run_prints_plan_without_mutating(monkeypatch, tmp_path, capsys):
-    project_root = tmp_path / "hermes-agent"
-    hermes_home = tmp_path / ".hermes"
+    project_root = tmp_path / "jimmy-agent"
+    jimmy_home = tmp_path / ".jimmy"
     project_root.mkdir()
-    hermes_home.mkdir()
-    (hermes_home / "config.yaml").write_text("model: {}\n")
+    jimmy_home.mkdir()
+    (jimmy_home / "config.yaml").write_text("model: {}\n")
 
     called = False
 
@@ -18,8 +18,8 @@ def test_dry_run_prints_plan_without_mutating(monkeypatch, tmp_path, capsys):
         called = True
 
     monkeypatch.setattr(uninstall, "get_project_root", lambda: project_root)
-    monkeypatch.setattr(uninstall, "get_hermes_home", lambda: hermes_home)
-    monkeypatch.setattr(uninstall, "_is_default_hermes_home", lambda home: False)
+    monkeypatch.setattr(uninstall, "get_jimmy_home", lambda: jimmy_home)
+    monkeypatch.setattr(uninstall, "_is_default_jimmy_home", lambda home: False)
     monkeypatch.setattr(uninstall, "_discover_named_profiles", lambda: [])
     monkeypatch.setattr(uninstall, "_perform_uninstall", _fail_if_called)
 
@@ -29,14 +29,14 @@ def test_dry_run_prints_plan_without_mutating(monkeypatch, tmp_path, capsys):
     assert called is False
     assert "Dry run" in output
     assert str(project_root) in output
-    assert str(hermes_home) in output
+    assert str(jimmy_home) in output
     assert project_root.exists()
-    assert hermes_home.exists()
+    assert jimmy_home.exists()
 
 
 def test_build_uninstall_parser_accepts_dry_run():
     import argparse
-    from hermes_cli.subcommands.uninstall import build_uninstall_parser
+    from jimmy_cli.subcommands.uninstall import build_uninstall_parser
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")

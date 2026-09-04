@@ -1,6 +1,6 @@
-"""Regression tests: `hermes dashboard` validates HERMES_WEB_DIST before serving.
+"""Regression tests: `jimmy dashboard` validates JIMMY_WEB_DIST before serving.
 
-A custom HERMES_WEB_DIST without --skip-build previously skipped BOTH the
+A custom JIMMY_WEB_DIST without --skip-build previously skipped BOTH the
 build and any validation, so the server started and served 404s with no
 obvious cause (same failure mode as issue #23817, reached via the env-var
 path instead of --skip-build). The env-var branch must now fail fast when
@@ -17,7 +17,7 @@ import pytest
 
 @pytest.fixture()
 def main_mod():
-    import hermes_cli.main as main
+    import jimmy_cli.main as main
     return main
 
 
@@ -37,39 +37,39 @@ def _args(**over):
 
 def _wire_common(main_mod, monkeypatch):
     monkeypatch.setattr(
-        "hermes_cli.profiles.get_active_profile_name", lambda: "default"
+        "jimmy_cli.profiles.get_active_profile_name", lambda: "default"
     )
     monkeypatch.setattr(main_mod, "_sync_bundled_skills_quietly", lambda: None)
     monkeypatch.setitem(sys.modules, "fastapi", types.SimpleNamespace())
     monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace())
     monkeypatch.setitem(
         sys.modules,
-        "hermes_logging",
+        "jimmy_logging",
         types.SimpleNamespace(setup_logging=lambda **_k: None),
     )
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.plugins",
+        "jimmy_cli.plugins",
         types.SimpleNamespace(discover_plugins=lambda: None),
     )
     monkeypatch.setattr(
-        "hermes_cli.mcp_startup.start_background_mcp_discovery",
+        "jimmy_cli.mcp_startup.start_background_mcp_discovery",
         lambda **_k: None,
     )
 
 
 def test_env_dist_without_index_exits(main_mod, monkeypatch, tmp_path, capsys):
-    """HERMES_WEB_DIST pointing at a dist with no index.html must exit 1,
+    """JIMMY_WEB_DIST pointing at a dist with no index.html must exit 1,
     not start a server that 404s."""
     _wire_common(main_mod, monkeypatch)
     empty_dist = tmp_path / "empty_dist"
     empty_dist.mkdir()
-    monkeypatch.setenv("HERMES_WEB_DIST", str(empty_dist))
+    monkeypatch.setenv("JIMMY_WEB_DIST", str(empty_dist))
 
     started = []
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.web_server",
+        "jimmy_cli.web_server",
         types.SimpleNamespace(start_server=lambda **k: started.append(k)),
     )
     builds = []
@@ -84,7 +84,7 @@ def test_env_dist_without_index_exits(main_mod, monkeypatch, tmp_path, capsys):
     assert started == []
     assert builds == []  # env var set -> build skipped, validation is the gate
     out = capsys.readouterr().out
-    assert "HERMES_WEB_DIST" in out and str(empty_dist) in out
+    assert "JIMMY_WEB_DIST" in out and str(empty_dist) in out
 
 
 
@@ -102,16 +102,16 @@ def test_skip_build_missing_dist_attempts_one_recovery_build(
     """--skip-build + missing index.html triggers exactly one recovery build;
     when the build produces a dist, the server starts."""
     _wire_common(main_mod, monkeypatch)
-    monkeypatch.delenv("HERMES_WEB_DIST", raising=False)
+    monkeypatch.delenv("JIMMY_WEB_DIST", raising=False)
     project_root = tmp_path / "proj"
-    dist = project_root / "hermes_cli" / "web_dist"
+    dist = project_root / "jimmy_cli" / "web_dist"
     dist.mkdir(parents=True)
     monkeypatch.setattr(main_mod, "PROJECT_ROOT", project_root)
 
     started = []
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.web_server",
+        "jimmy_cli.web_server",
         types.SimpleNamespace(start_server=lambda **k: started.append(k)),
     )
 

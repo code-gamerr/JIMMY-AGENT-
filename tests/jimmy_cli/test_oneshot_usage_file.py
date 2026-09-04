@@ -1,8 +1,8 @@
-"""Tests for hermes -z --usage-file (per-run JSON usage report)."""
+"""Tests for jimmy -z --usage-file (per-run JSON usage report)."""
 
 import json
 
-from hermes_cli.oneshot import _write_usage_file
+from jimmy_cli.oneshot import _write_usage_file
 
 
 def _result(**overrides):

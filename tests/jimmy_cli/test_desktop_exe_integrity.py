@@ -1,8 +1,8 @@
 """Behavior tests for the Windows desktop-exe integrity gate (#69179).
 
-The desktop self-update chain (Desktop → hermes-setup --update →
-``hermes update`` → ``hermes desktop --build-only`` → relaunch) rebuilds
-Hermes.exe on the end user's machine. Before this gate, "build succeeded" was
+The desktop self-update chain (Desktop → jimmy-setup --update →
+``jimmy update`` → ``jimmy desktop --build-only`` → relaunch) rebuilds
+Jimmy.exe on the end user's machine. Before this gate, "build succeeded" was
 just "the file exists", so a truncated PE (corrupt cached Electron zip), a
 non-PE file, or a wrong-architecture tree shipped as the new app — Windows
 then refuses to launch it with "This app can't run on your computer"
@@ -23,7 +23,7 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli import main as cli_main
+from jimmy_cli import main as cli_main
 
 PE_AMD64 = 0x8664
 PE_ARM64 = 0xAA64
@@ -67,7 +67,7 @@ def make_pe(path: Path, machine: int = PE_AMD64, *, truncate_to: int | None = No
 
 # ─── _windows_native_machine ────────────────────────────────────────────────
 
-# MACHINE_ATTRIBUTES.UserEnabled — mirrors hermes_cli.main.
+# MACHINE_ATTRIBUTES.UserEnabled — mirrors jimmy_cli.main.
 _USER_ENABLED = 0x00000001
 
 
@@ -204,17 +204,17 @@ def test_expected_machines_prefers_user_runnable_api_over_arch_name(monkeypatch)
 
 def _win_tree(tmp_path: Path) -> tuple[Path, Path]:
     desktop_dir = tmp_path / "apps" / "desktop"
-    exe = desktop_dir / "release" / "win-unpacked" / "Hermes.exe"
+    exe = desktop_dir / "release" / "win-unpacked" / "Jimmy.exe"
     return desktop_dir, exe
 
 
 def test_rollback_restores_backup_and_keeps_corrupt_copy(tmp_path):
     desktop_dir, exe = _win_tree(tmp_path)
     make_pe(exe, PE_AMD64, truncate_to=0x300)  # corrupt new build
-    backup_exe = desktop_dir / "release" / "win-unpacked.bak" / "Hermes.exe"
+    backup_exe = desktop_dir / "release" / "win-unpacked.bak" / "Jimmy.exe"
     make_pe(backup_exe, PE_AMD64)  # valid old build
 
-    with patch("hermes_cli.main._windows_native_machine", return_value="AMD64"):
+    with patch("jimmy_cli.main._windows_native_machine", return_value="AMD64"):
         restored = cli_main._rollback_desktop_from_backup(exe)
 
     assert restored == exe
@@ -222,7 +222,7 @@ def test_rollback_restores_backup_and_keeps_corrupt_copy(tmp_path):
     assert cli_main._parse_pe_machine(exe) == PE_AMD64
     assert exe.stat().st_size == 0x400
     # Corrupt tree preserved for diagnostics; backup consumed.
-    assert (desktop_dir / "release" / "win-unpacked.corrupt" / "Hermes.exe").exists()
+    assert (desktop_dir / "release" / "win-unpacked.corrupt" / "Jimmy.exe").exists()
     assert not backup_exe.exists()
 
 
@@ -245,8 +245,8 @@ def test_gate_fails_clearly_without_backup(tmp_path, capsys):
     fake.parent.mkdir(parents=True)
     fake.write_bytes(b"<html>proxy error</html>" + b" " * 600)
 
-    with patch("hermes_cli.main._purge_electron_build_cache", return_value=[]), \
-         patch("hermes_cli.main._desktop_stamp_path", return_value=tmp_path / "stamp.json"):
+    with patch("jimmy_cli.main._purge_electron_build_cache", return_value=[]), \
+         patch("jimmy_cli.main._desktop_stamp_path", return_value=tmp_path / "stamp.json"):
         verified, rolled_back = cli_main._ensure_desktop_exe_launchable(desktop_dir, exe)
 
     assert verified is None
@@ -256,7 +256,7 @@ def test_gate_fails_clearly_without_backup(tmp_path, capsys):
     assert "No usable backup" in out
 
 
-# ─── end-to-end: `hermes desktop --build-only` exits nonzero on corrupt exe ─
+# ─── end-to-end: `jimmy desktop --build-only` exits nonzero on corrupt exe ─
 
 
 def _ns(**kw):
@@ -267,7 +267,7 @@ def _ns(**kw):
         source=False,
         fake_boot=False,
         ignore_existing=False,
-        hermes_root=None,
+        jimmy_root=None,
         cwd=None,
     )
     defaults.update(kw)
@@ -276,37 +276,37 @@ def _ns(**kw):
 
 @pytest.mark.windows_only
 def test_build_only_fails_when_pack_produces_corrupt_exe(tmp_path, monkeypatch, capsys):
-    """The updater chain's contract: a rebuild whose Hermes.exe cannot launch
-    must exit nonzero (so hermes-setup's retry-once kicks in) and must restore
+    """The updater chain's contract: a rebuild whose Jimmy.exe cannot launch
+    must exit nonzero (so jimmy-setup's retry-once kicks in) and must restore
     the previous working build instead of leaving the corrupt one.
 
     ``windows_only``: the whole chain is Windows-gated — ``win-unpacked``
     candidate discovery in ``_desktop_packaged_executable`` and the integrity
     gate itself both short-circuit off Windows.
     """
-    root = tmp_path / "hermes-agent"
+    root = tmp_path / "jimmy-agent"
     desktop_dir = root / "apps" / "desktop"
     desktop_dir.mkdir(parents=True)
     (desktop_dir / "package.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
 
-    exe = desktop_dir / "release" / "win-unpacked" / "Hermes.exe"
+    exe = desktop_dir / "release" / "win-unpacked" / "Jimmy.exe"
     make_pe(exe, PE_AMD64, truncate_to=0x300)  # what the failed pack produced
-    make_pe(desktop_dir / "release" / "win-unpacked.bak" / "Hermes.exe", PE_AMD64)
+    make_pe(desktop_dir / "release" / "win-unpacked.bak" / "Jimmy.exe", PE_AMD64)
 
     install_ok = subprocess.CompletedProcess(["npm", "ci"], 0)
     pack_ok = subprocess.CompletedProcess(["npm", "run", "pack"], 0)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._resolve_node_runtime_npm", return_value="npm.cmd"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._stop_desktop_processes_locking_build", return_value=[]), \
-         patch("hermes_cli.main._purge_electron_build_cache", return_value=[]), \
-         patch("hermes_cli.main._desktop_stamp_path", return_value=tmp_path / "stamp.json"), \
-         patch("hermes_cli.main._write_desktop_build_stamp") as mock_stamp, \
-         patch("hermes_cli.main._windows_native_machine", return_value="AMD64"), \
-         patch("hermes_cli.main.subprocess.run", return_value=pack_ok), \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="npm.cmd"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._stop_desktop_processes_locking_build", return_value=[]), \
+         patch("jimmy_cli.main._purge_electron_build_cache", return_value=[]), \
+         patch("jimmy_cli.main._desktop_stamp_path", return_value=tmp_path / "stamp.json"), \
+         patch("jimmy_cli.main._write_desktop_build_stamp") as mock_stamp, \
+         patch("jimmy_cli.main._windows_native_machine", return_value="AMD64"), \
+         patch("jimmy_cli.main.subprocess.run", return_value=pack_ok), \
          pytest.raises(SystemExit) as exc:
         cli_main.cmd_gui(_ns())
 

@@ -1,4 +1,4 @@
-"""Relay subscriber for the persisted Hermes shared-metrics slice."""
+"""Relay subscriber for the persisted Jimmy shared-metrics slice."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import threading
 from typing import Any
 
 from agent.relay_runtime import RUNTIME_INSTANCE_KEY
-from hermes_cli.config import detect_install_method
+from jimmy_cli.config import detect_install_method
 
 from .shared_metrics import SharedMetricsStore
 from .shared_metrics_contract import (
@@ -28,18 +28,18 @@ logger = logging.getLogger(__name__)
 
 
 class SharedMetricsSubscriber:
-    """Persist validated Hermes counters from Relay lifecycle events."""
+    """Persist validated Jimmy counters from Relay lifecycle events."""
 
     def __init__(
         self,
         store: SharedMetricsStore,
-        hermes_version: str,
+        jimmy_version: str,
         *,
         runtime_id: str | None = None,
     ) -> None:
         self.store = store
         self._client_resource = client_resource(
-            hermes_version,
+            jimmy_version,
             os_name=platform.system(),
             architecture=platform.machine(),
             install_method=detect_install_method(),
@@ -95,7 +95,7 @@ class SharedMetricsSubscriber:
                     )
             except Exception:
                 logger.warning(
-                    "Unable to persist the Hermes shared metric: %s",
+                    "Unable to persist the Jimmy shared metric: %s",
                     metric_name,
                     exc_info=True,
                 )

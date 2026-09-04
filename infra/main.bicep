@@ -267,10 +267,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             memory: '2Gi'
           }
           env: [
-            { name: 'HERMES_HOME', value: '/opt/data' }
-            { name: 'HERMES_DASHBOARD', value: '1' }
-            { name: 'HERMES_DASHBOARD_HOST', value: '0.0.0.0' }
-            { name: 'HERMES_DASHBOARD_PORT', value: string(jimmyPort) }
+            { name: 'JIMMY_HOME', value: '/opt/data' }
+            { name: 'JIMMY_DASHBOARD', value: '1' }
+            { name: 'JIMMY_DASHBOARD_HOST', value: '0.0.0.0' }
+            { name: 'JIMMY_DASHBOARD_PORT', value: string(jimmyPort) }
             { name: 'JIMMY_SEED_PROFILES', value: '1' }
             { name: 'JIMMY_DISABLE_LOGIN_RATE_LIMIT', value: '1' }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
@@ -278,14 +278,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-api-key' }
             { name: 'AZURE_FOUNDRY_API_KEY', secretRef: 'azure-openai-api-key' }
-            { name: 'HERMES_DASHBOARD_BASIC_AUTH_SECRET', secretRef: 'jimmy-basic-auth-secret' }
+            { name: 'JIMMY_DASHBOARD_BASIC_AUTH_SECRET', secretRef: 'jimmy-basic-auth-secret' }
             { name: 'JIMMY1_PASSWORD', secretRef: 'jimmy1-password' }
             { name: 'JIMMY2_PASSWORD', secretRef: 'jimmy2-password' }
             { name: 'JIMMY3_PASSWORD', secretRef: 'jimmy3-password' }
             { name: 'JIMMY4_PASSWORD', secretRef: 'jimmy4-password' }
           ]
           // SQLite (sessions) cannot run on Azure Files/SMB — it hangs and
-          // surfaces as /api/sessions "Internal server error". Keep HERMES_HOME
+          // surfaces as /api/sessions "Internal server error". Keep JIMMY_HOME
           // on the container filesystem; seed recreates profiles on boot.
           // For durable storage later, use Azure Disk or an external DB — not Files.
         }

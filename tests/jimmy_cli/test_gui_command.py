@@ -1,4 +1,4 @@
-"""Tests for ``hermes gui`` desktop launcher wiring."""
+"""Tests for ``jimmy gui`` desktop launcher wiring."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli import main as cli_main
+from jimmy_cli import main as cli_main
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +21,7 @@ def _isolate_xdg_data_home(tmp_path, monkeypatch):
     resolves it under ``XDG_DATA_HOME`` (falling back to ``~/.local/share``).
     While these tests faked the host as darwin the Linux-only registration
     never ran, so nothing escaped. Running them on their real host makes that
-    call live, and on a Linux dev box it wrote a ``hermes.desktop`` pointing
+    call live, and on a Linux dev box it wrote a ``jimmy.desktop`` pointing
     ``Exec=`` at the test's throwaway npm stub into the user's actual
     applications menu.
 
@@ -43,7 +43,7 @@ def _stable_keychain_detection(monkeypatch):
     """
     monkeypatch.delenv("KDE_SESSION_VERSION", raising=False)
     monkeypatch.delenv("KDE_FULL_SESSION", raising=False)
-    monkeypatch.delenv("HERMES_DESKTOP_PASSWORD_STORE", raising=False)
+    monkeypatch.delenv("JIMMY_DESKTOP_PASSWORD_STORE", raising=False)
     monkeypatch.setenv("GNOME_KEYRING_CONTROL", "/run/user/1000/keyring")
 
 
@@ -55,7 +55,7 @@ def _ns(**kw):
         source=False,
         fake_boot=False,
         ignore_existing=False,
-        hermes_root=None,
+        jimmy_root=None,
         cwd=None,
     )
     defaults.update(kw)
@@ -63,7 +63,7 @@ def _ns(**kw):
 
 
 def _make_desktop_tree(tmp_path: Path) -> Path:
-    root = tmp_path / "hermes-agent"
+    root = tmp_path / "jimmy-agent"
     desktop_dir = root / "apps" / "desktop"
     desktop_dir.mkdir(parents=True)
     (desktop_dir / "package.json").write_text("{}", encoding="utf-8")
@@ -85,11 +85,11 @@ def _make_packaged_executable(root: Path, monkeypatch) -> Path:
     """
     desktop_dir = root / "apps" / "desktop"
     if sys.platform == "darwin":
-        exe = desktop_dir / "release" / "mac-arm64" / "Hermes.app" / "Contents" / "MacOS" / "Hermes"
+        exe = desktop_dir / "release" / "mac-arm64" / "Jimmy.app" / "Contents" / "MacOS" / "Jimmy"
     elif sys.platform == "win32":
-        exe = desktop_dir / "release" / "win-unpacked" / "Hermes.exe"
+        exe = desktop_dir / "release" / "win-unpacked" / "Jimmy.exe"
     else:
-        exe = desktop_dir / "release" / "linux-unpacked" / "hermes"
+        exe = desktop_dir / "release" / "linux-unpacked" / "jimmy"
     exe.parent.mkdir(parents=True, exist_ok=True)
     exe.write_text("", encoding="utf-8")
     if sys.platform not in ("darwin", "win32"):
@@ -107,14 +107,14 @@ def test_gui_installs_packages_and_launches_desktop_app(tmp_path, monkeypatch):
     pack_ok = subprocess.CompletedProcess(["npm", "run", "pack"], 0)
     launch_ok = subprocess.CompletedProcess([str(packaged_exe)], 0)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.main._register_linux_desktop_entry"), \
-         patch("hermes_cli.main.subprocess.run", side_effect=[pack_ok, launch_ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.main._register_linux_desktop_entry"), \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[pack_ok, launch_ok]) as mock_run, \
          pytest.raises(SystemExit) as exc:
         cli_main.cmd_gui(_ns())
 
@@ -135,26 +135,26 @@ def test_gui_installs_packages_and_launches_desktop_app(tmp_path, monkeypatch):
 def test_gui_install_env_prepends_managed_node_on_bare_path(tmp_path, monkeypatch):
     """Regression: npm's child scripts (electron-winstaller's select-7z-arch.js)
     shell out to bare ``node``. When Desktop is launched from the updater chain
-    the parent PATH is stripped, so the install env MUST carry the Hermes-managed
+    the parent PATH is stripped, so the install env MUST carry the Jimmy-managed
     Node ahead of that bare PATH or the install dies with ``node: not found``.
     """
     import os
 
-    from hermes_constants import iter_hermes_node_dirs
+    from jimmy_constants import iter_jimmy_node_dirs
 
     root = _make_desktop_tree(tmp_path)
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     _make_packaged_executable(root, monkeypatch)
 
-    # A managed Node tree on disk so with_hermes_node_path() actually prepends it.
-    home = tmp_path / "hermes-home"
+    # A managed Node tree on disk so with_jimmy_node_path() actually prepends it.
+    home = tmp_path / "jimmy-home"
     (home / "node" / "bin").mkdir(parents=True)
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     # Simulate the stripped PATH the desktop updater chain hands us.
     monkeypatch.setenv("PATH", os.pathsep.join(["/usr/bin", "/bin"]))
 
     install_ok = subprocess.CompletedProcess(["npm", "ci"], 0)
-    launch_ok = subprocess.CompletedProcess(["hermes"], 0)
+    launch_ok = subprocess.CompletedProcess(["jimmy"], 0)
 
     # A plain return_value rather than a fixed side_effect list: this test only
     # cares about the env handed to the npm install, and pinning an exact
@@ -162,17 +162,17 @@ def test_gui_install_env_prepends_managed_node_on_bare_path(tmp_path, monkeypatc
     # cmd_gui legitimately shells out one extra time — e.g. the Linux sandbox
     # fixup, which fires on hosts where chrome-sandbox isn't already
     # root-owned+4755. Assert on the install env, not on a call count.
-    with patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.main.subprocess.run", return_value=launch_ok), \
+    with patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.main.subprocess.run", return_value=launch_ok), \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns(skip_build=False))
 
-    managed_dirs = [str(p) for p in iter_hermes_node_dirs() if p.is_dir()]
+    managed_dirs = [str(p) for p in iter_jimmy_node_dirs() if p.is_dir()]
     assert managed_dirs, "managed node tree not discovered"
     install_env = mock_install.call_args.kwargs["env"]
     path_parts = install_env["PATH"].split(os.pathsep)
@@ -246,7 +246,7 @@ def test_gui_does_not_retry_after_packaged_executable_exists(tmp_path, monkeypat
     Electron-download problem the cache purge + mirror retries exist to repair.
 
     Regression for #40187: a late failure such as macOS code signing leaves
-    Hermes.app/Contents/MacOS/Hermes in place. Re-downloading Electron can't
+    Jimmy.app/Contents/MacOS/Jimmy in place. Re-downloading Electron can't
     repair a signing failure, so the destructive purge + slow mirror retry must
     be skipped — we fail directly instead of grinding through an identical retry.
     """
@@ -259,12 +259,12 @@ def test_gui_does_not_retry_after_packaged_executable_exists(tmp_path, monkeypat
     install_ok = subprocess.CompletedProcess(["npm", "ci"], 0)
     pack_fail = subprocess.CompletedProcess(["npm", "run", "pack"], 1)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._purge_electron_build_cache", return_value=[Path("/c/electron.zip")]) as mock_purge, \
-         patch("hermes_cli.main._redownload_electron_dist", return_value=True) as mock_dl, \
-         patch("hermes_cli.main.subprocess.run", return_value=pack_fail) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._purge_electron_build_cache", return_value=[Path("/c/electron.zip")]) as mock_purge, \
+         patch("jimmy_cli.main._redownload_electron_dist", return_value=True) as mock_dl, \
+         patch("jimmy_cli.main.subprocess.run", return_value=pack_fail) as mock_run, \
          pytest.raises(SystemExit) as exc:
         cli_main.cmd_gui(_ns())
 
@@ -397,19 +397,19 @@ def _write_info_plist(bundle: Path, identifier: str) -> None:
 
 
 def _make_signable_app(desktop_dir: Path) -> Path:
-    """Build a fake packaged Hermes.app with the pieces the signer must find."""
+    """Build a fake packaged Jimmy.app with the pieces the signer must find."""
     ent_dir = desktop_dir / "electron"
     ent_dir.mkdir(parents=True, exist_ok=True)
     (ent_dir / "entitlements.mac.plist").write_text("<plist/>", encoding="utf-8")
     (ent_dir / "entitlements.mac.inherit.plist").write_text("<plist/>", encoding="utf-8")
 
-    app = desktop_dir / "release" / "mac-arm64" / "Hermes.app"
-    _write_info_plist(app, "com.nousresearch.hermes")
+    app = desktop_dir / "release" / "mac-arm64" / "Jimmy.app"
+    _write_info_plist(app, "com.jimmy-agent.jimmy")
     (app / "Contents" / "MacOS").mkdir(parents=True)
-    (app / "Contents" / "MacOS" / "Hermes").write_text("", encoding="utf-8")
+    (app / "Contents" / "MacOS" / "Jimmy").write_text("", encoding="utf-8")
 
-    helper = app / "Contents" / "Frameworks" / "Hermes Helper.app"
-    _write_info_plist(helper, "com.nousresearch.hermes.helper")
+    helper = app / "Contents" / "Frameworks" / "Jimmy Helper.app"
+    _write_info_plist(helper, "com.jimmy-agent.jimmy.helper")
 
     native_dir = app / "Contents" / "Resources" / "app.asar.unpacked" / "node_modules" / "pty"
     native_dir.mkdir(parents=True)
@@ -436,7 +436,7 @@ def test_desktop_macos_local_codesign_signs_native_binaries(tmp_path, monkeypatc
     """The standalone Mach-O pass must actually find files inside the bundle.
 
     Regression: an absolute-path parts check always matches the outer
-    Hermes.app component, silently skipping every .node/.dylib/crashpad
+    Jimmy.app component, silently skipping every .node/.dylib/crashpad
     binary — codesign then rejects the outer signature (nested code unsigned).
     """
     desktop_dir = tmp_path / "apps" / "desktop"
@@ -500,24 +500,24 @@ def test_relaunchable_fixup_falls_back_to_legacy_adhoc_on_failure(tmp_path, monk
 
 @pytest.mark.linux_only
 def test_gui_registers_linux_desktop_entry_before_launch(tmp_path, monkeypatch):
-    """`hermes desktop` gives the app a launcher presence on Linux."""
+    """`jimmy desktop` gives the app a launcher presence on Linux."""
     root = _make_desktop_tree(tmp_path)
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     packaged_exe = _make_packaged_executable(root, monkeypatch)
 
     registered: list[Path] = []
-    monkeypatch.setattr("hermes_cli.linux_desktop_entry.is_supported", lambda: True)
+    monkeypatch.setattr("jimmy_cli.linux_desktop_entry.is_supported", lambda: True)
     monkeypatch.setattr(
-        "hermes_cli.linux_desktop_entry.install_desktop_entry",
-        lambda project_root: registered.append(project_root) or (tmp_path / "hermes.desktop"),
+        "jimmy_cli.linux_desktop_entry.install_desktop_entry",
+        lambda project_root: registered.append(project_root) or (tmp_path / "jimmy.desktop"),
     )
 
     launch_ok = subprocess.CompletedProcess([str(packaged_exe)], 0)
 
-    with patch("hermes_cli.main._desktop_build_needed", return_value=False), \
-         patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.main.subprocess.run", return_value=launch_ok), \
+    with patch("jimmy_cli.main._desktop_build_needed", return_value=False), \
+         patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.main.subprocess.run", return_value=launch_ok), \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns())
 
@@ -534,15 +534,15 @@ def test_gui_launches_even_when_desktop_entry_install_fails(tmp_path, monkeypatc
     def boom(_project_root):
         raise OSError("read-only /home")
 
-    monkeypatch.setattr("hermes_cli.linux_desktop_entry.is_supported", lambda: True)
-    monkeypatch.setattr("hermes_cli.linux_desktop_entry.install_desktop_entry", boom)
+    monkeypatch.setattr("jimmy_cli.linux_desktop_entry.is_supported", lambda: True)
+    monkeypatch.setattr("jimmy_cli.linux_desktop_entry.install_desktop_entry", boom)
 
     launch_ok = subprocess.CompletedProcess([str(packaged_exe)], 0)
 
-    with patch("hermes_cli.main._desktop_build_needed", return_value=False), \
-         patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.main.subprocess.run", return_value=launch_ok) as mock_run, \
+    with patch("jimmy_cli.main._desktop_build_needed", return_value=False), \
+         patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.main.subprocess.run", return_value=launch_ok) as mock_run, \
          pytest.raises(SystemExit) as exc:
         cli_main.cmd_gui(_ns())
 
@@ -556,19 +556,19 @@ def test_gui_skips_desktop_entry_off_linux(tmp_path, monkeypatch):
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     packaged_exe = _make_packaged_executable(root, monkeypatch)
 
-    monkeypatch.setattr("hermes_cli.linux_desktop_entry.is_supported", lambda: False)
+    monkeypatch.setattr("jimmy_cli.linux_desktop_entry.is_supported", lambda: False)
 
     def fail(_project_root):
         raise AssertionError("must not install a desktop entry off Linux")
 
-    monkeypatch.setattr("hermes_cli.linux_desktop_entry.install_desktop_entry", fail)
+    monkeypatch.setattr("jimmy_cli.linux_desktop_entry.install_desktop_entry", fail)
 
     launch_ok = subprocess.CompletedProcess([str(packaged_exe)], 0)
 
-    with patch("hermes_cli.main._desktop_build_needed", return_value=False), \
-         patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main.subprocess.run", return_value=launch_ok), \
+    with patch("jimmy_cli.main._desktop_build_needed", return_value=False), \
+         patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main.subprocess.run", return_value=launch_ok), \
          pytest.raises(SystemExit) as exc:
         cli_main.cmd_gui(_ns())
 
@@ -587,7 +587,7 @@ def test_gui_skips_desktop_entry_off_linux(tmp_path, monkeypatch):
 )
 def test_desktop_launch_options_normalizes_password_store(raw, expected):
     cfg = {"desktop": {"password_store": raw}}
-    with patch("hermes_cli.config.load_config", return_value=cfg):
+    with patch("jimmy_cli.config.load_config", return_value=cfg):
         _, _, store = cli_main._desktop_launch_options()
     assert store == expected
 
@@ -600,7 +600,7 @@ def _clear_keychain_env(monkeypatch):
         "KDE_SESSION_VERSION",
         "KDE_FULL_SESSION",
         "GNOME_KEYRING_CONTROL",
-        "HERMES_DESKTOP_PASSWORD_STORE",
+        "JIMMY_DESKTOP_PASSWORD_STORE",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -634,7 +634,7 @@ def test_detect_linux_password_store_gnome_keyring(monkeypatch):
 def test_detect_linux_password_store_via_dbus_secret_service(monkeypatch):
     _clear_keychain_env(monkeypatch)
     ping_ok = subprocess.CompletedProcess(["dbus-send"], 0)
-    with patch("hermes_cli.main.subprocess.run", return_value=ping_ok) as mock_run:
+    with patch("jimmy_cli.main.subprocess.run", return_value=ping_ok) as mock_run:
         assert cli_main._detect_linux_password_store() == "gnome-libsecret"
     assert "--dest=org.freedesktop.secrets" in mock_run.call_args.args[0]
 
@@ -642,9 +642,9 @@ def test_detect_linux_password_store_via_dbus_secret_service(monkeypatch):
 def test_detect_linux_password_store_none_when_no_keychain(monkeypatch):
     _clear_keychain_env(monkeypatch)
     ping_fail = subprocess.CompletedProcess(["dbus-send"], 1)
-    with patch("hermes_cli.main.subprocess.run", return_value=ping_fail):
+    with patch("jimmy_cli.main.subprocess.run", return_value=ping_fail):
         assert cli_main._detect_linux_password_store() is None
-    with patch("hermes_cli.main.subprocess.run", side_effect=FileNotFoundError):
+    with patch("jimmy_cli.main.subprocess.run", side_effect=FileNotFoundError):
         assert cli_main._detect_linux_password_store() is None
 
 
@@ -657,21 +657,21 @@ def test_gui_linux_packaged_launch_bridges_detected_password_store(tmp_path, mon
 
     ok = subprocess.CompletedProcess([], 0)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.config.load_config", return_value={}), \
-         patch("hermes_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
-         patch("hermes_cli.main._detect_linux_password_store", return_value="gnome-libsecret"), \
-         patch("hermes_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.config.load_config", return_value={}), \
+         patch("jimmy_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
+         patch("jimmy_cli.main._detect_linux_password_store", return_value="gnome-libsecret"), \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns())
 
     launch_env = mock_run.call_args_list[1].kwargs["env"]
-    assert launch_env["HERMES_DESKTOP_PASSWORD_STORE"] == "gnome-libsecret"
+    assert launch_env["JIMMY_DESKTOP_PASSWORD_STORE"] == "gnome-libsecret"
 
 
 @pytest.mark.linux_only
@@ -682,20 +682,20 @@ def test_gui_linux_source_launch_bridges_detected_password_store(tmp_path, monke
 
     ok = subprocess.CompletedProcess([], 0)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.config.load_config", return_value={}), \
-         patch("hermes_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
-         patch("hermes_cli.main._detect_linux_password_store", return_value="kwallet6"), \
-         patch("hermes_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.config.load_config", return_value={}), \
+         patch("jimmy_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
+         patch("jimmy_cli.main._detect_linux_password_store", return_value="kwallet6"), \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns(source=True))
 
     assert mock_run.call_args_list[1].args[0] == ["/usr/bin/npm", "exec", "--", "electron", "."]
     launch_env = mock_run.call_args_list[1].kwargs["env"]
-    assert launch_env["HERMES_DESKTOP_PASSWORD_STORE"] == "kwallet6"
+    assert launch_env["JIMMY_DESKTOP_PASSWORD_STORE"] == "kwallet6"
 
 
 @pytest.mark.linux_only
@@ -708,28 +708,28 @@ def test_gui_config_password_store_skips_detection(tmp_path, monkeypatch):
     ok = subprocess.CompletedProcess([], 0)
     cfg = {"desktop": {"password_store": "kwallet6"}}
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.config.load_config", return_value=cfg), \
-         patch("hermes_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
-         patch("hermes_cli.main._detect_linux_password_store") as mock_detect, \
-         patch("hermes_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.config.load_config", return_value=cfg), \
+         patch("jimmy_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
+         patch("jimmy_cli.main._detect_linux_password_store") as mock_detect, \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns())
 
     mock_detect.assert_not_called()
     launch_env = mock_run.call_args_list[1].kwargs["env"]
-    assert launch_env["HERMES_DESKTOP_PASSWORD_STORE"] == "kwallet6"
+    assert launch_env["JIMMY_DESKTOP_PASSWORD_STORE"] == "kwallet6"
 
 
 @pytest.mark.linux_only
 def test_gui_explicit_password_store_env_wins_over_config_and_detection(tmp_path, monkeypatch):
     _clear_keychain_env(monkeypatch)
-    monkeypatch.setenv("HERMES_DESKTOP_PASSWORD_STORE", "basic")
+    monkeypatch.setenv("JIMMY_DESKTOP_PASSWORD_STORE", "basic")
     root = _make_desktop_tree(tmp_path)
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     _make_packaged_executable(root, monkeypatch)
@@ -737,22 +737,22 @@ def test_gui_explicit_password_store_env_wins_over_config_and_detection(tmp_path
     ok = subprocess.CompletedProcess([], 0)
     cfg = {"desktop": {"password_store": "kwallet6"}}
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
-         patch("hermes_cli.config.load_config", return_value=cfg), \
-         patch("hermes_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
-         patch("hermes_cli.main._detect_linux_password_store") as mock_detect, \
-         patch("hermes_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
+         patch("jimmy_cli.config.load_config", return_value=cfg), \
+         patch("jimmy_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
+         patch("jimmy_cli.main._detect_linux_password_store") as mock_detect, \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns())
 
     mock_detect.assert_not_called()
     launch_env = mock_run.call_args_list[1].kwargs["env"]
-    assert launch_env["HERMES_DESKTOP_PASSWORD_STORE"] == "basic"
+    assert launch_env["JIMMY_DESKTOP_PASSWORD_STORE"] == "basic"
 
 
 @pytest.mark.macos_only
@@ -764,18 +764,18 @@ def test_gui_password_store_bridge_is_linux_only(tmp_path, monkeypatch):
 
     ok = subprocess.CompletedProcess([], 0)
 
-    with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-         patch("hermes_cli.main._run_npm_install_deterministic", return_value=ok), \
-         patch("hermes_cli.main._desktop_build_needed", return_value=True), \
-         patch("hermes_cli.main._write_desktop_build_stamp"), \
-         patch("hermes_cli.main._desktop_macos_relaunchable_fixup"), \
-         patch("hermes_cli.config.load_config", return_value={}), \
-         patch("hermes_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
-         patch("hermes_cli.main._detect_linux_password_store") as mock_detect, \
-         patch("hermes_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
+    with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+         patch("jimmy_cli.main._run_npm_install_deterministic", return_value=ok), \
+         patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._write_desktop_build_stamp"), \
+         patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
+         patch("jimmy_cli.config.load_config", return_value={}), \
+         patch("jimmy_cli.linux_desktop_entry.install_desktop_entry", return_value=None), \
+         patch("jimmy_cli.main._detect_linux_password_store") as mock_detect, \
+         patch("jimmy_cli.main.subprocess.run", side_effect=[ok, ok]) as mock_run, \
          pytest.raises(SystemExit):
         cli_main.cmd_gui(_ns())
 
     mock_detect.assert_not_called()
     launch_env = mock_run.call_args_list[1].kwargs["env"]
-    assert "HERMES_DESKTOP_PASSWORD_STORE" not in launch_env
+    assert "JIMMY_DESKTOP_PASSWORD_STORE" not in launch_env

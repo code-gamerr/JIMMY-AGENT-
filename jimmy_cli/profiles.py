@@ -1,22 +1,22 @@
 """
-Profile management for multiple isolated Hermes instances.
+Profile management for multiple isolated Jimmy instances.
 
-Each profile is a fully independent HERMES_HOME directory with its own
+Each profile is a fully independent JIMMY_HOME directory with its own
 config.yaml, .env, memory, sessions, skills, gateway, cron, and logs.
-Profiles live under ``~/.hermes/profiles/<name>/`` by default.
+Profiles live under ``~/.jimmy/profiles/<name>/`` by default.
 
-The "default" profile is ``~/.hermes`` itself — backward compatible,
+The "default" profile is ``~/.jimmy`` itself — backward compatible,
 zero migration needed.
 
 Usage::
 
-    hermes profile create coder          # fresh profile + bundled skills
-    hermes profile create coder --clone  # also copy config, .env, SOUL.md, skills
-    hermes profile create coder --clone-all  # full copy of source profile
+    jimmy profile create coder          # fresh profile + bundled skills
+    jimmy profile create coder --clone  # also copy config, .env, SOUL.md, skills
+    jimmy profile create coder --clone-all  # full copy of source profile
     coder chat                           # use via wrapper alias
-    hermes -p coder chat                 # or via flag
-    hermes profile use coder             # set as sticky default
-    hermes profile delete coder          # remove profile + alias + service
+    jimmy -p coder chat                 # or via flag
+    jimmy profile use coder             # set as sticky default
+    jimmy profile delete coder          # remove profile + alias + service
 """
 
 import json
@@ -53,7 +53,7 @@ _PROFILE_DIRS = [
     # Back-compat/Docker HOME for tool subprocesses. Host subprocesses keep
     # the user's real HOME by default so normal CLI credentials remain visible;
     # containers still use this directory for persistent HOME state.
-    # See hermes_constants.get_subprocess_home().
+    # See jimmy_constants.get_subprocess_home().
     "home",
 ]
 
@@ -82,12 +82,12 @@ _CLONE_ALL_STRIP: list[str] = [
 ]
 
 # Infrastructure artifacts excluded from --clone-all when the source is the
-# default profile (``~/.hermes``).  Named profiles never contain these
+# default profile (``~/.jimmy``).  Named profiles never contain these
 # directories at root, so the exclusion is gated to avoid silently dropping
 # user data from a named-profile source.
 #
 # Rationale per item:
-#   hermes-agent  — git repo checkout (~84 MB source + ~3 GB venv)
+#   jimmy-agent  — git repo checkout (~84 MB source + ~3 GB venv)
 #   .worktrees    — git worktrees
 #   profiles      — sibling named profiles (recursive copy never intended)
 #   bin           — installed binaries (tirith etc., ~10 MB) shared per-host
@@ -98,7 +98,7 @@ _CLONE_ALL_STRIP: list[str] = [
 # portable snapshot; clone-all keeps those because the cloned profile is
 # meant to keep working immediately).
 _CLONE_ALL_DEFAULT_EXCLUDE_ROOT: frozenset[str] = frozenset({
-    "hermes-agent",
+    "jimmy-agent",
     ".worktrees",
     "profiles",
     "bin",
@@ -116,7 +116,7 @@ _CLONE_ALL_DEFAULT_EXCLUDE_ROOT: frozenset[str] = frozenset({
 # Rationale per item:
 #   state.db (+wal/shm) — SQLite session store (can reach many GB)
 #   sessions            — per-session transcript/data dirs
-#   backups             — `hermes backup` archives
+#   backups             — `jimmy backup` archives
 #   state-snapshots     — quick-backup snapshot trees
 #   checkpoints         — session checkpoint data
 _CLONE_ALL_HISTORY_EXCLUDE_ROOT: frozenset[str] = frozenset({
@@ -129,11 +129,11 @@ _CLONE_ALL_HISTORY_EXCLUDE_ROOT: frozenset[str] = frozenset({
     "checkpoints",
 })
 
-# Marker file written by `hermes profile create --no-skills`.  When present in
-# a profile's root, callers of seed_profile_skills() (fresh-create, `hermes
+# Marker file written by `jimmy profile create --no-skills`.  When present in
+# a profile's root, callers of seed_profile_skills() (fresh-create, `jimmy
 # update`'s all-profile sync, the web dashboard) skip bundled-skill seeding
 # for that profile.  The user can still install skills manually via
-# `hermes skills install` or drop SKILL.md files into the profile's skills/.
+# `jimmy skills install` or drop SKILL.md files into the profile's skills/.
 # Delete the marker file to opt back in.
 NO_BUNDLED_SKILLS_MARKER = ".no-bundled-skills"
 
@@ -154,8 +154,8 @@ def _clone_all_copytree_ignore(source_dir: Path):
          history, backups, and snapshots that belong to the SOURCE profile
          and should never carry into a fresh clone.  Applies to any source.
       2. Root-level entries in ``_CLONE_ALL_DEFAULT_EXCLUDE_ROOT`` — known
-         Hermes infrastructure directories that only the default profile
-         (``~/.hermes``) ever contains.  Gated on ``source_dir`` actually
+         Jimmy infrastructure directories that only the default profile
+         (``~/.jimmy``) ever contains.  Gated on ``source_dir`` actually
          being the default profile so a named-profile source never has its
          own data silently dropped.
       3. Universal exclusions at any depth — Python bytecode caches that
@@ -168,7 +168,7 @@ def _clone_all_copytree_ignore(source_dir: Path):
     clone.
     """
     source_resolved = source_dir.resolve()
-    is_default_source = source_resolved == _get_default_hermes_home().resolve()
+    is_default_source = source_resolved == _get_default_jimmy_home().resolve()
 
     def _ignore(directory: str, names: List[str]) -> List[str]:
         ignored: list[str] = []
@@ -200,27 +200,27 @@ def _clone_all_copytree_ignore(source_dir: Path):
     return _ignore
 
 
-# Directories/files to exclude when exporting the default (~/.hermes) profile.
+# Directories/files to exclude when exporting the default (~/.jimmy) profile.
 # The default profile contains infrastructure (repo checkout, worktrees, DBs,
 # caches, binaries) that named profiles don't have.  We exclude those so the
 # export is a portable, reasonable-size archive of actual profile data.
 _DEFAULT_EXPORT_EXCLUDE_ROOT = frozenset({
     # Infrastructure
-    "hermes-agent",         # repo checkout (multi-GB)
+    "jimmy-agent",         # repo checkout (multi-GB)
     ".worktrees",           # git worktrees
     "profiles",             # other profiles — never recursive-export
     "bin",                  # installed binaries (tirith, etc.)
     "node_modules",         # npm packages
     # Databases & runtime state
     "state.db", "state.db-shm", "state.db-wal",
-    "hermes_state.db",
+    "jimmy_state.db",
     "response_store.db", "response_store.db-shm", "response_store.db-wal",
     "gateway.pid", "gateway_state.json", "processes.json",
     "auth.json",            # API keys, OAuth tokens, credential pools
     ".env",                 # API keys (dotenv)
     "auth.lock", "active_profile", ".update_check",
     "errors.log",
-    ".hermes_history",
+    ".jimmy_history",
     # Caches (regenerated on use)
     "image_cache", "audio_cache", "document_cache",
     "browser_screenshots", "checkpoints",
@@ -228,15 +228,15 @@ _DEFAULT_EXPORT_EXCLUDE_ROOT = frozenset({
     "logs",                 # gateway logs
 })
 
-# Allow-list for ``export_profile("default")``: when HERMES_HOME equals the
+# Allow-list for ``export_profile("default")``: when JIMMY_HOME equals the
 # cwd (Docker/custom deployments), the default profile home is the working
 # directory and contains arbitrary user files that should NOT be bundled
-# into the export. The set below identifies the *known Hermes profile
-# artifacts* at the root of HERMES_HOME; everything else is excluded.
+# into the export. The set below identifies the *known Jimmy profile
+# artifacts* at the root of JIMMY_HOME; everything else is excluded.
 # Sensitive runtime infrastructure (``state.db``, ``logs/``, ``auth.*``,
 # other profiles) is intentionally *not* in this list so the export stays
 # a portable, credential-free snapshot of the user-facing surface
-# (#58394). Add new artifacts here when introduced in ``hermes_constants``.
+# (#58394). Add new artifacts here when introduced in ``jimmy_constants``.
 _DEFAULT_EXPORT_INCLUDE_ROOT = frozenset({
     # Configuration / persona
     "config.yaml", "SOUL.md", "MEMORY.md", "USER.md", "todo.json",
@@ -252,11 +252,11 @@ _DEFAULT_EXPORT_INCLUDE_ROOT = frozenset({
 
 # Names that cannot be used as profile aliases
 _RESERVED_NAMES = frozenset({
-    "hermes", "default", "test", "tmp", "root", "sudo",
+    "jimmy", "default", "test", "tmp", "root", "sudo",
 })
 
-# Hermes subcommands that cannot be used as profile names/aliases
-_HERMES_SUBCOMMANDS = frozenset({
+# Jimmy subcommands that cannot be used as profile names/aliases
+_JIMMY_SUBCOMMANDS = frozenset({
     "chat", "model", "gateway", "setup", "whatsapp", "login", "logout",
     "status", "cron", "doctor", "dump", "config", "pairing", "skills", "tools",
     "mcp", "sessions", "insights", "version", "update", "uninstall",
@@ -271,31 +271,31 @@ _HERMES_SUBCOMMANDS = frozenset({
 def _get_profiles_root() -> Path:
     """Return the directory where named profiles are stored.
 
-    Anchored to the hermes root, NOT to the current HERMES_HOME
+    Anchored to the jimmy root, NOT to the current JIMMY_HOME
     (which may itself be a profile).  This ensures ``coder profile list``
     can see all profiles.
 
-    In Docker/custom deployments where HERMES_HOME points outside
-    ``~/.hermes``, profiles live under ``HERMES_HOME/profiles/`` so
+    In Docker/custom deployments where JIMMY_HOME points outside
+    ``~/.jimmy``, profiles live under ``JIMMY_HOME/profiles/`` so
     they persist on the mounted volume.
     """
-    return _get_default_hermes_home() / "profiles"
+    return _get_default_jimmy_home() / "profiles"
 
 
-def _get_default_hermes_home() -> Path:
-    """Return the default (pre-profile) HERMES_HOME path.
+def _get_default_jimmy_home() -> Path:
+    """Return the default (pre-profile) JIMMY_HOME path.
 
-    In standard deployments this is ``~/.hermes``.
-    In Docker/custom deployments where HERMES_HOME is outside ``~/.hermes``
-    (e.g. ``/opt/data``), returns HERMES_HOME directly.
+    In standard deployments this is ``~/.jimmy``.
+    In Docker/custom deployments where JIMMY_HOME is outside ``~/.jimmy``
+    (e.g. ``/opt/data``), returns JIMMY_HOME directly.
     """
-    from hermes_constants import get_default_hermes_root
-    return get_default_hermes_root()
+    from jimmy_constants import get_default_jimmy_root
+    return get_default_jimmy_root()
 
 
 def _get_active_profile_path() -> Path:
     """Return the path to the sticky active_profile file."""
-    return _get_default_hermes_home() / "active_profile"
+    return _get_default_jimmy_home() / "active_profile"
 
 
 def _get_wrapper_dir() -> Path:
@@ -334,14 +334,14 @@ def validate_profile_name(name: str) -> None:
     honest about what the on-disk directory name must look like, while
     ingress-point normalization handles UX flexibility (see #18498).
 
-    Also rejects names in :data:`_RESERVED_NAMES` (``hermes``, ``test``,
+    Also rejects names in :data:`_RESERVED_NAMES` (``jimmy``, ``test``,
     ``tmp``, ``root``, ``sudo``) that would create confusing on-disk
-    collisions (a ``hermes`` profile inside ``~/.hermes/``) or get refused
+    collisions (a ``jimmy`` profile inside ``~/.jimmy/``) or get refused
     at alias-creation time anyway. ``default`` is a special pass-through —
     it's a valid alias for the built-in root profile.
     """
     if name == "default":
-        return  # special alias for ~/.hermes
+        return  # special alias for ~/.jimmy
     if not _PROFILE_ID_RE.match(name):
         raise ValueError(
             f"Invalid profile name {name!r}. Must match "
@@ -350,7 +350,7 @@ def validate_profile_name(name: str) -> None:
     if name in _RESERVED_NAMES:
         raise ValueError(
             f"Profile name {name!r} is reserved — it collides with either "
-            f"the Hermes installation itself or a common system binary.  "
+            f"the Jimmy installation itself or a common system binary.  "
             f"Pick a different name."
         )
 
@@ -372,10 +372,10 @@ def validate_alias_name(name: str) -> None:
 
 
 def get_profile_dir(name: str) -> Path:
-    """Resolve a profile name to its HERMES_HOME directory."""
+    """Resolve a profile name to its JIMMY_HOME directory."""
     canon = normalize_profile_name(name)
     if canon == "default":
-        return _get_default_hermes_home()
+        return _get_default_jimmy_home()
     return _get_profiles_root() / canon
 
 
@@ -394,7 +394,7 @@ def profile_exists(name: str) -> bool:
 def check_alias_collision(name: str) -> Optional[str]:
     """Return a human-readable collision message, or None if the name is safe.
 
-    Checks: alias-name validity, reserved names, hermes subcommands, existing
+    Checks: alias-name validity, reserved names, jimmy subcommands, existing
     binaries in PATH.
     """
     canon = normalize_profile_name(name)
@@ -404,8 +404,8 @@ def check_alias_collision(name: str) -> Optional[str]:
         return str(exc)
     if canon in _RESERVED_NAMES:
         return f"'{canon}' is a reserved name"
-    if canon in _HERMES_SUBCOMMANDS:
-        return f"'{canon}' conflicts with a hermes subcommand"
+    if canon in _JIMMY_SUBCOMMANDS:
+        return f"'{canon}' conflicts with a jimmy subcommand"
 
     # Check existing commands in PATH
     wrapper_dir = _get_wrapper_dir()
@@ -422,7 +422,7 @@ def check_alias_collision(name: str) -> Optional[str]:
             if existing_path == str(expected):
                 try:
                     content = expected.read_text(encoding="utf-8")
-                    if "hermes -p" in content:
+                    if "jimmy -p" in content:
                         return None  # it's our wrapper, safe to overwrite
                 except Exception:
                     pass
@@ -465,7 +465,7 @@ def create_wrapper_script(name: str, target: Optional[str] = None) -> Optional[P
     if is_windows:
         wrapper_path = wrapper_dir / f"{canon}.bat"
         try:
-            wrapper_path.write_text(f"@echo off\r\nhermes -p {profile} %*\r\n", encoding="utf-8")
+            wrapper_path.write_text(f"@echo off\r\njimmy -p {profile} %*\r\n", encoding="utf-8")
             return wrapper_path
         except OSError as e:
             print(f"⚠ Could not create wrapper at {wrapper_path}: {e}")
@@ -473,8 +473,8 @@ def create_wrapper_script(name: str, target: Optional[str] = None) -> Optional[P
     else:
         wrapper_path = wrapper_dir / canon
         try:
-            hermes_exe = shutil.which("hermes") or "hermes"
-            wrapper_path.write_text(f'#!/bin/sh\nexec {shlex.quote(hermes_exe)} -p {profile} "$@"\n', encoding="utf-8")
+            jimmy_exe = shutil.which("jimmy") or "jimmy"
+            wrapper_path.write_text(f'#!/bin/sh\nexec {shlex.quote(jimmy_exe)} -p {profile} "$@"\n', encoding="utf-8")
             wrapper_path.chmod(wrapper_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
             return wrapper_path
         except OSError as e:
@@ -504,7 +504,7 @@ def remove_wrapper_script(name: str) -> bool:
             try:
                 # Verify it's our wrapper before removing
                 content = wrapper_path.read_text(encoding="utf-8")
-                if "hermes -p" in content:
+                if "jimmy -p" in content:
                     wrapper_path.unlink()
                     return True
             except Exception:
@@ -516,7 +516,7 @@ def _migrate_profile_config_if_outdated(profile_dir: Path) -> None:
     """Bring a copied profile config.yaml up to the current schema.
 
     Profile creation can clone a config file that predates schema tracking (no
-    ``_config_version``) or that is simply older than the running Hermes. If we
+    ``_config_version``) or that is simply older than the running Jimmy. If we
     leave it untouched, the first desktop/doctor view of the new profile shows a
     scary ``v0 → latest`` warning even though we just created the profile. Scope
     the normal migration pipeline to the new profile and keep it non-interactive.
@@ -526,19 +526,19 @@ def _migrate_profile_config_if_outdated(profile_dir: Path) -> None:
         return
 
     try:
-        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
-        from hermes_cli.config import check_config_version, migrate_config
+        from jimmy_constants import reset_jimmy_home_override, set_jimmy_home_override
+        from jimmy_cli.config import check_config_version, migrate_config
 
-        token = set_hermes_home_override(str(profile_dir))
+        token = set_jimmy_home_override(str(profile_dir))
         try:
             current_ver, latest_ver = check_config_version()
             if current_ver < latest_ver:
                 migrate_config(interactive=False, quiet=True)
         finally:
-            reset_hermes_home_override(token)
+            reset_jimmy_home_override(token)
     except Exception:
         # Profile creation should not fail because an old copied config could
-        # not be migrated. The next `hermes doctor --fix` can still surface the
+        # not be migrated. The next `jimmy doctor --fix` can still surface the
         # detailed error in the target profile.
         pass
 
@@ -547,8 +547,8 @@ def find_alias_for_profile(profile_name: str) -> Optional[str]:
     """Return the alias name of the wrapper that activates *profile_name*, or None.
 
     A wrapper created by :func:`create_wrapper_script` is a file named after the
-    alias whose body invokes ``hermes -p <profile>``. When the alias name equals
-    the profile name this is trivial, but a custom alias (``hermes profile alias
+    alias whose body invokes ``jimmy -p <profile>``. When the alias name equals
+    the profile name this is trivial, but a custom alias (``jimmy profile alias
     <profile> --name <custom>``) produces a differently-named file — so the
     display side cannot assume ``wrapper == profile`` and must reverse-look-up.
 
@@ -565,7 +565,7 @@ def find_alias_for_profile(profile_name: str) -> Optional[str]:
 
 
 # Cap how much of a wrapper file we read when reverse-looking-up its profile.
-# Real wrappers are a few hundred bytes of shell; the needle (``hermes -p X``)
+# Real wrappers are a few hundred bytes of shell; the needle (``jimmy -p X``)
 # sits near the top. The wrapper dir (e.g. ``~/.local/bin``) commonly also holds
 # large unrelated binaries (ffmpeg, node, …) — reading those whole, N times, was
 # the dominant cost in ``list_profiles`` (~4.5s). Reading a small head slice and
@@ -587,7 +587,7 @@ def build_alias_map() -> dict[str, str]:
     if not wrapper_dir.is_dir():
         return result
     is_windows = sys.platform == "win32"
-    prefix = "hermes -p "
+    prefix = "jimmy -p "
 
     for entry in sorted(wrapper_dir.iterdir()):
         if not entry.is_file():
@@ -667,7 +667,7 @@ def _read_distribution_meta(profile_dir: Path) -> tuple:
     if present; ``(None, None, None)`` otherwise.
 
     Failures (missing file, bad YAML) are swallowed — a bad manifest should
-    never break ``hermes profile list`` for an unrelated profile.
+    never break ``jimmy profile list`` for an unrelated profile.
     """
     mf_path = profile_dir / "distribution.yaml"
     if not mf_path.is_file():
@@ -695,7 +695,7 @@ def _read_config_model(profile_dir: Path) -> tuple:
     try:
         # Multi-profile display read: load_config() targets the ACTIVE
         # profile's home, so read THIS profile's file via the raw primitive.
-        from hermes_cli.config import read_user_config_raw
+        from jimmy_cli.config import read_user_config_raw
         cfg = read_user_config_raw(config_path)
         model_cfg = cfg.get("model", {})
         if isinstance(model_cfg, str):
@@ -718,7 +718,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
     no live PID file.  In those cases fall back to validating the PID recorded
     in the profile's own ``gateway_state.json`` against the live process table,
     mirroring the ``/api/status`` sidebar's liveness logic so the two surfaces
-    agree.  Parameterized by ``profile_dir`` so it never mutates ``HERMES_HOME``.
+    agree.  Parameterized by ``profile_dir`` so it never mutates ``JIMMY_HOME``.
     """
     try:
         from gateway.status import get_running_pid
@@ -810,7 +810,7 @@ def _count_skills(profile_dir: Path) -> int:
 # ---------------------------------------------------------------------------
 #
 # We keep this file deliberately tiny and separate from the profile's
-# ``config.yaml``. ``config.yaml`` is the user-facing Hermes config
+# ``config.yaml``. ``config.yaml`` is the user-facing Jimmy config
 # (~5000 lines of defaults); ``profile.yaml`` is metadata ABOUT the
 # profile itself (its role, who described it). Mixing them makes both
 # harder to read.
@@ -829,7 +829,7 @@ def read_profile_meta(profile_dir: Path) -> dict:
     Returns ``{"description": "", "description_auto": False,
     "display_name": ""}`` when the file is missing or unreadable. Never
     raises — a corrupt profile.yaml on an unrelated profile must not
-    break ``hermes profile list``.
+    break ``jimmy profile list``.
     """
     empty = {"description": "", "description_auto": False, "display_name": ""}
     path = _profile_yaml_path(profile_dir)
@@ -934,7 +934,7 @@ def list_profiles() -> List[ProfileInfo]:
     wrapper_dir = _get_wrapper_dir()
 
     # Default profile
-    default_home = _get_default_hermes_home()
+    default_home = _get_default_jimmy_home()
     if default_home.is_dir():
         model, provider = _read_config_model(default_home)
         dist_name, dist_version, dist_source = _read_distribution_meta(default_home)
@@ -1006,7 +1006,7 @@ def profiles_to_serve(
     multiplex: bool,
     profile_allowlist: Optional[List[str]] = None,
 ) -> List[Tuple[str, Path]]:
-    """Return the ``(profile_name, hermes_home)`` pairs a gateway should serve.
+    """Return the ``(profile_name, jimmy_home)`` pairs a gateway should serve.
 
     This is the single chokepoint for "which profiles does the inbound gateway
     handle" so later multiplexing phases never re-derive the set.
@@ -1016,7 +1016,7 @@ def profiles_to_serve(
       always had. The name is ``"default"`` for the default profile or the
       active named profile's id.
     - ``multiplex=True``: returns the default profile plus every valid named
-      profile under ``profiles/``, each paired with its own HERMES_HOME. When
+      profile under ``profiles/``, each paired with its own JIMMY_HOME. When
       ``profile_allowlist`` is provided, only selected named profiles are
       included; the default profile is always served.
 
@@ -1024,14 +1024,14 @@ def profiles_to_serve(
     per-profile config reads, gateway-running probes, or skill counts like
     :func:`list_profiles`. It runs on gateway startup and must stay cheap.
 
-    The returned ``hermes_home`` is the path to pass to
-    ``set_hermes_home_override`` when scoping a turn to that profile.
+    The returned ``jimmy_home`` is the path to pass to
+    ``set_jimmy_home_override`` when scoping a turn to that profile.
     """
     active = get_active_profile_name() or "default"
     if not multiplex:
         return [(active, get_profile_dir(active))]
 
-    serve: List[Tuple[str, Path]] = [("default", _get_default_hermes_home())]
+    serve: List[Tuple[str, Path]] = [("default", _get_default_jimmy_home())]
     allowed: Optional[set[str]] = None
     if profile_allowlist is not None:
         allowed = set()
@@ -1099,7 +1099,7 @@ def create_profile(
         If True, skip wrapper script creation.
     no_skills:
         If True, create an empty profile with no bundled skills, and write
-        a marker file so ``hermes update`` skips re-seeding this profile's
+        a marker file so ``jimmy update`` skips re-seeding this profile's
         skills. Mutually exclusive with ``clone_config``/``clone_all`` (those
         explicitly copy skills from the source).
 
@@ -1118,7 +1118,7 @@ def create_profile(
 
     if canon == "default":
         raise ValueError(
-            "Cannot create a profile named 'default' — it is the built-in profile (~/.hermes)."
+            "Cannot create a profile named 'default' — it is the built-in profile (~/.jimmy)."
         )
 
     profile_dir = get_profile_dir(canon)
@@ -1130,8 +1130,8 @@ def create_profile(
     if clone_from is not None or clone_all or clone_config:
         if clone_from is None:
             # Default: clone from active profile
-            from hermes_constants import get_hermes_home
-            source_dir = get_hermes_home()
+            from jimmy_constants import get_jimmy_home
+            source_dir = get_jimmy_home()
         else:
             clone_from = normalize_profile_name(clone_from)
             validate_profile_name(clone_from)
@@ -1142,7 +1142,7 @@ def create_profile(
             )
 
     if clone_all and source_dir:
-        # Full copy of source profile (exclude sibling ~/.hermes/profiles/)
+        # Full copy of source profile (exclude sibling ~/.jimmy/profiles/)
         shutil.copytree(
             source_dir,
             profile_dir,
@@ -1193,7 +1193,7 @@ def create_profile(
 
     # Seed an empty .env so the profile has its own credentials file from
     # day one. Without it, profile-scoped env writes (dashboard Channels /
-    # Keys pages, `hermes -p <name> auth add`) had no file until first
+    # Keys pages, `jimmy -p <name> auth add`) had no file until first
     # write, and the profile silently inherited API keys from the shell
     # environment — users reasonably read that as "the new profile reads
     # the root .env". Skipped when --clone/--clone-all already copied one.
@@ -1201,7 +1201,7 @@ def create_profile(
     if not env_path.exists():
         try:
             env_path.write_text(
-                "# Per-profile secrets for this Hermes profile.\n"
+                "# Per-profile secrets for this Jimmy profile.\n"
                 "# API keys and tokens set here override the shell environment.\n"
                 "# Behavioral settings belong in config.yaml, not here.\n",
                 encoding="utf-8",
@@ -1215,25 +1215,25 @@ def create_profile(
     soul_path = profile_dir / "SOUL.md"
     if not soul_path.exists():
         try:
-            from hermes_cli.default_soul import DEFAULT_SOUL_MD
+            from jimmy_cli.default_soul import DEFAULT_SOUL_MD
             soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
         except Exception:
             pass  # best-effort — don't fail profile creation over this
 
-    # Write the opt-out marker so seed_profile_skills() and `hermes update`'s
+    # Write the opt-out marker so seed_profile_skills() and `jimmy update`'s
     # all-profile sync loop both skip this profile for bundled-skill seeding.
     if no_skills:
         try:
             (profile_dir / NO_BUNDLED_SKILLS_MARKER).write_text(
                 "This profile opted out of bundled-skill seeding "
-                "(`hermes profile create --no-skills`).\n"
-                "Delete this file to re-enable sync on the next `hermes update`.\n",
+                "(`jimmy profile create --no-skills`).\n"
+                "Delete this file to re-enable sync on the next `jimmy update`.\n",
                 encoding="utf-8",
             )
         except OSError:
             pass  # best-effort — the feature still works via the empty skills/ dir
 
-    # Cloned configs can be older than the running Hermes (or predate schema
+    # Cloned configs can be older than the running Jimmy (or predate schema
     # tracking entirely). Migrate config-only clones immediately so
     # desktop/status surfaces don't warn that a just-created profile is
     # v0/outdated. Leave --clone-all snapshots byte-for-byte apart from the
@@ -1252,11 +1252,11 @@ def create_profile(
                 description_auto=False,
             )
         except Exception:
-            pass  # non-fatal — user can describe later with `hermes profile describe`
+            pass  # non-fatal — user can describe later with `jimmy profile describe`
 
     # Phase 4: when running inside a container under s6, register the
     # new profile's gateway as a runtime s6 service so
-    # `hermes -p <profile> gateway start` can supervise it via
+    # `jimmy -p <profile> gateway start` can supervise it via
     # `s6-svc -u` instead of spawning a bare process. On host (systemd
     # / launchd / windows) this is a no-op — the existing per-profile
     # unit-generation paths handle gateway lifecycle.
@@ -1268,10 +1268,10 @@ def create_profile(
 def seed_profile_skills(profile_dir: Path, quiet: bool = False) -> Optional[dict]:
     """Seed bundled skills into a profile via subprocess.
 
-    Uses subprocess because sync_skills() caches HERMES_HOME at module level.
+    Uses subprocess because sync_skills() caches JIMMY_HOME at module level.
     Returns the sync result dict, or None on failure.
 
-    Profiles that opted out of bundled skills (via ``hermes profile create
+    Profiles that opted out of bundled skills (via ``jimmy profile create
     --no-skills`` — which writes ``.no-bundled-skills`` to the profile root)
     are skipped and get an empty-result dict so callers can report
     "opted out" instead of "failed".
@@ -1289,7 +1289,7 @@ def seed_profile_skills(profile_dir: Path, quiet: bool = False) -> Optional[dict
             [sys.executable, "-c",
              "import json; from tools.skills_sync import sync_skills; "
              "r = sync_skills(quiet=True); print(json.dumps(r))"],
-            env={**os.environ, "HERMES_HOME": str(profile_dir)},
+            env={**os.environ, "JIMMY_HOME": str(profile_dir)},
             cwd=str(project_root),
             capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=60,
         )
@@ -1333,7 +1333,7 @@ def backfill_profile_envs(quiet: bool = False) -> List[str]:
     if not profiles_root.is_dir():
         return backfilled
 
-    default_env = _get_default_hermes_home() / ".env"
+    default_env = _get_default_jimmy_home() / ".env"
 
     for entry in sorted(profiles_root.iterdir()):
         if not entry.is_dir() or not _PROFILE_ID_RE.match(entry.name):
@@ -1348,7 +1348,7 @@ def backfill_profile_envs(quiet: bool = False) -> List[str]:
                 shutil.copy2(default_env, env_path)
             else:
                 env_path.write_text(
-                    "# Per-profile secrets for this Hermes profile.\n"
+                    "# Per-profile secrets for this Jimmy profile.\n"
                     "# API keys and tokens set here override the shell environment.\n"
                     "# Behavioral settings belong in config.yaml, not here.\n",
                     encoding="utf-8",
@@ -1363,16 +1363,16 @@ def backfill_profile_envs(quiet: bool = False) -> List[str]:
 
 
 def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
-    """PIDs of running Hermes *backends* bound to this profile.
+    """PIDs of running Jimmy *backends* bound to this profile.
 
     The ``gateway.pid`` file only tracks the messaging gateway.  A Desktop app
     spawns a headless ``serve`` (or legacy ``dashboard --no-open``) backend per
     profile that holds the profile's SQLite connection open and keeps writing
     sessions/WAL/sandbox files — the writer that makes ``rmtree`` hit
     ``ENOTEMPTY`` (and, pre-fix, resurrected the tree).  ``gateway.pid`` never
-    names it, so find it by inspection: a Hermes backend subcommand
+    names it, so find it by inspection: a Jimmy backend subcommand
     (``serve``/``dashboard``/``gateway``) that is bound to *this* profile either
-    by a ``--profile <canon>`` / ``-p <canon>`` selector or by a ``HERMES_HOME``
+    by a ``--profile <canon>`` / ``-p <canon>`` selector or by a ``JIMMY_HOME``
     that resolves to ``profile_dir``.
 
     Best-effort and tightly scoped: current-user processes only, backend
@@ -1390,7 +1390,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
     except OSError:
         resolved_dir = profile_dir
 
-    # Never terminate ourselves or a parent (e.g. `hermes -p <canon> profile
+    # Never terminate ourselves or a parent (e.g. `jimmy -p <canon> profile
     # delete` runs under the very profile it's deleting).
     skip: set[int] = {os.getpid()}
     try:
@@ -1407,20 +1407,20 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
         current_user = None
 
     backend_tokens = {"serve", "dashboard", "gateway"}
-    hermes_markers = ("hermes_cli.main", "hermes-gateway", "tui_gateway")
+    jimmy_markers = ("jimmy_cli.main", "jimmy-gateway", "tui_gateway")
     # Matches python / python3 / python3.12 / pythonw(.exe) — the interpreter
     # basenames a `#!/…/python3` console-script shim gets exec'd through when
-    # something (e.g. Electron's `findOnPath('hermes')` resolution) spawns the
+    # something (e.g. Electron's `findOnPath('jimmy')` resolution) spawns the
     # shim by handing the interpreter its path explicitly instead of running
     # the shim directly. In that shape the OS-reported argv[0] is the
-    # interpreter, not "hermes", so the checks below would otherwise miss it.
+    # interpreter, not "jimmy", so the checks below would otherwise miss it.
     _python_interpreter_re = re.compile(r"^python[\d.]*w?(\.exe)?$")
     # The actual console-script entry points this project ships (see
     # pyproject.toml [project.scripts]) -- used to validate argv[1] against
     # a known shim identity rather than a loose prefix match, since argv[1]
     # can be ANY user-invoked python script path when argv[0] is a bare
     # interpreter.
-    _HERMES_CONSOLE_SCRIPT_NAMES = frozenset({"hermes", "hermes-agent", "hermes-acp"})
+    _JIMMY_CONSOLE_SCRIPT_NAMES = frozenset({"jimmy", "jimmy-agent", "jimmy-acp"})
     pids: list[int] = []
 
     for proc in psutil.process_iter(["pid", "name", "username", "cmdline"]):
@@ -1436,32 +1436,32 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
             if not argv:
                 continue
 
-            # Must be a Hermes process: either an entrypoint marker in argv, a
-            # resolved executable named `hermes`, or a python interpreter
-            # directly exec'ing a `hermes`-named console-script shim (argv[0]
+            # Must be a Jimmy process: either an entrypoint marker in argv, a
+            # resolved executable named `jimmy`, or a python interpreter
+            # directly exec'ing a `jimmy`-named console-script shim (argv[0]
             # is the interpreter, argv[1] is the shim's path).
             joined = " ".join(argv)
             exe_name = os.path.basename(argv[0]).lower()
-            is_hermes = (
-                any(marker in joined for marker in hermes_markers)
-                or exe_name == "hermes"
-                or exe_name.startswith("hermes")
+            is_jimmy = (
+                any(marker in joined for marker in jimmy_markers)
+                or exe_name == "jimmy"
+                or exe_name.startswith("jimmy")
             )
-            if not is_hermes and len(argv) >= 2 and _python_interpreter_re.match(exe_name):
+            if not is_jimmy and len(argv) >= 2 and _python_interpreter_re.match(exe_name):
                 # Match against the actual known console-script entry points
-                # (pyproject.toml [project.scripts]: hermes, hermes-agent,
-                # hermes-acp) rather than a bare `startswith("hermes")` --
+                # (pyproject.toml [project.scripts]: jimmy, jimmy-agent,
+                # jimmy-acp) rather than a bare `startswith("jimmy")` --
                 # that looser check is fine for a directly-resolved executable
                 # name (argv[0] IS the interpreter there, so a false match is
                 # rare), but here argv[1] can be ANY user-invoked python
                 # script path, and a bare prefix match would misidentify an
                 # unrelated script the user happens to name e.g.
-                # "hermes-notes.py" or "hermes-unrelated-tool" as the shim,
+                # "jimmy-notes.py" or "jimmy-unrelated-tool" as the shim,
                 # making it killable by profile delete.
                 script_name = os.path.basename(str(argv[1])).lower()
                 script_stem = script_name.rsplit(".", 1)[0] if "." in script_name else script_name
-                is_hermes = script_stem in _HERMES_CONSOLE_SCRIPT_NAMES
-            if not is_hermes:
+                is_jimmy = script_stem in _JIMMY_CONSOLE_SCRIPT_NAMES
+            if not is_jimmy:
                 continue
 
             # Restrict to backend subcommands so we never kill an interactive
@@ -1482,10 +1482,10 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
                         bound = True
                         break
 
-            # ...or by HERMES_HOME env pointing at this profile dir.
+            # ...or by JIMMY_HOME env pointing at this profile dir.
             if not bound:
                 try:
-                    env_home = (proc.environ() or {}).get("HERMES_HOME", "")
+                    env_home = (proc.environ() or {}).get("JIMMY_HOME", "")
                     if env_home and Path(env_home).resolve() == resolved_dir:
                         bound = True
                 except Exception:
@@ -1587,8 +1587,8 @@ def delete_profile(name: str, yes: bool = False) -> Path:
 
     if canon == "default":
         raise ValueError(
-            "Cannot delete the default profile (~/.hermes).\n"
-            "To remove everything, use: hermes uninstall"
+            "Cannot delete the default profile (~/.jimmy).\n"
+            "To remove everything, use: jimmy uninstall"
         )
 
     profile_dir = get_profile_dir(canon)
@@ -1654,7 +1654,7 @@ def delete_profile(name: str, yes: bool = False) -> Path:
     # 2b. Stop any other backends bound to this profile (Desktop-spawned
     # serve/dashboard processes the gateway.pid file never names). They hold
     # the profile's SQLite connection open and keep writing files, which makes
-    # the rmtree below fail with ENOTEMPTY and — before the ensure_hermes_home
+    # the rmtree below fail with ENOTEMPTY and — before the ensure_jimmy_home
     # guard — resurrected the deleted tree.
     _stop_profile_backends(canon, profile_dir)
 
@@ -1755,7 +1755,7 @@ def _maybe_register_gateway_service(profile_name: str) -> None:
     which goes through the same dispatch path.
 
     Port selection: each supervised profile gateway loads its own
-    ``HERMES_HOME`` and binds the port resolved by ``gateway/config.py``
+    ``JIMMY_HOME`` and binds the port resolved by ``gateway/config.py``
     from that profile's environment — ``API_SERVER_PORT`` (or
     ``platforms.api_server.extra.port`` in the profile's
     ``config.yaml``), defaulting to 8642. There is no ``[gateway] port``
@@ -1776,10 +1776,10 @@ def _maybe_register_gateway_service(profile_name: str) -> None:
     actually the S6 one.
     """
     try:
-        from hermes_cli.service_manager import detect_service_manager
+        from jimmy_cli.service_manager import detect_service_manager
         if detect_service_manager() != "s6":
             return  # host path — silent, no registration needed
-        from hermes_cli.service_manager import get_service_manager
+        from jimmy_cli.service_manager import get_service_manager
         mgr = get_service_manager()
     except RuntimeError:
         return  # no backend on this host — nothing to do
@@ -1811,10 +1811,10 @@ def _maybe_unregister_gateway_service(profile_name: str) -> None:
     — see that docstring.
     """
     try:
-        from hermes_cli.service_manager import detect_service_manager
+        from jimmy_cli.service_manager import detect_service_manager
         if detect_service_manager() != "s6":
             return  # host path — silent
-        from hermes_cli.service_manager import get_service_manager
+        from jimmy_cli.service_manager import get_service_manager
         mgr = get_service_manager()
     except RuntimeError:
         return
@@ -1833,11 +1833,11 @@ def _cleanup_gateway_service(name: str, profile_dir: Path) -> None:
     import platform as _platform
 
     # Derive service name for this profile
-    # Temporarily set HERMES_HOME so _profile_suffix resolves correctly
-    old_home = os.environ.get("HERMES_HOME")
+    # Temporarily set JIMMY_HOME so _profile_suffix resolves correctly
+    old_home = os.environ.get("JIMMY_HOME")
     try:
-        os.environ["HERMES_HOME"] = str(profile_dir)
-        from hermes_cli.gateway import get_service_name, get_launchd_plist_path
+        os.environ["JIMMY_HOME"] = str(profile_dir)
+        from jimmy_cli.gateway import get_service_name, get_launchd_plist_path
 
         if _platform.system() == "Linux":
             svc_name = get_service_name()
@@ -1871,9 +1871,9 @@ def _cleanup_gateway_service(name: str, profile_dir: Path) -> None:
         print(f"⚠ Service cleanup: {e}")
     finally:
         if old_home is not None:
-            os.environ["HERMES_HOME"] = old_home
-        elif "HERMES_HOME" in os.environ:
-            del os.environ["HERMES_HOME"]
+            os.environ["JIMMY_HOME"] = old_home
+        elif "JIMMY_HOME" in os.environ:
+            del os.environ["JIMMY_HOME"]
 
 
 def _stop_gateway_process(profile_dir: Path) -> None:
@@ -1937,14 +1937,14 @@ def get_active_profile() -> str:
 def set_active_profile(name: str) -> None:
     """Set the sticky active profile.
 
-    Writes to ``~/.hermes/active_profile``. Use ``"default"`` to clear.
+    Writes to ``~/.jimmy/active_profile``. Use ``"default"`` to clear.
     """
     canon = normalize_profile_name(name)
     validate_profile_name(canon)
     if canon != "default" and not profile_exists(canon):
         raise FileNotFoundError(
             f"Profile '{canon}' does not exist. "
-            f"Create it with: hermes profile create {canon}"
+            f"Create it with: jimmy profile create {canon}"
         )
 
     path = _get_active_profile_path()
@@ -1960,17 +1960,17 @@ def set_active_profile(name: str) -> None:
 
 
 def get_active_profile_name() -> str:
-    """Infer the current profile name from HERMES_HOME.
+    """Infer the current profile name from JIMMY_HOME.
 
-    Returns ``"default"`` if HERMES_HOME is not set or points to ``~/.hermes``.
-    Returns the profile name if HERMES_HOME points into ``~/.hermes/profiles/<name>``.
-    Returns ``"custom"`` if HERMES_HOME is set to an unrecognized path.
+    Returns ``"default"`` if JIMMY_HOME is not set or points to ``~/.jimmy``.
+    Returns the profile name if JIMMY_HOME points into ``~/.jimmy/profiles/<name>``.
+    Returns ``"custom"`` if JIMMY_HOME is set to an unrecognized path.
     """
-    from hermes_constants import get_hermes_home
-    hermes_home = get_hermes_home()
-    resolved = hermes_home.resolve()
+    from jimmy_constants import get_jimmy_home
+    jimmy_home = get_jimmy_home()
+    resolved = jimmy_home.resolve()
 
-    default_resolved = _get_default_hermes_home().resolve()
+    default_resolved = _get_default_jimmy_home().resolve()
     if resolved == default_resolved:
         return "default"
 
@@ -1998,9 +1998,9 @@ def _default_export_ignore(root_dir: Path):
     * **Root-level allow-list** — only entries whose name appears in
       ``_DEFAULT_EXPORT_INCLUDE_ROOT`` survive. Everything else (such as
       an unrelated ``x11-dev/`` directory in a Docker deployment where
-      HERMES_HOME equals the cwd) is excluded. Blacklisting was tried
-      first and proved unable to anticipate every non-Hermes file the
-      user may have lying alongside HERMES_HOME (#58394).
+      JIMMY_HOME equals the cwd) is excluded. Blacklisting was tried
+      first and proved unable to anticipate every non-Jimmy file the
+      user may have lying alongside JIMMY_HOME (#58394).
     * **Universal exclusions at any depth** — ``__pycache__``, sockets,
       temp files; plus npm lockfiles, which may appear at the root.
 
@@ -2018,7 +2018,7 @@ def _default_export_ignore(root_dir: Path):
             elif entry in {"package.json", "package-lock.json"}:
                 ignored.add(entry)
         # Root-level allow-list: drop everything that isn't a known
-        # Hermes profile artifact.
+        # Jimmy profile artifact.
         if Path(directory) == root_dir:
             ignored.update(
                 entry for entry in contents if entry not in _DEFAULT_EXPORT_INCLUDE_ROOT
@@ -2075,9 +2075,9 @@ def _scrub_export_secrets(staged: Path) -> None:
     """Force-redact secret-shaped strings in a staged export tree.
 
     Same ``agent.redact.redact_sensitive_text(..., force=True)`` pass used by
-    ``hermes sessions export --redact``. Runs on the *staged copy only* so the
+    ``jimmy sessions export --redact``. Runs on the *staged copy only* so the
     live profile is never rewritten. ``force=True`` ignores
-    ``security.redact_secrets`` / ``HERMES_REDACT_SECRETS`` — share archives
+    ``security.redact_secrets`` / ``JIMMY_REDACT_SECRETS`` — share archives
     must not emit raw keys even when the user has disabled live redaction.
 
     Symlinks to text files are materialized into regular files when their
@@ -2149,8 +2149,8 @@ def export_profile(name: str, output_path: str, extra_files: Optional[Dict[str, 
             target.write_text(content, encoding="utf-8")
 
     if canon == "default":
-        # The default profile IS ~/.hermes itself — its parent is ~/ and its
-        # directory name is ".hermes", not "default".  We stage a clean copy
+        # The default profile IS ~/.jimmy itself — its parent is ~/ and its
+        # directory name is ".jimmy", not "default".  We stage a clean copy
         # under a temp dir so the archive contains ``default/...``.
         with tempfile.TemporaryDirectory() as tmpdir:
             staged = Path(tmpdir) / "default"
@@ -2276,7 +2276,7 @@ def import_profile(archive_path: str, name: Optional[str] = None) -> Path:
     if not inferred_name:
         raise ValueError(
             "Cannot determine profile name from archive. "
-            "Specify it explicitly: hermes profile import <archive> --name <name>"
+            "Specify it explicitly: jimmy profile import <archive> --name <name>"
         )
     if archive_root is None:
         raise ValueError(
@@ -2284,14 +2284,14 @@ def import_profile(archive_path: str, name: Optional[str] = None) -> Path:
         )
 
     # Archives exported from the default profile have "default/" as top-level
-    # dir.  Importing as "default" would target ~/.hermes itself — disallow
+    # dir.  Importing as "default" would target ~/.jimmy itself — disallow
     # that and guide the user toward a named profile.
     canon = normalize_profile_name(inferred_name)
     validate_profile_name(canon)
     if canon == "default":
         raise ValueError(
-            "Cannot import as 'default' — that is the built-in root profile (~/.hermes). "
-            "Specify a different name: hermes profile import <archive> --name <name>"
+            "Cannot import as 'default' — that is the built-in root profile (~/.jimmy). "
+            "Specify a different name: jimmy profile import <archive> --name <name>"
         )
 
     profile_dir = get_profile_dir(canon)
@@ -2301,7 +2301,7 @@ def import_profile(archive_path: str, name: Optional[str] = None) -> Path:
     profiles_root = _get_profiles_root()
     profiles_root.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix="hermes_profile_import_") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="jimmy_profile_import_") as tmpdir:
         staging_root = Path(tmpdir)
         _safe_extract_profile_archive(archive, staging_root)
 
@@ -2327,13 +2327,13 @@ def import_profile(archive_path: str, name: Optional[str] = None) -> Path:
 
 def _migrate_honcho_profile_host(old_name: str, new_name: str, new_dir: Path) -> None:
     """Rename Honcho host blocks for a renamed profile without changing peers."""
-    old_host = f"hermes_{old_name}"
-    legacy_old_host = f"hermes.{old_name}"
-    new_host = f"hermes_{new_name}"
+    old_host = f"jimmy_{old_name}"
+    legacy_old_host = f"jimmy.{old_name}"
+    new_host = f"jimmy_{new_name}"
 
     candidates = [
         new_dir / "honcho.json",
-        _get_default_hermes_home() / "honcho.json",
+        _get_default_jimmy_home() / "honcho.json",
         Path.home() / ".honcho" / "config.json",
     ]
 
@@ -2365,7 +2365,7 @@ def _migrate_honcho_profile_host(old_name: str, new_name: str, new_dir: Path) ->
 
         block = hosts[source_host]
         if isinstance(block, dict) and "aiPeer" not in block:
-            if source_host.startswith("hermes_"):
+            if source_host.startswith("jimmy_"):
                 bare = source_host.split("_", 1)[1]
             else:
                 bare = source_host.split(".", 1)[1] if "." in source_host else source_host
@@ -2403,7 +2403,7 @@ def rename_profile(old_name: str, new_name: str) -> Path:
             raise ValueError("Display name cannot be empty.")
         cleaned = set_profile_display_name("default", new_name)
         print(f"✓ Display name set: {cleaned} (canonical id remains 'default')")
-        return _get_default_hermes_home()
+        return _get_default_jimmy_home()
 
     new_canon = normalize_profile_name(new_name)
     validate_profile_name(new_canon)
@@ -2456,29 +2456,29 @@ def rename_profile(old_name: str, new_name: str) -> Path:
 # ---------------------------------------------------------------------------
 
 def resolve_profile_env(profile_name: str) -> str:
-    """Resolve a profile name to a HERMES_HOME path string.
+    """Resolve a profile name to a JIMMY_HOME path string.
 
-    Called early in the CLI entry point, before any hermes modules
-    are imported, to set the HERMES_HOME environment variable.
+    Called early in the CLI entry point, before any jimmy modules
+    are imported, to set the JIMMY_HOME environment variable.
 
-    When HERMES_HOME is already set, the configured spelling IS the
+    When JIMMY_HOME is already set, the configured spelling IS the
     launch root (it may be a junction/symlink alias of the platform
     default).  Keep that spelling so profile re-home does not destroy
     the launcher's lexical provenance -- the subprocess sanitizer needs
-    it to match Hermes-owned PYTHONPATH entries written in the same
+    it to match Jimmy-owned PYTHONPATH entries written in the same
     spelling (#82581 junction follow-up).  Physically the paths are
     identical (junction-transparent); only the spelling is preserved.
     """
     canon = normalize_profile_name(profile_name)
     validate_profile_name(canon)
-    env_home = os.environ.get("HERMES_HOME", "").strip()
+    env_home = os.environ.get("JIMMY_HOME", "").strip()
     if env_home:
         env_path = Path(env_home)
         # A profile-shaped env value means the root is the grandparent
-        # (mirrors get_default_hermes_root()).
+        # (mirrors get_default_jimmy_root()).
         root = env_path.parent.parent if env_path.parent.name == "profiles" else env_path
     else:
-        root = _get_default_hermes_home()
+        root = _get_default_jimmy_home()
     if canon == "default":
         return str(root)
     profile_dir = root / "profiles" / canon
@@ -2486,7 +2486,7 @@ def resolve_profile_env(profile_name: str) -> str:
     if not profile_dir.is_dir():
         raise FileNotFoundError(
             f"Profile '{canon}' does not exist. "
-            f"Create it with: hermes profile create {canon}"
+            f"Create it with: jimmy profile create {canon}"
         )
 
     return str(profile_dir)

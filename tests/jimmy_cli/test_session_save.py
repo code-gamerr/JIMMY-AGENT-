@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from hermes_cli.session_export import (
+from jimmy_cli.session_export import (
     SAVE_FORMATS,
     default_save_filename,
     normalize_save_format,
@@ -76,7 +76,7 @@ class TestRenderSessionForSave:
 
 class TestDefaultSaveFilename:
     def test_basic(self):
-        assert default_save_filename("abc-123", "md") == "hermes_session_abc-123.md"
+        assert default_save_filename("abc-123", "md") == "jimmy_session_abc-123.md"
 
     def test_hostile_session_id_sanitized(self):
         name = default_save_filename("../../etc/passwd", "json")
@@ -84,4 +84,4 @@ class TestDefaultSaveFilename:
         assert ".." not in name.replace("etcpasswd", "")
 
     def test_empty_session_id(self):
-        assert default_save_filename("", "html") == "hermes_session_session.html"
+        assert default_save_filename("", "html") == "jimmy_session_session.html"

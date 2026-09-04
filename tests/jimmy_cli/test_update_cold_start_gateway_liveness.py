@@ -10,10 +10,10 @@ same as every other ``_spawn_detached`` caller.
 
 from __future__ import annotations
 
-from hermes_cli import gateway as hermes_gateway
-from hermes_cli import gateway_windows
-from hermes_cli import main as cli_main
-from hermes_cli import update_cmd
+from jimmy_cli import gateway as jimmy_gateway
+from jimmy_cli import gateway_windows
+from jimmy_cli import main as cli_main
+from jimmy_cli import update_cmd
 
 
 def _run_cold_start(monkeypatch, capsys, *, surviving_pids):
@@ -22,7 +22,7 @@ def _run_cold_start(monkeypatch, capsys, *, surviving_pids):
     # The pre-spawn re-check (``all_profiles=True``) must find nothing
     # running so the cold-start path proceeds and actually spawns.
     monkeypatch.setattr(
-        hermes_gateway,
+        jimmy_gateway,
         "find_gateway_pids",
         lambda all_profiles=False: [] if all_profiles else surviving_pids,
     )

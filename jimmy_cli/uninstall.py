@@ -1,9 +1,9 @@
 """
-Hermes Agent Uninstaller.
+Jimmy Uninstaller.
 
 Provides options for:
 - Full uninstall: Remove everything including configs and data
-- Keep data: Remove code but keep ~/.hermes/ (configs, sessions, logs)
+- Keep data: Remove code but keep ~/.jimmy/ (configs, sessions, logs)
 """
 
 import os
@@ -12,9 +12,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 
-from hermes_cli.colors import Colors, color
+from jimmy_cli.colors import Colors, color
 
 def log_info(msg: str):
     print(f"{color('→', Colors.CYAN)} {msg}")
@@ -51,7 +51,7 @@ def find_shell_configs() -> list:
 
 
 def remove_path_from_shell_configs():
-    """Remove Hermes PATH entries from shell configuration files."""
+    """Remove Jimmy PATH entries from shell configuration files."""
     configs = find_shell_configs()
     removed_from = []
     
@@ -60,22 +60,22 @@ def remove_path_from_shell_configs():
             content = config_path.read_text(encoding="utf-8")
             original_content = content
             
-            # Remove lines containing hermes-agent or hermes PATH entries
+            # Remove lines containing jimmy-agent or jimmy PATH entries
             new_lines = []
             skip_next = False
             
             for line in content.split('\n'):
-                # Skip the "# Hermes Agent" comment and following line
-                if '# Hermes Agent' in line or '# hermes-agent' in line:
+                # Skip the "# Jimmy" comment and following line
+                if '# Jimmy' in line or '# jimmy-agent' in line:
                     skip_next = True
                     continue
-                if skip_next and ('hermes' in line.lower() and 'PATH' in line):
+                if skip_next and ('jimmy' in line.lower() and 'PATH' in line):
                     skip_next = False
                     continue
                 skip_next = False
                 
-                # Remove any PATH line containing hermes
-                if 'hermes' in line.lower() and ('PATH=' in line or 'path=' in line.lower()):
+                # Remove any PATH line containing jimmy
+                if 'jimmy' in line.lower() and ('PATH=' in line or 'path=' in line.lower()):
                     continue
                     
                 new_lines.append(line)
@@ -89,7 +89,7 @@ def remove_path_from_shell_configs():
             if new_content != original_content:
                 from utils import atomic_write_text
 
-                # This is the user's own shell rc, not a Hermes-owned file, and
+                # This is the user's own shell rc, not a Jimmy-owned file, and
                 # nothing in this function backs it up. A bare write_text()
                 # truncates it before the new content lands, so a crash or
                 # SIGINT mid-write leaves the user with an empty or truncated
@@ -110,23 +110,23 @@ def remove_path_from_shell_configs():
 
 
 def remove_wrapper_script():
-    """Remove the hermes wrapper script if it exists."""
+    """Remove the jimmy wrapper script if it exists."""
     wrapper_paths = [
-        Path.home() / ".local" / "bin" / "hermes",
-        Path.home() / ".local" / "bin" / "hermes-acp",
-        Path.home() / ".local" / "bin" / "hermes-agent",
-        Path("/usr/local/bin/hermes"),
-        Path("/usr/local/bin/hermes-acp"),
-        Path("/usr/local/bin/hermes-agent"),
+        Path.home() / ".local" / "bin" / "jimmy",
+        Path.home() / ".local" / "bin" / "jimmy-acp",
+        Path.home() / ".local" / "bin" / "jimmy-agent",
+        Path("/usr/local/bin/jimmy"),
+        Path("/usr/local/bin/jimmy-acp"),
+        Path("/usr/local/bin/jimmy-agent"),
     ]
     
     removed = []
     for wrapper in wrapper_paths:
         if wrapper.exists():
             try:
-                # Check if it's our wrapper (contains hermes_cli reference)
+                # Check if it's our wrapper (contains jimmy_cli reference)
                 content = wrapper.read_text(encoding="utf-8")
-                if 'hermes_cli' in content or 'hermes-agent' in content:
+                if 'jimmy_cli' in content or 'jimmy-agent' in content:
                     wrapper.unlink()
                     removed.append(wrapper)
             except Exception as e:
@@ -148,11 +148,11 @@ def _node_symlink_candidate_dirs() -> "list[Path]":
     return dirs
 
 
-def remove_node_symlinks(hermes_home: Path) -> list:
+def remove_node_symlinks(jimmy_home: Path) -> list:
     """Remove the node/npm/npx symlinks the installer placed on PATH.
 
     The POSIX installer (``scripts/install.sh`` / ``scripts/lib/node-bootstrap.sh``)
-    symlinks node/npm/npx into the same directory as the ``hermes`` command:
+    symlinks node/npm/npx into the same directory as the ``jimmy`` command:
 
     - ``/usr/local/bin/`` on root FHS installs (Linux, uid 0)
     - ``$PREFIX/bin/`` on Termux
@@ -161,11 +161,11 @@ def remove_node_symlinks(hermes_home: Path) -> list:
     We check all candidate directories so that uninstall works regardless of
     how the install was done (e.g. a root FHS install that placed links in
     ``/usr/local/bin``, or an older install that used ``~/.local/bin`` before
-    the FHS fix).  Only symlinks that resolve into this Hermes home's ``node``
+    the FHS fix).  Only symlinks that resolve into this Jimmy home's ``node``
     directory are removed — links the user has repointed elsewhere (nvm, fnm,
     etc.) are left untouched.
     """
-    node_dir = (hermes_home / "node").resolve()
+    node_dir = (jimmy_home / "node").resolve()
     removed = []
 
     for name in ("node", "npm", "npx"):
@@ -201,7 +201,7 @@ def uninstall_gateway_service():
     - Linux: user + system systemd services (with proper DBUS env setup)
     - macOS: launchd plists
     - Windows: Scheduled Task + Startup-folder fallback, via ``gateway_windows``
-    - All platforms: standalone ``hermes gateway run`` processes
+    - All platforms: standalone ``jimmy gateway run`` processes
     - Termux/Android: skips systemd (no systemd on Android), still kills standalone processes
     """
     import platform
@@ -209,7 +209,7 @@ def uninstall_gateway_service():
 
     # 1. Kill any standalone gateway processes (all platforms, including Termux)
     try:
-        from hermes_cli.gateway import kill_gateway_processes, find_gateway_pids
+        from jimmy_cli.gateway import kill_gateway_processes, find_gateway_pids
         pids = find_gateway_pids()
         if pids:
             killed = kill_gateway_processes()
@@ -230,7 +230,7 @@ def uninstall_gateway_service():
     # 2. Linux: uninstall systemd services (both user and system scopes)
     if system == "Linux":
         try:
-            from hermes_cli.gateway import (
+            from jimmy_cli.gateway import (
                 get_systemd_unit_path,
                 get_service_name,
                 _systemctl_cmd,
@@ -267,7 +267,7 @@ def uninstall_gateway_service():
     # 3. macOS: uninstall launchd plist
     elif system == "Darwin":
         try:
-            from hermes_cli.gateway import get_launchd_plist_path
+            from jimmy_cli.gateway import get_launchd_plist_path
             plist_path = get_launchd_plist_path()
             if plist_path.exists():
                 subprocess.run(["launchctl", "unload", str(plist_path)],
@@ -285,7 +285,7 @@ def uninstall_gateway_service():
     #    uninstall logic stays in exactly one place.
     elif system == "Windows":
         try:
-            from hermes_cli import gateway_windows
+            from jimmy_cli import gateway_windows
             if gateway_windows.is_installed() or gateway_windows.is_task_registered() \
                     or gateway_windows.is_startup_entry_installed():
                 try:
@@ -311,20 +311,20 @@ def uninstall_gateway_service():
 # The installer (``scripts/install.ps1``) does four Windows-only things that
 # ``remove_path_from_shell_configs`` / ``remove_wrapper_script`` don't cover:
 #
-#   1. Sets User-scope env vars ``HERMES_HOME`` and ``HERMES_GIT_BASH_PATH``
+#   1. Sets User-scope env vars ``JIMMY_HOME`` and ``JIMMY_GIT_BASH_PATH``
 #      via ``[Environment]::SetEnvironmentVariable(..., "User")``.  These
 #      don't live in ~/.bashrc — they're in the Windows registry at
 #      HKCU\Environment.
 #   2. Prepends to User-scope ``PATH`` (same registry location) entries
-#      like ``%LOCALAPPDATA%\hermes\git\cmd``, ``%LOCALAPPDATA%\hermes\git\bin``,
-#      ``%LOCALAPPDATA%\hermes\git\usr\bin``, ``%LOCALAPPDATA%\hermes\node``.
+#      like ``%LOCALAPPDATA%\jimmy\git\cmd``, ``%LOCALAPPDATA%\jimmy\git\bin``,
+#      ``%LOCALAPPDATA%\jimmy\git\usr\bin``, ``%LOCALAPPDATA%\jimmy\node``.
 #      Again not in any rc file — only accessible via the registry or the
 #      .NET [Environment] API.
-#   3. Downloads PortableGit to ``%LOCALAPPDATA%\hermes\git\`` and Node to
-#      ``%LOCALAPPDATA%\hermes\node\`` as user-scoped, isolated copies.
+#   3. Downloads PortableGit to ``%LOCALAPPDATA%\jimmy\git\`` and Node to
+#      ``%LOCALAPPDATA%\jimmy\node\`` as user-scoped, isolated copies.
 #      These are ~200MB combined and serve no purpose after uninstall.
-#   4. On the ``hermes dashboard`` + gateway paths, drops files into
-#      ``%LOCALAPPDATA%\hermes\gateway-service\`` and sometimes
+#   4. On the ``jimmy dashboard`` + gateway paths, drops files into
+#      ``%LOCALAPPDATA%\jimmy\gateway-service\`` and sometimes
 #      ``%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`` — the
 #      latter is handled by ``gateway_windows.uninstall()`` already.
 #
@@ -336,21 +336,21 @@ def uninstall_gateway_service():
 # or open a new terminal anyway).
 
 
-def _hermes_path_markers(hermes_home: Path) -> list[str]:
-    """Path-entry substrings that identify Hermes-owned User-PATH entries."""
-    root = str(hermes_home).rstrip("\\/")
+def _jimmy_path_markers(jimmy_home: Path) -> list[str]:
+    """Path-entry substrings that identify Jimmy-owned User-PATH entries."""
+    root = str(jimmy_home).rstrip("\\/")
     # Match on prefix so sub-entries (git\cmd, git\bin, git\usr\bin, node, etc.)
-    # all get swept.  Also match the bare hermes-agent install dir.
-    markers = [root + "\\hermes-agent", root + "\\git", root + "\\node", root + "\\venv"]
-    # Also match if HERMES_HOME was customised to somewhere else — find-and-nuke
-    # any entry whose path component contains "hermes".  We don't want to catch
-    # unrelated entries like "chermes-foo" or "ephermeral", so we look for
-    # backslash-hermes as a word-ish boundary.
+    # all get swept.  Also match the bare jimmy-agent install dir.
+    markers = [root + "\\jimmy-agent", root + "\\git", root + "\\node", root + "\\venv"]
+    # Also match if JIMMY_HOME was customised to somewhere else — find-and-nuke
+    # any entry whose path component contains "jimmy".  We don't want to catch
+    # unrelated entries like "cjimmy-foo" or "ephermeral", so we look for
+    # backslash-jimmy as a word-ish boundary.
     return markers
 
 
-def remove_path_from_windows_registry(hermes_home: Path) -> list[str]:
-    """Strip Hermes-owned entries from User-scope PATH in the registry.
+def remove_path_from_windows_registry(jimmy_home: Path) -> list[str]:
+    """Strip Jimmy-owned entries from User-scope PATH in the registry.
 
     Returns the list of removed path entries.  Operates on HKCU\\Environment,
     same key the installer wrote to via ``[Environment]::SetEnvironmentVariable``.
@@ -371,7 +371,7 @@ def remove_path_from_windows_registry(hermes_home: Path) -> list[str]:
                 return []
             # Preserve REG_EXPAND_SZ vs REG_SZ so unexpanded %VARS% survive.
             entries = [e for e in path_value.split(";") if e]
-            markers = _hermes_path_markers(hermes_home)
+            markers = _jimmy_path_markers(jimmy_home)
             kept: list[str] = []
             for entry in entries:
                 entry_norm = entry.rstrip("\\/")
@@ -388,8 +388,8 @@ def remove_path_from_windows_registry(hermes_home: Path) -> list[str]:
     return removed
 
 
-def remove_hermes_env_vars_windows() -> list[str]:
-    """Delete HERMES_HOME and HERMES_GIT_BASH_PATH from User-scope env vars."""
+def remove_jimmy_env_vars_windows() -> list[str]:
+    """Delete JIMMY_HOME and JIMMY_GIT_BASH_PATH from User-scope env vars."""
     try:
         import winreg
     except ImportError:
@@ -399,7 +399,7 @@ def remove_hermes_env_vars_windows() -> list[str]:
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
                             winreg.KEY_READ | winreg.KEY_WRITE) as key:
-            for name in ("HERMES_HOME", "HERMES_GIT_BASH_PATH"):
+            for name in ("JIMMY_HOME", "JIMMY_GIT_BASH_PATH"):
                 try:
                     winreg.QueryValueEx(key, name)
                 except FileNotFoundError:
@@ -414,13 +414,13 @@ def remove_hermes_env_vars_windows() -> list[str]:
     return removed
 
 
-def remove_portable_tooling_windows(hermes_home: Path) -> list[Path]:
+def remove_portable_tooling_windows(jimmy_home: Path) -> list[Path]:
     """Delete PortableGit and Node installs the Windows installer created under
-    ``%LOCALAPPDATA%\\hermes\\``.  Only called on full uninstall; they're
+    ``%LOCALAPPDATA%\\jimmy\\``.  Only called on full uninstall; they're
     isolated from any system Git / Node so they cannot break other tools."""
     removed: list[Path] = []
     for sub in ("git", "node", "gateway-service"):
-        target = hermes_home / sub
+        target = jimmy_home / sub
         if target.exists():
             try:
                 shutil.rmtree(target, ignore_errors=False)
@@ -435,11 +435,11 @@ def _is_windows() -> bool:
     return sys.platform == "win32"
 
 
-def _is_default_hermes_home(hermes_home: Path) -> bool:
-    """Return True when ``hermes_home`` points at the default (non-profile) root."""
+def _is_default_jimmy_home(jimmy_home: Path) -> bool:
+    """Return True when ``jimmy_home`` points at the default (non-profile) root."""
     try:
-        from hermes_constants import get_default_hermes_root
-        return hermes_home.resolve() == get_default_hermes_root().resolve()
+        from jimmy_constants import get_default_jimmy_root
+        return jimmy_home.resolve() == get_default_jimmy_root().resolve()
     except Exception:
         return False
 
@@ -449,7 +449,7 @@ def _discover_named_profiles():
     if profile support is unavailable or nothing is installed beyond the
     default root."""
     try:
-        from hermes_cli.profiles import list_profiles
+        from jimmy_cli.profiles import list_profiles
     except Exception:
         return []
     try:
@@ -461,11 +461,11 @@ def _discover_named_profiles():
 
 def _uninstall_profile(profile) -> None:
     """Fully uninstall a single named profile: stop its gateway service,
-    remove its alias wrapper, and wipe its HERMES_HOME directory.
+    remove its alias wrapper, and wipe its JIMMY_HOME directory.
 
-    We shell out to ``hermes -p <name> gateway stop|uninstall`` because
+    We shell out to ``jimmy -p <name> gateway stop|uninstall`` because
     service names, unit paths, and plist paths are all derived from the
-    current HERMES_HOME and can't be easily switched in-process.
+    current JIMMY_HOME and can't be easily switched in-process.
     """
     import sys as _sys
     name = profile.name
@@ -474,13 +474,13 @@ def _uninstall_profile(profile) -> None:
     log_info(f"Uninstalling profile '{name}'...")
 
     # 1. Stop and remove this profile's gateway service.
-    #    Use `python -m hermes_cli.main` so we don't depend on a `hermes`
+    #    Use `python -m jimmy_cli.main` so we don't depend on a `jimmy`
     #    wrapper that may be half-removed mid-uninstall.
-    hermes_invocation = [_sys.executable, "-m", "hermes_cli.main", "--profile", name]
+    jimmy_invocation = [_sys.executable, "-m", "jimmy_cli.main", "--profile", name]
     for subcmd in ("stop", "uninstall"):
         try:
             subprocess.run(
-                hermes_invocation + ["gateway", subcmd],
+                jimmy_invocation + ["gateway", subcmd],
                 capture_output=True,
                 text=True, encoding='utf-8', errors='replace',
                 timeout=60,
@@ -500,7 +500,7 @@ def _uninstall_profile(profile) -> None:
         except Exception as e:
             log_warn(f"  Could not remove alias {alias_path}: {e}")
 
-    # 3. Wipe the profile's HERMES_HOME directory.
+    # 3. Wipe the profile's JIMMY_HOME directory.
     try:
         if profile_home.exists():
             shutil.rmtree(profile_home)
@@ -512,33 +512,33 @@ def _uninstall_profile(profile) -> None:
 def run_gui_uninstall(args):
     """GUI-only uninstall: remove the Chat GUI, leave the agent + data intact.
 
-    Mirrors ``hermes uninstall --gui``. Removes the desktop app's built
+    Mirrors ``jimmy uninstall --gui``. Removes the desktop app's built
     artifacts, the packaged app bundle (best-effort), and the Electron
-    userData dir — nothing under ``$HERMES_HOME`` config/sessions/.env, and
+    userData dir — nothing under ``$JIMMY_HOME`` config/sessions/.env, and
     never the Python agent or its venv.
     """
-    from hermes_cli.gui_uninstall import (
+    from jimmy_cli.gui_uninstall import (
         agent_is_installed,
         gui_install_summary,
         uninstall_gui,
     )
 
-    hermes_home = get_hermes_home()
-    summary = gui_install_summary(hermes_home)
+    jimmy_home = get_jimmy_home()
+    summary = gui_install_summary(jimmy_home)
     skip_confirm = bool(getattr(args, "yes", False))
 
     print()
     print(color("┌─────────────────────────────────────────────────────────┐", Colors.MAGENTA, Colors.BOLD))
-    print(color("│         ⚕ Hermes Chat GUI Uninstaller                  │", Colors.MAGENTA, Colors.BOLD))
+    print(color("│         ⚕ Jimmy Chat GUI Uninstaller                  │", Colors.MAGENTA, Colors.BOLD))
     print(color("└─────────────────────────────────────────────────────────┘", Colors.MAGENTA, Colors.BOLD))
     print()
 
     if not summary["gui_installed"]:
-        print("No Hermes Chat GUI installation was found.")
-        print(f"  Checked: {hermes_home}, and the standard app locations for this OS.")
+        print("No Jimmy Chat GUI installation was found.")
+        print(f"  Checked: {jimmy_home}, and the standard app locations for this OS.")
         return
 
-    print(color("This removes the Chat GUI only. The Hermes agent stays installed.", Colors.CYAN))
+    print(color("This removes the Chat GUI only. The Jimmy agent stays installed.", Colors.CYAN))
     print()
     print(color("Will remove:", Colors.YELLOW, Colors.BOLD))
     for p in summary["source_built_artifacts"]:
@@ -548,10 +548,10 @@ def run_gui_uninstall(args):
     if summary["userdata_exists"]:
         print(f"  • {summary['userdata_dir']}  (desktop app data)")
     print()
-    if agent_is_installed(hermes_home):
+    if agent_is_installed(jimmy_home):
         print(color("Kept intact:", Colors.GREEN, Colors.BOLD))
-        print(f"  • The Hermes agent at {hermes_home / 'hermes-agent'}")
-        print(f"  • Your config, sessions, and secrets under {hermes_home}")
+        print(f"  • The Jimmy agent at {jimmy_home / 'jimmy-agent'}")
+        print(f"  • Your config, sessions, and secrets under {jimmy_home}")
         print()
 
     if not skip_confirm:
@@ -569,15 +569,15 @@ def run_gui_uninstall(args):
     print()
     print(color("Uninstalling Chat GUI...", Colors.CYAN, Colors.BOLD))
     print()
-    uninstall_gui(hermes_home)
+    uninstall_gui(jimmy_home)
 
     print()
     print(color("┌─────────────────────────────────────────────────────────┐", Colors.GREEN, Colors.BOLD))
     print(color("│            ✓ Chat GUI Uninstalled!                      │", Colors.GREEN, Colors.BOLD))
     print(color("└─────────────────────────────────────────────────────────┘", Colors.GREEN, Colors.BOLD))
     print()
-    print("The Hermes agent is still installed. Run 'hermes' to use the CLI,")
-    print("or 'hermes uninstall' to remove the agent too.")
+    print("The Jimmy agent is still installed. Run 'jimmy' to use the CLI,")
+    print("or 'jimmy uninstall' to remove the agent too.")
     print()
 
 
@@ -586,28 +586,28 @@ def run_uninstall(args):
     Run the uninstall process.
     
     Options:
-    - Full uninstall: removes code + ~/.hermes/ (configs, data, logs)
-    - Keep data: removes code but keeps ~/.hermes/ for future reinstall
+    - Full uninstall: removes code + ~/.jimmy/ (configs, data, logs)
+    - Keep data: removes code but keeps ~/.jimmy/ for future reinstall
     """
     project_root = get_project_root()
-    hermes_home = get_hermes_home()
+    jimmy_home = get_jimmy_home()
 
     if bool(getattr(args, "dry_run", False)):
         _print_uninstall_dry_run(
             project_root=project_root,
-            hermes_home=hermes_home,
+            jimmy_home=jimmy_home,
             full_uninstall=bool(getattr(args, "full", False)),
         )
         return
 
     # Detect named profiles when uninstalling from the default root —
-    # offer to clean them up too instead of leaving zombie HERMES_HOMEs
+    # offer to clean them up too instead of leaving zombie JIMMY_HOMEs
     # and systemd units behind.
-    is_default_profile = _is_default_hermes_home(hermes_home)
+    is_default_profile = _is_default_jimmy_home(jimmy_home)
     named_profiles = _discover_named_profiles() if is_default_profile else []
 
     # Non-interactive fast path (``--yes``): no prompts. ``--full`` selects a
-    # full wipe (code + ~/.hermes data); otherwise keep-data. Named profiles
+    # full wipe (code + ~/.jimmy data); otherwise keep-data. Named profiles
     # are NOT auto-removed here — that's a destructive, surprising default for
     # an unattended run, so it stays opt-in to the interactive flow. This is
     # the path the desktop app's detached cleanup script uses for its
@@ -617,7 +617,7 @@ def run_uninstall(args):
         full_uninstall = bool(getattr(args, "full", False))
         _perform_uninstall(
             project_root=project_root,
-            hermes_home=hermes_home,
+            jimmy_home=jimmy_home,
             full_uninstall=full_uninstall,
             remove_profiles=False,
             named_profiles=named_profiles,
@@ -626,16 +626,16 @@ def run_uninstall(args):
 
     print()
     print(color("┌─────────────────────────────────────────────────────────┐", Colors.MAGENTA, Colors.BOLD))
-    print(color("│            ⚕ Hermes Agent Uninstaller                  │", Colors.MAGENTA, Colors.BOLD))
+    print(color("│            ⚕ Jimmy Uninstaller                  │", Colors.MAGENTA, Colors.BOLD))
     print(color("└─────────────────────────────────────────────────────────┘", Colors.MAGENTA, Colors.BOLD))
     print()
     
     # Show what will be affected
     print(color("Current Installation:", Colors.CYAN, Colors.BOLD))
     print(f"  Code:    {project_root}")
-    print(f"  Config:  {hermes_home / 'config.yaml'}")
-    print(f"  Secrets: {hermes_home / '.env'}")
-    print(f"  Data:    {hermes_home / 'cron/'}, {hermes_home / 'sessions/'}, {hermes_home / 'logs/'}")
+    print(f"  Config:  {jimmy_home / 'config.yaml'}")
+    print(f"  Secrets: {jimmy_home / '.env'}")
+    print(f"  Data:    {jimmy_home / 'cron/'}, {jimmy_home / 'sessions/'}, {jimmy_home / 'logs/'}")
     print()
 
     if named_profiles:
@@ -673,7 +673,7 @@ def run_uninstall(args):
 
     # When doing a full uninstall from the default profile, also offer to
     # remove any named profiles — stopping their gateway services, unlinking
-    # their alias wrappers, and wiping their HERMES_HOME dirs. Otherwise
+    # their alias wrappers, and wiping their JIMMY_HOME dirs. Otherwise
     # those leave zombie services and data behind.
     remove_profiles = False
     if full_uninstall and named_profiles:
@@ -696,7 +696,7 @@ def run_uninstall(args):
     # Final confirmation
     print()
     if full_uninstall:
-        print(color("⚠️  WARNING: This will permanently delete ALL Hermes data!", Colors.RED, Colors.BOLD))
+        print(color("⚠️  WARNING: This will permanently delete ALL Jimmy data!", Colors.RED, Colors.BOLD))
         print(color("   Including: configs, API keys, sessions, scheduled jobs, logs", Colors.RED))
         if remove_profiles:
             print(color(
@@ -705,7 +705,7 @@ def run_uninstall(args):
                 Colors.RED
             ))
     else:
-        print("This will remove the Hermes code but keep your configuration and data.")
+        print("This will remove the Jimmy code but keep your configuration and data.")
     
     print()
     try:
@@ -722,41 +722,41 @@ def run_uninstall(args):
 
     _perform_uninstall(
         project_root=project_root,
-        hermes_home=hermes_home,
+        jimmy_home=jimmy_home,
         full_uninstall=full_uninstall,
         remove_profiles=remove_profiles,
         named_profiles=named_profiles,
     )
 
 
-def _print_uninstall_dry_run(*, project_root: Path, hermes_home: Path, full_uninstall: bool) -> None:
+def _print_uninstall_dry_run(*, project_root: Path, jimmy_home: Path, full_uninstall: bool) -> None:
     """Print the uninstall plan without stopping services or deleting files."""
     print()
     print(color("Dry run: no files, services, or environment entries will be changed.", Colors.CYAN, Colors.BOLD))
     print()
     print(color("Would inspect/remove:", Colors.YELLOW, Colors.BOLD))
     print("  • Gateway services and standalone gateway processes")
-    print("  • Hermes PATH entries from shell configs / Windows User PATH")
-    print("  • Hermes wrapper scripts and Hermes-managed node/npm/npx symlinks")
+    print("  • Jimmy PATH entries from shell configs / Windows User PATH")
+    print("  • Jimmy wrapper scripts and Jimmy-managed node/npm/npx symlinks")
     print("  • Desktop Chat GUI artifacts")
     print(f"  • Code checkout: {project_root}")
     if full_uninstall:
-        print(f"  • Hermes config/data: {hermes_home}")
-        if _is_default_hermes_home(hermes_home):
+        print(f"  • Jimmy config/data: {jimmy_home}")
+        if _is_default_jimmy_home(jimmy_home):
             profiles = _discover_named_profiles()
             if profiles:
                 print("  • Named profiles (interactive uninstall asks before removing):")
                 for prof in profiles:
                     print(f"    - {prof.name}: {prof.path}")
     else:
-        print(f"  • Keep Hermes config/data: {hermes_home}")
+        print(f"  • Keep Jimmy config/data: {jimmy_home}")
     print()
 
 
 def _perform_uninstall(
     *,
     project_root: Path,
-    hermes_home: Path,
+    jimmy_home: Path,
     full_uninstall: bool,
     remove_profiles: bool,
     named_profiles: list,
@@ -765,9 +765,9 @@ def _perform_uninstall(
     paths so the destructive sequence lives in exactly one place.
 
     Steps: stop gateway → strip PATH (rc files + Windows registry) → remove the
-    ``hermes`` wrapper + node symlinks → remove the desktop Chat GUI artifacts →
+    ``jimmy`` wrapper + node symlinks → remove the desktop Chat GUI artifacts →
     delete the code checkout → (Windows) remove PortableGit/Node → optionally
-    wipe ``$HERMES_HOME`` data and named profiles on full uninstall.
+    wipe ``$JIMMY_HOME`` data and named profiles on full uninstall.
     """
     print()
     print(color("Uninstalling...", Colors.CYAN, Colors.BOLD))
@@ -791,26 +791,26 @@ def _perform_uninstall(
 
     if _is_windows():
         log_info("Removing PATH entries from Windows User environment...")
-        # Expand %LOCALAPPDATA% etc. in hermes_home so the marker matching is
+        # Expand %LOCALAPPDATA% etc. in jimmy_home so the marker matching is
         # against fully resolved paths — installer writes literal strings
-        # like C:\Users\<u>\AppData\Local\hermes\git\cmd, not %LOCALAPPDATA%.
-        removed_path_entries = remove_path_from_windows_registry(Path(os.path.expandvars(str(hermes_home))))
+        # like C:\Users\<u>\AppData\Local\jimmy\git\cmd, not %LOCALAPPDATA%.
+        removed_path_entries = remove_path_from_windows_registry(Path(os.path.expandvars(str(jimmy_home))))
         if removed_path_entries:
             for entry in removed_path_entries:
                 log_success(f"Removed from User PATH: {entry}")
         else:
-            log_info("No Hermes-owned PATH entries in User environment")
+            log_info("No Jimmy-owned PATH entries in User environment")
 
-        log_info("Removing HERMES_HOME / HERMES_GIT_BASH_PATH User env vars...")
-        removed_env = remove_hermes_env_vars_windows()
+        log_info("Removing JIMMY_HOME / JIMMY_GIT_BASH_PATH User env vars...")
+        removed_env = remove_jimmy_env_vars_windows()
         if removed_env:
             for name in removed_env:
                 log_success(f"Removed User env var: {name}")
         else:
-            log_info("No Hermes-set User env vars to remove")
+            log_info("No Jimmy-set User env vars to remove")
     
     # 3. Remove wrapper script
-    log_info("Removing hermes command...")
+    log_info("Removing jimmy command...")
     removed_wrappers = remove_wrapper_script()
     if removed_wrappers:
         for wrapper in removed_wrappers:
@@ -819,15 +819,15 @@ def _perform_uninstall(
         log_info("No wrapper script found")
 
     # 3b. Remove node/npm/npx symlinks the installer left in ~/.local/bin
-    #     (only when they still point into this Hermes home's node dir, so we
+    #     (only when they still point into this Jimmy home's node dir, so we
     #     never clobber an existing nvm / user-managed Node).
-    log_info("Removing Hermes-managed node/npm/npx symlinks...")
-    removed_node_links = remove_node_symlinks(hermes_home)
+    log_info("Removing Jimmy-managed node/npm/npx symlinks...")
+    removed_node_links = remove_node_symlinks(jimmy_home)
     if removed_node_links:
         for link in removed_node_links:
             log_success(f"Removed {link}")
     else:
-        log_info("No Hermes-managed node/npm/npx symlinks found")
+        log_info("No Jimmy-managed node/npm/npx symlinks found")
 
     # 3c. Remove the desktop Chat GUI's artifacts too (built renderer/release,
     #     node_modules, the packaged app bundle, and the Electron userData
@@ -835,13 +835,13 @@ def _perform_uninstall(
     #     code, so the GUI — which is just another consumer of the same
     #     checkout — should go with it. uninstall_gui() never touches config /
     #     sessions / .env, so it's safe in keep-data mode; on full uninstall the
-    #     step-5 rmtree(hermes_home) would sweep the in-tree artifacts anyway,
-    #     but the packaged app + Electron userData live OUTSIDE HERMES_HOME and
+    #     step-5 rmtree(jimmy_home) would sweep the in-tree artifacts anyway,
+    #     but the packaged app + Electron userData live OUTSIDE JIMMY_HOME and
     #     must be cleaned explicitly here.
     log_info("Removing desktop Chat GUI artifacts...")
     try:
-        from hermes_cli.gui_uninstall import uninstall_gui
-        gui_removed = uninstall_gui(hermes_home)
+        from jimmy_cli.gui_uninstall import uninstall_gui
+        gui_removed = uninstall_gui(jimmy_home)
         if not gui_removed:
             log_info("No desktop GUI artifacts found")
     except Exception as e:
@@ -854,8 +854,8 @@ def _perform_uninstall(
     # We need to be careful here
     try:
         if project_root.exists():
-            # If the install is inside ~/.hermes/, just remove the hermes-agent subdir
-            if hermes_home in project_root.parents or project_root.parent == hermes_home:
+            # If the install is inside ~/.jimmy/, just remove the jimmy-agent subdir
+            if jimmy_home in project_root.parents or project_root.parent == jimmy_home:
                 shutil.rmtree(project_root)
                 log_success(f"Removed {project_root}")
             else:
@@ -868,23 +868,23 @@ def _perform_uninstall(
 
     # 4b. Remove Windows-only installer artifacts that are NOT user data:
     #     PortableGit, bundled Node, gateway-service dir.  Installer put them
-    #     under HERMES_HOME but they're install tooling, not config — safe to
+    #     under JIMMY_HOME but they're install tooling, not config — safe to
     #     remove even in "keep data" mode.  If we're doing a full uninstall
-    #     the step-5 rmtree(hermes_home) would sweep them anyway; calling
+    #     the step-5 rmtree(jimmy_home) would sweep them anyway; calling
     #     this helper there is a no-op since they'll already be gone.
     if _is_windows():
         log_info("Removing Windows installer artifacts (PortableGit, Node, gateway-service)...")
-        removed_artifacts = remove_portable_tooling_windows(hermes_home)
+        removed_artifacts = remove_portable_tooling_windows(jimmy_home)
         if removed_artifacts:
             for path in removed_artifacts:
                 log_success(f"Removed {path}")
         else:
             log_info("No Windows installer artifacts to remove")
     
-    # 5. Optionally remove ~/.hermes/ data directory (and named profiles)
+    # 5. Optionally remove ~/.jimmy/ data directory (and named profiles)
     if full_uninstall:
         # 5a. Stop and remove each named profile's gateway service and
-        #     alias wrapper. The profile HERMES_HOME dirs live under
+        #     alias wrapper. The profile JIMMY_HOME dirs live under
         #     ``<default>/profiles/<name>/`` and will be swept away by the
         #     rmtree below, but services + alias scripts live OUTSIDE the
         #     default root and have to be cleaned up explicitly.
@@ -894,14 +894,14 @@ def _perform_uninstall(
 
         log_info("Removing configuration and data...")
         try:
-            if hermes_home.exists():
-                shutil.rmtree(hermes_home)
-                log_success(f"Removed {hermes_home}")
+            if jimmy_home.exists():
+                shutil.rmtree(jimmy_home)
+                log_success(f"Removed {jimmy_home}")
         except Exception as e:
-            log_warn(f"Could not fully remove {hermes_home}: {e}")
+            log_warn(f"Could not fully remove {jimmy_home}: {e}")
             log_info("You may need to manually remove it")
     else:
-        log_info(f"Keeping configuration and data in {hermes_home}")
+        log_info(f"Keeping configuration and data in {jimmy_home}")
     
     # Done
     print()
@@ -912,13 +912,13 @@ def _perform_uninstall(
     
     if not full_uninstall:
         print(color("Your configuration and data have been preserved:", Colors.CYAN))
-        print(f"  {hermes_home}/")
+        print(f"  {jimmy_home}/")
         print()
         print("To reinstall later with your existing settings:")
         if _is_windows():
-            print(color("  iex (irm https://hermes-agent.nousresearch.com/install.ps1)", Colors.DIM))
+            print(color("  iex (irm https://jimmy-agent.jimmy-agent.com/install.ps1)", Colors.DIM))
         else:
-            print(color("  curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash", Colors.DIM))
+            print(color("  curl -fsSL https://jimmy-agent.jimmy-agent.com/install.sh | bash", Colors.DIM))
         print()
 
     if _is_windows():
@@ -928,7 +928,7 @@ def _perform_uninstall(
         print(color("Reload your shell to complete the process:", Colors.YELLOW))
         print("  source ~/.bashrc  # or ~/.zshrc")
     print()
-    print("Thank you for using Hermes Agent! ⚕")
+    print("Thank you for using Jimmy! ⚕")
     print()
 
 
@@ -943,22 +943,22 @@ class _UninstallArgs:
 
 
 def main(argv=None) -> int:
-    """Module entrypoint: ``python -m hermes_cli.uninstall --mode <gui|lite|full>``.
+    """Module entrypoint: ``python -m jimmy_cli.uninstall --mode <gui|lite|full>``.
 
     Exists so the desktop app can run the uninstall under a Python interpreter
     OUTSIDE the venv being deleted. On Windows, ``lite``/``full`` rmtree the
     venv that contains the running ``python.exe`` — and a running .exe is
     mandatory-locked, so doing that from the venv's own interpreter half-fails.
     The desktop launches this with the system Python + ``PYTHONPATH=<agentRoot>``
-    so ``import hermes_cli`` resolves from source while the venv is torn down.
+    so ``import jimmy_cli`` resolves from source while the venv is torn down.
 
-    This module imports only stdlib + ``hermes_constants`` + ``hermes_cli.colors``
-    (and lazily ``hermes_cli.gui_uninstall``), so it runs fine under a bare
+    This module imports only stdlib + ``jimmy_constants`` + ``jimmy_cli.colors``
+    (and lazily ``jimmy_cli.gui_uninstall``), so it runs fine under a bare
     system Python with no site-packages from the venv.
     """
     import argparse
 
-    parser = argparse.ArgumentParser(prog="python -m hermes_cli.uninstall")
+    parser = argparse.ArgumentParser(prog="python -m jimmy_cli.uninstall")
     parser.add_argument(
         "--mode",
         choices=["gui", "lite", "full"],

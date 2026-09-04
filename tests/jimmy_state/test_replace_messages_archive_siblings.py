@@ -20,7 +20,7 @@ also pinned below.
 
 import pytest
 
-from hermes_state import SessionDB
+from jimmy_state import SessionDB
 
 
 @pytest.fixture

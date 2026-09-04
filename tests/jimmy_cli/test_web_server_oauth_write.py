@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from hermes_cli.web_server import _save_anthropic_oauth_creds
+from jimmy_cli.web_server import _save_anthropic_oauth_creds
 
 
 class _DummyPool:
@@ -19,7 +19,7 @@ class _DummyPool:
 @pytest.fixture
 def oauth_file(monkeypatch, tmp_path):
     target = tmp_path / '.anthropic_oauth.json'
-    monkeypatch.setattr('agent.anthropic_adapter._get_hermes_oauth_file', lambda: target)
+    monkeypatch.setattr('agent.anthropic_adapter._get_jimmy_oauth_file', lambda: target)
     monkeypatch.setattr('agent.credential_pool.load_pool', lambda _provider: _DummyPool())
     return target
 

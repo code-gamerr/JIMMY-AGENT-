@@ -30,7 +30,7 @@ class _FakeProc:
 
 
 def test_apply_whatsapp_onboarding_saves_pairing_policy(monkeypatch):
-    from hermes_cli import web_server as ws
+    from jimmy_cli import web_server as ws
 
     saved = {}
     removed = []
@@ -74,12 +74,12 @@ def test_apply_whatsapp_onboarding_saves_pairing_policy(monkeypatch):
 
 
 def test_start_whatsapp_onboarding_existing_creds_returns_linked_account(monkeypatch, tmp_path):
-    from hermes_cli import web_server as ws
+    from jimmy_cli import web_server as ws
 
     session_dir = tmp_path / "session"
     session_dir.mkdir()
     (session_dir / "creds.json").write_text(
-        '{"me":{"id":"15551234567:1@s.whatsapp.net","name":"Hermes Bot"}}',
+        '{"me":{"id":"15551234567:1@s.whatsapp.net","name":"Jimmy Bot"}}',
         encoding="utf-8",
     )
 
@@ -107,7 +107,7 @@ def test_start_whatsapp_onboarding_existing_creds_returns_linked_account(monkeyp
     assert result["status"] == "connected"
     assert result["qr_payload"] is None
     assert result["account_id"] == "15551234567:1@s.whatsapp.net"
-    assert result["account_name"] == "Hermes Bot"
+    assert result["account_name"] == "Jimmy Bot"
     assert result["account_phone"] == "15551234567"
     assert old_record.status == "cancelled"
     assert old_proc.terminated is True

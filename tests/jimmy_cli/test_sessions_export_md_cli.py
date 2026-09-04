@@ -2,8 +2,8 @@ import sys
 
 
 def test_sessions_export_md_writes_single_session(monkeypatch, tmp_path, capsys):
-    import hermes_cli.main as main_mod
-    import hermes_state
+    import jimmy_cli.main as main_mod
+    import jimmy_state
 
     captured = {}
 
@@ -31,12 +31,12 @@ def test_sessions_export_md_writes_single_session(monkeypatch, tmp_path, capsys)
         def close(self):
             captured["closed"] = True
 
-    monkeypatch.setattr(hermes_state, "SessionDB", lambda: FakeDB())
+    monkeypatch.setattr(jimmy_state, "SessionDB", lambda: FakeDB())
     monkeypatch.setattr(
         sys,
         "argv",
         [
-            "hermes",
+            "jimmy",
             "sessions",
             "export",
             "--format",
@@ -67,8 +67,8 @@ def test_sessions_export_md_writes_single_session(monkeypatch, tmp_path, capsys)
 
 def test_sessions_export_redact_scrubs_secrets(monkeypatch, tmp_path):
     """--redact runs exported content through force-mode secret redaction."""
-    import hermes_cli.main as main_mod
-    import hermes_state
+    import jimmy_cli.main as main_mod
+    import jimmy_state
 
     secret = "sk-proj-Zz12345678901234567890123456789012345678"
 
@@ -88,12 +88,12 @@ def test_sessions_export_redact_scrubs_secrets(monkeypatch, tmp_path):
         def close(self):
             pass
 
-    monkeypatch.setattr(hermes_state, "SessionDB", lambda: FakeDB())
+    monkeypatch.setattr(jimmy_state, "SessionDB", lambda: FakeDB())
     monkeypatch.setattr(
         sys,
         "argv",
         [
-            "hermes", "sessions", "export", "--format", "md",
+            "jimmy", "sessions", "export", "--format", "md",
             "--session-id", "s1", "--redact", str(tmp_path),
         ],
     )

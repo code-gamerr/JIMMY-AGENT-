@@ -1,4 +1,4 @@
-"""CLI handlers for ``hermes secrets bitwarden ...``.
+"""CLI handlers for ``jimmy secrets bitwarden ...``.
 
 Subcommands:
     setup    — interactive wizard: install bws, prompt for token + project, test fetch
@@ -26,9 +26,9 @@ from rich.table import Table
 # NOTE: the Bitwarden backend (``agent.secret_sources.bitwarden``) pulls in
 # ``cryptography`` at module-import time.  On Windows the resulting
 # ``cryptography._rust.pyd`` is mapped into the running process — and when
-# that process is ``hermes update``, the self-lock preflight detects the
+# that process is ``jimmy update``, the self-lock preflight detects the
 # loaded native module and defers (#86781).  Keep the backend import lazy:
-# this module is registered parse-time from ``hermes_cli.main`` and must not
+# this module is registered parse-time from ``jimmy_cli.main`` and must not
 # touch ``bw`` until a handler actually runs.
 #
 # ``_BWS_VERSION`` is duplicated here (as a plain string) so ``register_cli``
@@ -37,13 +37,13 @@ from rich.table import Table
 # bump both together when pinning a new bws release.
 _BWS_VERSION = "2.0.0"
 
-from hermes_cli.config import (
+from jimmy_cli.config import (
     get_env_path,
     load_config,
     save_config,
     save_env_value,
 )
-from hermes_cli.secret_prompt import masked_secret_prompt
+from jimmy_cli.secret_prompt import masked_secret_prompt
 
 
 def _load_bw():
@@ -57,10 +57,10 @@ def __getattr__(name: str):
     """PEP 562 module-level lazy resolver.
 
     Existing callers (and upstream tests) monkeypatch attributes on
-    ``hermes_cli.secrets_cli.bw`` directly.  Resolving that attribute at
+    ``jimmy_cli.secrets_cli.bw`` directly.  Resolving that attribute at
     module-import time would re-import ``cryptography`` eagerly — the very
     self-lock we are preventing (#86781).  Defer the backend import until
-    the first actual attribute access, so ``import hermes_cli.secrets_cli``
+    the first actual attribute access, so ``import jimmy_cli.secrets_cli``
     stays crypto-free while ``secrets_cli.bw.find_bws`` still resolves.
     """
     if name == "bw":
@@ -69,15 +69,15 @@ def __getattr__(name: str):
 
 
 # ---------------------------------------------------------------------------
-# Argparse wiring — called from hermes_cli.main
+# Argparse wiring — called from jimmy_cli.main
 # ---------------------------------------------------------------------------
 
 
 def register_cli(parent_parser: argparse.ArgumentParser) -> None:
     """Attach the ``bitwarden`` subcommand tree to a parent parser.
 
-    Called from ``hermes_cli.main`` as part of building the top-level
-    ``hermes secrets`` parser.
+    Called from ``jimmy_cli.main`` as part of building the top-level
+    ``jimmy secrets`` parser.
     """
     sub = parent_parser.add_subparsers(dest="secrets_bw_command")
 
@@ -201,7 +201,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
                 f"  [red]Non-interactive mode (no TTY) requires all setup flags.[/red]\n"
                 f"  Missing: {', '.join(missing)}\n\n"
                 "  Usage:\n"
-                "    hermes secrets bitwarden setup \\\n"
+                "    jimmy secrets bitwarden setup \\\n"
                 "      --access-token '0.xxx' \\\n"
                 "      --server-url 'https://vault.bitwarden.com' \\\n"
                 "      --project-id 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'"
@@ -333,12 +333,12 @@ def cmd_setup(args: argparse.Namespace) -> int:
     console.print()
     console.print(
         "[green]✓ Bitwarden Secrets Manager is enabled.[/green]  "
-        "Secrets will be pulled at the start of every Hermes process."
+        "Secrets will be pulled at the start of every Jimmy process."
     )
     console.print(
-        "  Status:  [cyan]hermes secrets bitwarden status[/cyan]\n"
-        "  Refresh: [cyan]hermes secrets bitwarden sync[/cyan]\n"
-        "  Disable: [cyan]hermes secrets bitwarden disable[/cyan]"
+        "  Status:  [cyan]jimmy secrets bitwarden status[/cyan]\n"
+        "  Refresh: [cyan]jimmy secrets bitwarden sync[/cyan]\n"
+        "  Disable: [cyan]jimmy secrets bitwarden disable[/cyan]"
     )
     return 0
 
@@ -389,11 +389,11 @@ def cmd_status(args: argparse.Namespace) -> int:
         console.print(message)
 
     if not enabled:
-        console.print("\n  Run [cyan]hermes secrets bitwarden setup[/cyan] to enable.")
+        console.print("\n  Run [cyan]jimmy secrets bitwarden setup[/cyan] to enable.")
         return 0
     if not token_set:
         console.print(
-            f"\n  [yellow]Enabled but {token_env} is not set — Hermes will skip BSM "
+            f"\n  [yellow]Enabled but {token_env} is not set — Jimmy will skip BSM "
             "and warn on next startup.[/yellow]"
         )
     if not project_id:
@@ -463,7 +463,7 @@ def cmd_token(args: argparse.Namespace) -> int:
             console.print(
                 f"[yellow]Warning: configured project {project_id} is not visible "
                 "to this machine account.  Grant it access in the Bitwarden web "
-                "app or re-run `hermes secrets bitwarden setup` to pick a "
+                "app or re-run `jimmy secrets bitwarden setup` to pick a "
                 "different project.[/yellow]"
             )
 
@@ -474,12 +474,12 @@ def cmd_token(args: argparse.Namespace) -> int:
     bw.clear_caches()
     console.print(
         f"[green]✓[/green] stored in {get_env_path()} as {token_env}.  "
-        "Takes effect on the next Hermes invocation."
+        "Takes effect on the next Jimmy invocation."
     )
     if not bw_cfg.get("enabled"):
         console.print(
             "[yellow]Note: the Bitwarden integration is currently disabled — "
-            "run `hermes secrets bitwarden setup` (or set "
+            "run `jimmy secrets bitwarden setup` (or set "
             "secrets.bitwarden.enabled: true) to turn it on.[/yellow]"
         )
     return 0
@@ -493,7 +493,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     if not bw_cfg.get("enabled"):
         console.print(
             "[yellow]Bitwarden integration is disabled.  Run "
-            "`hermes secrets bitwarden setup` first.[/yellow]"
+            "`jimmy secrets bitwarden setup` first.[/yellow]"
         )
         return 1
 
@@ -552,7 +552,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     if not args.apply:
         console.print(
             "\n  This was a dry-run — secrets are picked up automatically on the "
-            "next [cyan]hermes[/cyan] invocation.  Re-run with [cyan]--apply[/cyan] "
+            "next [cyan]jimmy[/cyan] invocation.  Re-run with [cyan]--apply[/cyan] "
             "to export into the current shell instead."
         )
     else:
@@ -569,7 +569,7 @@ def cmd_disable(args: argparse.Namespace) -> int:
     save_config(cfg)
     console.print(
         "[green]Disabled.[/green]  Bitwarden secrets will NOT be pulled on the next "
-        "Hermes invocation.\n"
+        "Jimmy invocation.\n"
         "  Your access token is left in .env — remove it manually if you also want "
         "to revoke the credential."
     )
@@ -676,7 +676,7 @@ def _list_projects(
             console.print(
                 "  [yellow]'invalid_client' from the US identity endpoint usually "
                 "means the token is for a different Bitwarden region.  Re-run "
-                "[cyan]hermes secrets bitwarden setup[/cyan] and pick EU or "
+                "[cyan]jimmy secrets bitwarden setup[/cyan] and pick EU or "
                 "self-hosted at the region prompt, or set [cyan]secrets.bitwarden."
                 "server_url[/cyan] in config.yaml.[/yellow]"
             )

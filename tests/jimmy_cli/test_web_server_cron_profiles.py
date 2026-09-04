@@ -12,9 +12,9 @@ from fastapi import HTTPException
 @pytest.fixture()
 def isolated_profiles(tmp_path, monkeypatch):
     """Give profile discovery an isolated default home with one named profile."""
-    from hermes_cli import profiles
+    from jimmy_cli import profiles
 
-    default_home = tmp_path / ".hermes"
+    default_home = tmp_path / ".jimmy"
     profiles_root = default_home / "profiles"
     worker_home = profiles_root / "worker_alpha"
 
@@ -22,7 +22,7 @@ def isolated_profiles(tmp_path, monkeypatch):
         (home / "cron").mkdir(parents=True, exist_ok=True)
         (home / "config.yaml").write_text("model: test-model\n", encoding="utf-8")
 
-    monkeypatch.setattr(profiles, "_get_default_hermes_home", lambda: default_home)
+    monkeypatch.setattr(profiles, "_get_default_jimmy_home", lambda: default_home)
     monkeypatch.setattr(profiles, "_get_profiles_root", lambda: profiles_root)
     return {"default": default_home, "worker_alpha": worker_home}
 
@@ -45,22 +45,22 @@ def test_fire_cron_job_scopes_store_and_runtime_home_together(
     """A profile fire must execute and persist under the same profile home."""
     from cron import jobs as cron_jobs
     from cron import scheduler
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
     default_home = isolated_profiles["default"]
     worker_home = isolated_profiles["worker_alpha"]
-    monkeypatch.setattr(scheduler, "_hermes_home", None)
+    monkeypatch.setattr(scheduler, "_jimmy_home", None)
     captured = {}
 
     class RecordingProvider:
         def fire_due(self, job_id, *, adapters=None, loop=None):
             captured["job_id"] = job_id
-            captured["runtime_home"] = scheduler._get_hermes_home()
+            captured["runtime_home"] = scheduler._get_jimmy_home()
             captured["jobs_file"] = cron_jobs._current_cron_store().jobs_file
             return True
 
@@ -69,7 +69,7 @@ def test_fire_cron_job_scopes_store_and_runtime_home_together(
         lambda: RecordingProvider(),
     )
 
-    outer_token = set_hermes_home_override(default_home)
+    outer_token = set_jimmy_home_override(default_home)
     try:
         assert web_server._fire_cron_job_for_profile("worker_alpha", "worker-job") is True
         assert captured == {
@@ -77,9 +77,9 @@ def test_fire_cron_job_scopes_store_and_runtime_home_together(
             "runtime_home": worker_home,
             "jobs_file": worker_home / "cron" / "jobs.json",
         }
-        assert scheduler._get_hermes_home() == default_home
+        assert scheduler._get_jimmy_home() == default_home
     finally:
-        reset_hermes_home_override(outer_token)
+        reset_jimmy_home_override(outer_token)
 
 
 def test_create_registers_scheduler_inside_target_profile(
@@ -89,8 +89,8 @@ def test_create_registers_scheduler_inside_target_profile(
     """Dashboard create must resolve and register under the selected profile."""
     from cron import jobs as cron_jobs
     from cron.scheduler_provider import CronScheduler
-    from hermes_cli import web_server
-    from hermes_constants import get_hermes_home
+    from jimmy_cli import web_server
+    from jimmy_constants import get_jimmy_home
 
     worker_home = isolated_profiles["worker_alpha"]
     captured = {}
@@ -105,7 +105,7 @@ def test_create_registers_scheduler_inside_target_profile(
 
         def register_job(self, job):
             captured["job"] = job
-            captured["runtime_home"] = get_hermes_home()
+            captured["runtime_home"] = get_jimmy_home()
             captured["jobs_file"] = cron_jobs._current_cron_store().jobs_file
 
     monkeypatch.setattr(
@@ -133,7 +133,7 @@ def test_dashboard_create_reports_saved_but_unregistered(
 ):
     """Dashboard callers can distinguish persistence from remote registration."""
     from cron.scheduler import CronSchedulerRegistrationError
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = {"id": "saved-job", "name": "saved job"}
     failure = CronSchedulerRegistrationError(
@@ -174,16 +174,16 @@ def test_notify_cron_provider_scopes_store_and_runtime_home_together(
     """Provider reconciliation must observe the mutated profile, not default."""
     from cron import jobs as cron_jobs
     from cron import scheduler
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
     default_home = isolated_profiles["default"]
     worker_home = isolated_profiles["worker_alpha"]
-    monkeypatch.setattr(scheduler, "_hermes_home", None)
+    monkeypatch.setattr(scheduler, "_jimmy_home", None)
     monkeypatch.setattr(
         web_server,
         "_cron_profile_dicts",
@@ -193,7 +193,7 @@ def test_notify_cron_provider_scopes_store_and_runtime_home_together(
 
     class RecordingProvider:
         def on_jobs_changed(self):
-            captured["runtime_home"] = scheduler._get_hermes_home()
+            captured["runtime_home"] = scheduler._get_jimmy_home()
             captured["jobs_file"] = cron_jobs._current_cron_store().jobs_file
 
     monkeypatch.setattr(
@@ -201,23 +201,23 @@ def test_notify_cron_provider_scopes_store_and_runtime_home_together(
         lambda: RecordingProvider(),
     )
 
-    outer_token = set_hermes_home_override(default_home)
+    outer_token = set_jimmy_home_override(default_home)
     try:
         web_server._notify_cron_provider_for_profile("worker_alpha")
         assert captured == {
             "runtime_home": worker_home,
             "jobs_file": worker_home / "cron" / "jobs.json",
         }
-        assert scheduler._get_hermes_home() == default_home
+        assert scheduler._get_jimmy_home() == default_home
     finally:
-        reset_hermes_home_override(outer_token)
+        reset_jimmy_home_override(outer_token)
 
 
 def test_notify_cron_provider_failure_is_best_effort(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     class FailNotifyProvider:
         @property
@@ -256,9 +256,9 @@ def test_external_provider_reconcile_fails_closed_with_multiple_profiles(
     armed one-shots in the shared NAS registry. The mutation itself still
     succeeds (fail-closed only skips the remote converge)."""
     from cron import scheduler
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
-    monkeypatch.setattr(scheduler, "_hermes_home", None)
+    monkeypatch.setattr(scheduler, "_jimmy_home", None)
     monkeypatch.setattr(
         web_server,
         "_cron_profile_dicts",
@@ -305,9 +305,9 @@ def test_builtin_provider_hook_still_fires_with_multiple_profiles(
     safe no-op and must NOT be blocked by the multi-profile guard."""
     from cron import scheduler
     from cron.scheduler_provider import InProcessCronScheduler
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
-    monkeypatch.setattr(scheduler, "_hermes_home", None)
+    monkeypatch.setattr(scheduler, "_jimmy_home", None)
     monkeypatch.setattr(
         web_server,
         "_cron_profile_dicts",
@@ -342,7 +342,7 @@ def test_profile_call_cannot_retarget_ticker_store_mid_write(
 ):
     """A dashboard profile call must not redirect a concurrent ticker save."""
     from cron import jobs as cron_jobs
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     default_cron = isolated_profiles["default"] / "cron"
     worker_cron = isolated_profiles["worker_alpha"] / "cron"
@@ -427,7 +427,7 @@ def test_profile_call_cannot_retarget_ticker_store_mid_write(
 
 @pytest.mark.asyncio
 async def test_cron_mutation_without_profile_finds_named_profile_job(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     worker_job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -455,7 +455,7 @@ async def test_dashboard_cron_mutations_notify_selected_profile_provider(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     notified_profiles = []
     monkeypatch.setattr(
@@ -489,7 +489,7 @@ async def test_blueprint_instantiation_notifies_selected_profile_provider(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     notified_profiles = []
     monkeypatch.setattr(
@@ -516,7 +516,7 @@ async def test_trigger_cron_job_fires_only_selected_job_and_returns_refreshed_st
     monkeypatch,
 ):
     from cron import jobs as cron_jobs
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     selected = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -585,7 +585,7 @@ async def test_trigger_cron_job_reports_lost_claim_as_conflict(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -617,7 +617,7 @@ async def test_trigger_cron_job_forces_paused_job_atomically(
     monkeypatch,
 ):
     from cron import jobs as cron_jobs
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -658,7 +658,7 @@ async def test_trigger_paused_job_rejects_legacy_provider_without_mutating_job(
     monkeypatch,
 ):
     from fastapi import HTTPException
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -701,7 +701,7 @@ async def test_trigger_cron_job_returns_refreshed_execution_failure(
     monkeypatch,
 ):
     from cron import jobs as cron_jobs
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -736,7 +736,7 @@ async def test_trigger_cron_job_returns_completed_snapshot_for_retained_oneshot(
     monkeypatch,
 ):
     from cron import jobs as cron_jobs
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -779,7 +779,7 @@ async def test_trigger_cron_job_returns_completed_snapshot_for_retained_oneshot(
 
 @pytest.mark.asyncio
 async def test_cron_profile_scan_runs_off_event_loop(isolated_profiles, monkeypatch):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     worker_job = web_server._call_cron_for_profile(
         "worker_alpha",
@@ -821,7 +821,7 @@ async def test_cron_profile_scan_runs_off_event_loop(isolated_profiles, monkeypa
 
 @pytest.mark.asyncio
 async def test_cron_dashboard_io_rejects_async_callables():
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     async def async_callable():
         return "nope"
@@ -833,7 +833,7 @@ async def test_cron_dashboard_io_rejects_async_callables():
 
 @pytest.mark.asyncio
 async def test_update_cron_job_normalizes_dashboard_core_fields(isolated_profiles, tmp_path):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     scripts_dir = isolated_profiles["worker_alpha"] / "scripts"
     scripts_dir.mkdir()
@@ -869,7 +869,7 @@ async def test_update_cron_job_normalizes_dashboard_core_fields(isolated_profile
 async def test_create_cron_job_rejects_script_outside_profile_scripts(
     isolated_profiles, tmp_path
 ):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     outside = tmp_path / "outside.py"
     outside.write_text("print('nope')\n", encoding="utf-8")
@@ -890,7 +890,7 @@ async def test_create_cron_job_rejects_script_outside_profile_scripts(
 
 @pytest.mark.asyncio
 async def test_create_cron_job_rejects_empty_agent_job(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     with pytest.raises(HTTPException) as exc:
         await web_server.create_cron_job(
@@ -904,7 +904,7 @@ async def test_create_cron_job_rejects_empty_agent_job(isolated_profiles):
 
 @pytest.mark.asyncio
 async def test_update_cron_job_no_agent_reuses_existing_script(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     scripts_dir = isolated_profiles["worker_alpha"] / "scripts"
     scripts_dir.mkdir()
@@ -930,7 +930,7 @@ async def test_update_cron_job_no_agent_reuses_existing_script(isolated_profiles
 
 @pytest.mark.asyncio
 async def test_dashboard_cron_rejects_missing_context_from(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     with pytest.raises(HTTPException) as create_exc:
         await web_server.create_cron_job(
@@ -977,7 +977,7 @@ async def test_dashboard_cron_noop_inference_fields_keep_existing_snapshots(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import runtime_provider, web_server
+    from jimmy_cli import runtime_provider, web_server
 
     current_provider = {"name": "initial-provider"}
     monkeypatch.setattr(
@@ -1027,7 +1027,7 @@ async def test_update_cron_job_clears_snapshots_for_no_agent(
     isolated_profiles,
     monkeypatch,
 ):
-    from hermes_cli import runtime_provider, web_server
+    from jimmy_cli import runtime_provider, web_server
 
     monkeypatch.setattr(
         runtime_provider,
@@ -1068,7 +1068,7 @@ async def test_update_cron_job_clears_snapshots_for_no_agent(
 async def test_update_cron_job_rejects_id_mutation(isolated_profiles, monkeypatch):
     """Dashboard surfaces a 400 (not a 500 or silent rename) when an
     id-mutation attempt is rejected by cron/jobs.update_job."""
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     notified_profiles = []
     monkeypatch.setattr(
@@ -1100,7 +1100,7 @@ async def test_update_cron_job_rejects_id_mutation(isolated_profiles, monkeypatc
 
 @pytest.mark.asyncio
 async def test_cron_delete_with_profile_deletes_only_target_profile(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     default_job = web_server._call_cron_for_profile(
         "default",
@@ -1128,7 +1128,7 @@ async def test_cron_delete_with_profile_deletes_only_target_profile(isolated_pro
 
 @pytest.mark.asyncio
 async def test_cron_profile_validation_errors(isolated_profiles):
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     with pytest.raises(HTTPException) as bad_name:
         await web_server.list_cron_jobs(profile="../bad")
@@ -1144,12 +1144,12 @@ async def test_create_cron_job_without_profile_uses_backend_own_profile(
     isolated_profiles, monkeypatch
 ):
     """A pool backend scoped to a named profile must not default creates to
-    ``~/.hermes`` when the request carries no explicit ``profile`` (the
+    ``~/.jimmy`` when the request carries no explicit ``profile`` (the
     Desktop app's pre-profileScoped clients sent none)."""
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
     monkeypatch.setenv(
-        "HERMES_HOME", str(isolated_profiles["worker_alpha"])
+        "JIMMY_HOME", str(isolated_profiles["worker_alpha"])
     )
 
     job = await web_server.create_cron_job(
@@ -1170,11 +1170,11 @@ async def test_create_cron_job_without_profile_uses_backend_own_profile(
 async def test_create_cron_job_without_profile_defaults_when_unscoped(
     isolated_profiles, monkeypatch
 ):
-    """HERMES_HOME at the default home (or unrecognized) keeps the legacy
+    """JIMMY_HOME at the default home (or unrecognized) keeps the legacy
     ``default`` fallback."""
-    from hermes_cli import web_server
+    from jimmy_cli import web_server
 
-    monkeypatch.setenv("HERMES_HOME", str(isolated_profiles["default"]))
+    monkeypatch.setenv("JIMMY_HOME", str(isolated_profiles["default"]))
 
     job = await web_server.create_cron_job(
         web_server.CronJobCreate(

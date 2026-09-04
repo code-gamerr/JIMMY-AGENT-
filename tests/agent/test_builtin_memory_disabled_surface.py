@@ -9,7 +9,7 @@ Mem0, …) paid for both on every API call with no way to drop them — listing
 ``memory`` under ``disabled_toolsets`` takes the provider's tools down too.
 
 These tests exercise the real resolution chain (config on disk → check_fn →
-``get_tool_definitions``) against a temp ``HERMES_HOME``, not mocks.
+``get_tool_definitions``) against a temp ``JIMMY_HOME``, not mocks.
 """
 
 import pytest
@@ -40,9 +40,9 @@ def _write_memory_config(home, **memory_section):
 
 
 @pytest.fixture
-def hermes_home(tmp_path, monkeypatch):
-    home = tmp_path / ".hermes"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+def jimmy_home(tmp_path, monkeypatch):
+    home = tmp_path / ".jimmy"
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     return home
 
 
@@ -52,29 +52,29 @@ def _memory_tool_names():
 
 
 class TestBuiltinMemoryToolAvailability:
-    def test_tool_hidden_when_both_stores_disabled(self, hermes_home):
+    def test_tool_hidden_when_both_stores_disabled(self, jimmy_home):
         _write_memory_config(
-            hermes_home, memory_enabled=False, user_profile_enabled=False
+            jimmy_home, memory_enabled=False, user_profile_enabled=False
         )
         assert "memory" not in _memory_tool_names()
 
-    def test_tool_present_when_only_user_profile_enabled(self, hermes_home):
+    def test_tool_present_when_only_user_profile_enabled(self, jimmy_home):
         _write_memory_config(
-            hermes_home, memory_enabled=False, user_profile_enabled=True
+            jimmy_home, memory_enabled=False, user_profile_enabled=True
         )
         assert "memory" in _memory_tool_names()
 
-    def test_tool_present_when_only_memory_enabled(self, hermes_home):
+    def test_tool_present_when_only_memory_enabled(self, jimmy_home):
         _write_memory_config(
-            hermes_home, memory_enabled=True, user_profile_enabled=False
+            jimmy_home, memory_enabled=True, user_profile_enabled=False
         )
         assert "memory" in _memory_tool_names()
 
-    def test_tool_present_by_default(self, hermes_home):
+    def test_tool_present_by_default(self, jimmy_home):
         """No config file at all must not strip a working tool."""
         assert "memory" in _memory_tool_names()
 
-    def test_unreadable_config_fails_open(self, hermes_home, monkeypatch):
+    def test_unreadable_config_fails_open(self, jimmy_home, monkeypatch):
         """A config read error must not silently remove the tool."""
         from tools import memory_tool as memory_tool_module
 
@@ -82,7 +82,7 @@ class TestBuiltinMemoryToolAvailability:
             raise RuntimeError("config unreadable")
 
         monkeypatch.setattr(
-            "hermes_cli.config.load_config_readonly", _boom, raising=False
+            "jimmy_cli.config.load_config_readonly", _boom, raising=False
         )
         assert memory_tool_module.check_memory_requirements() is True
 

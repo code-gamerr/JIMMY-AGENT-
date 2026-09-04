@@ -1,16 +1,16 @@
-"""Tests for `hermes memory setup [provider]` routing.
+"""Tests for `jimmy memory setup [provider]` routing.
 
 The `memory setup` subcommand accepts an optional positional ``provider`` so a
 fresh install can configure a specific provider directly (e.g.
-``hermes memory setup honcho``) without the interactive picker — which matters
-because the per-provider ``hermes <provider>`` subcommand is only registered
+``jimmy memory setup honcho``) without the interactive picker — which matters
+because the per-provider ``jimmy <provider>`` subcommand is only registered
 once that provider is active.
 """
 
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from hermes_cli import memory_setup
+from jimmy_cli import memory_setup
 
 
 class TestMemorySetupProviderRouting:
@@ -30,7 +30,7 @@ class TestMemorySetupProviderRouting:
         memory_setup.cmd_setup_provider("notaprovider")
         out = capsys.readouterr().out
         assert "not found" in out
-        assert "hermes memory setup" in out
+        assert "jimmy memory setup" in out
 
 
 class TestInstallDependenciesRunner:
@@ -57,15 +57,15 @@ class TestInstallDependenciesRunner:
                 return run_behavior(cmd)
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-        # The hermetic conftest sets HERMES_DISABLE_LAZY_INSTALLS=1 so no test
+        # The hermetic conftest sets JIMMY_DISABLE_LAZY_INSTALLS=1 so no test
         # can trigger a real mid-run pip install. These tests exercise the
         # install ladder itself (against a fully mocked subprocess.run), so
         # they opt back in — the same both-directions override
         # tests/tools/test_lazy_deps.py uses.
-        with _patch.dict(os.environ, {"HERMES_DISABLE_LAZY_INSTALLS": "0"}), \
+        with _patch.dict(os.environ, {"JIMMY_DISABLE_LAZY_INSTALLS": "0"}), \
              patch("plugins.memory.find_provider_dir", return_value=tmp_path), \
-             patch("hermes_cli.tools_config.shutil.which", side_effect=which_side_effect), \
-             patch("hermes_cli.tools_config.subprocess.run", fake_run):
+             patch("jimmy_cli.tools_config.shutil.which", side_effect=which_side_effect), \
+             patch("jimmy_cli.tools_config.subprocess.run", fake_run):
             memory_setup._install_dependencies("x")
         return calls, sys.executable
 

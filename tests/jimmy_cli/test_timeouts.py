@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import textwrap
 
-from hermes_cli.timeouts import (
+from jimmy_cli.timeouts import (
     get_provider_request_timeout,
     get_provider_stale_timeout,
 )
@@ -41,8 +41,8 @@ def test_anthropic_adapter_honors_timeout_kwarg():
 
 def test_resolved_api_call_timeout_priority(monkeypatch, tmp_path):
     """AIAgent._resolved_api_call_timeout() honors config > env > default priority."""
-    # Isolate HERMES_HOME
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    # Isolate JIMMY_HOME
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     (tmp_path / ".env").write_text("", encoding="utf-8")
 
     # Case A: config wins over env var
@@ -54,7 +54,7 @@ def test_resolved_api_call_timeout_priority(monkeypatch, tmp_path):
               openai/gpt-4o-mini:
                 timeout_seconds: 42
         """)
-    monkeypatch.setenv("HERMES_API_TIMEOUT", "999")
+    monkeypatch.setenv("JIMMY_API_TIMEOUT", "999")
 
     from run_agent import AIAgent
     agent = AIAgent(
@@ -78,9 +78,9 @@ def test_resolved_api_call_timeout_priority(monkeypatch, tmp_path):
     _write_config(tmp_path, "")
     # Clear the cached config load
     import importlib
-    from hermes_cli import config as cfg_mod
+    from jimmy_cli import config as cfg_mod
     importlib.reload(cfg_mod)
-    from hermes_cli import timeouts as to_mod
+    from jimmy_cli import timeouts as to_mod
     importlib.reload(to_mod)
     import run_agent as ra_mod
     importlib.reload(ra_mod)
@@ -98,7 +98,7 @@ def test_resolved_api_call_timeout_priority(monkeypatch, tmp_path):
     assert agent2._resolved_api_call_timeout() == 999.0
 
     # Case C: no config, no env → 1800.0 default
-    monkeypatch.delenv("HERMES_API_TIMEOUT", raising=False)
+    monkeypatch.delenv("JIMMY_API_TIMEOUT", raising=False)
     assert agent2._resolved_api_call_timeout() == 1800.0
 
 

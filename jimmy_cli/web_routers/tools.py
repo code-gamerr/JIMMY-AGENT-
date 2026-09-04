@@ -5,7 +5,7 @@ Handler bodies are byte-identical.  The toolset/terminal catalogs
 (``_MODEL_CATALOG_TOOLSETS``, ``_TERMINAL_BACKENDS``,
 ``_TERMINAL_BACKEND_NAMES`` - some defined *after* this router's mount point
 in web_server's body) and all helpers stay in web_server - reached via the
-late-binding seam in :mod:`hermes_cli.web_deps` (``late`` for callables,
+late-binding seam in :mod:`jimmy_cli.web_deps` (``late`` for callables,
 ``LateState`` for the catalog constants) so monkeypatching on web_server
 stays authoritative.
 """
@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional  # noqa: F401
 
 from fastapi import APIRouter, HTTPException  # noqa: F401
 
-from hermes_cli.web_deps import late, LateState
-from hermes_cli.web_models import (
+from jimmy_cli.web_deps import late, LateState
+from jimmy_cli.web_models import (
     TerminalBackendSelect,
     ToolsetEnvUpdate,
     ToolsetModelSelect,
@@ -28,7 +28,7 @@ from hermes_cli.web_models import (
 )
 
 # Same logger the handlers used before extraction (identical logger object).
-_log = logging.getLogger("hermes_cli.web_server")
+_log = logging.getLogger("jimmy_cli.web_server")
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ _probe_terminal_backend = late("_probe_terminal_backend")
 _profile_cli_args = late("_profile_cli_args")
 _profile_scope = late("_profile_scope")
 _resolve_toolset_model_plugin = late("_resolve_toolset_model_plugin")
-_spawn_hermes_action = late("_spawn_hermes_action")
+_spawn_jimmy_action = late("_spawn_jimmy_action")
 _toolset_model_catalog = late("_toolset_model_catalog")
 load_config = late("load_config")
 save_config = late("save_config")
@@ -56,7 +56,7 @@ _CONFIG_MUTATION_LOCK = LateState("_CONFIG_MUTATION_LOCK")
 
 @router.get("/api/tools/toolsets")
 async def get_toolsets(profile: Optional[str] = None):
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         _CONFIG_ONLY_TOOLSETS,
         _get_effective_configurable_toolsets,
         _get_platform_tools,
@@ -65,7 +65,7 @@ async def get_toolsets(profile: Optional[str] = None):
         get_nous_subscription_features,  # stub: always inactive
         gui_toolset_label,
     )
-    from hermes_cli.platforms import platform_label
+    from jimmy_cli.platforms import platform_label
     from toolsets import resolve_toolset
 
     def _read():
@@ -130,7 +130,7 @@ async def toggle_toolset(name: str, body: ToolsetToggle, profile: Optional[str] 
     ``_save_platform_tools`` helper keeps the GUI and CLI in lockstep. Scoped
     to ``body.profile`` when provided. Returns 400 for unknown toolset keys.
     """
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         _CONFIG_ONLY_TOOLSETS,
         _get_effective_configurable_toolsets,
         _get_platform_tools,
@@ -179,15 +179,15 @@ async def toggle_toolset(name: str, body: ToolsetToggle, profile: Optional[str] 
     # Install-on-enable: when the newly enabled toolset's provider carries a
     # post_setup hook with a registered, UNSATISFIED install-state predicate
     # (cua-driver binary missing, etc. — see _POST_SETUP_INSTALLED), spawn the
-    # same background install `hermes tools` runs interactively. Without this,
+    # same background install `jimmy tools` runs interactively. Without this,
     # a dashboard/desktop toggle "saves" but the tool silently never appears
     # in the schema because its check_fn can't find the binary — the exact
-    # dead-end that forced users to discover `hermes computer-use install`
+    # dead-end that forced users to discover `jimmy computer-use install`
     # by hand. Best-effort: a spawn failure never fails the toggle.
     post_setup_started: Optional[str] = None
     if body.enabled and name not in _CONFIG_ONLY_TOOLSETS:
         def _pending_install_key() -> Optional[str]:
-            from hermes_cli.tools_config import (
+            from jimmy_cli.tools_config import (
                 TOOL_CATEGORIES,
                 _post_setup_already_installed,
                 _visible_providers,
@@ -207,7 +207,7 @@ async def toggle_toolset(name: str, body: ToolsetToggle, profile: Optional[str] 
         try:
             pending_key = await asyncio.to_thread(_pending_install_key)
             if pending_key:
-                _spawn_hermes_action(
+                _spawn_jimmy_action(
                     _profile_cli_args(body.profile or profile)
                     + ["tools", "post-setup", pending_key],
                     "tools-post-setup",
@@ -229,13 +229,13 @@ async def toggle_toolset(name: str, body: ToolsetToggle, profile: Optional[str] 
 async def get_toolset_config(name: str, profile: Optional[str] = None):
     """Return the provider matrix + key status for a toolset's config panel.
 
-    Surfaces the same provider rows the CLI ``hermes tools`` picker shows
+    Surfaces the same provider rows the CLI ``jimmy tools`` picker shows
     (via ``_visible_providers``), each with its ``env_vars`` annotated with
     current ``is_set`` state so the GUI can render provider selection + key
     entry. Toolsets without a ``TOOL_CATEGORIES`` entry return an empty
     provider list and ``has_category: false``. Returns 400 for unknown keys.
     """
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         TOOL_CATEGORIES,
         _get_effective_configurable_toolsets,
         _is_provider_active,
@@ -243,8 +243,8 @@ async def get_toolset_config(name: str, profile: Optional[str] = None):
         provider_readiness_status,
         web_provider_capabilities,
     )
-    from hermes_cli.config import get_env_value
-    from hermes_cli.tools_config import get_nous_subscription_features
+    from jimmy_cli.config import get_env_value
+    from jimmy_cli.tools_config import get_nous_subscription_features
 
     valid = {ts_key for ts_key, _, _ in _get_effective_configurable_toolsets()}
     if name not in valid:
@@ -346,7 +346,7 @@ async def get_toolset_models(
 ):
     """Return the model catalog for a toolset backend (image/video gen).
 
-    The GUI counterpart of the model picker `hermes tools` runs after a
+    The GUI counterpart of the model picker `jimmy tools` runs after a
     backend is selected — e.g. FAL's multi-model catalog (speed / strengths /
     price per model). ``provider`` names a picker row; omitted, the currently
     active provider is used. Toolsets without model catalogs return
@@ -465,7 +465,7 @@ async def select_toolset_provider(
     """Persist a provider selection for a toolset (no key prompting).
 
     Delegates to ``apply_provider_selection`` — the shared, non-interactive
-    core extracted from the CLI configurator — so the GUI and ``hermes tools``
+    core extracted from the CLI configurator — so the GUI and ``jimmy tools``
     write identical config keys (``web.backend``, ``tts.provider``, etc.).
     API keys and post-setup flows are handled by separate endpoints. Returns
     400 for unknown toolset or provider names.
@@ -489,14 +489,14 @@ async def select_toolset_provider(
     existing Nous Portal OAuth flow (``POST /api/providers/oauth/nous/start``)
     and refetch.
     """
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         TOOL_CATEGORIES,
         apply_provider_selection,
         web_provider_capabilities,
         _get_effective_configurable_toolsets,
         _visible_providers,
     )
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         MANAGED_FEATURE_COVERAGE_CATEGORY,
         get_nous_subscription_features,
     )
@@ -604,20 +604,20 @@ async def select_toolset_provider(
 async def save_toolset_env(name: str, body: ToolsetEnvUpdate, profile: Optional[str] = None):
     """Persist API keys for a toolset's provider env vars.
 
-    Writes each ``key: value`` to ``~/.hermes/.env`` via ``save_env_value`` —
-    the same store ``hermes tools`` writes when it prompts for keys. Keys are
+    Writes each ``key: value`` to ``~/.jimmy/.env`` via ``save_env_value`` —
+    the same store ``jimmy tools`` writes when it prompts for keys. Keys are
     validated against the env-var allowlist for the toolset's category (the
     union of every visible provider's ``env_vars``), so the GUI can't write an
     arbitrary env var through this endpoint. A blank value is treated as
     "leave unchanged" and skipped. Returns the saved/skipped key lists and the
     refreshed ``is_set`` status. Returns 400 for unknown toolset or env keys.
     """
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         TOOL_CATEGORIES,
         _get_effective_configurable_toolsets,
         _visible_providers,
     )
-    from hermes_cli.config import get_env_value, save_env_value
+    from jimmy_cli.config import get_env_value, save_env_value
 
     valid_ts = {ts_key for ts_key, _, _ in _get_effective_configurable_toolsets()}
     if name not in valid_ts:
@@ -668,18 +668,18 @@ async def run_toolset_post_setup(
     Post-setup hooks (npm install for browser/Camofox, pip install for
     KittenTTS/Piper/ddgs, cua-driver fetch, etc.) are long-running and
     text-output, so this follows the spawn-action pattern: it launches
-    ``hermes tools post-setup <key>`` and the frontend tails the log via
+    ``jimmy tools post-setup <key>`` and the frontend tails the log via
     ``GET /api/actions/tools-post-setup/status``. The ``key`` is validated
     against the declared post-setup allowlist before spawning. Returns 400
     for unknown toolset or post-setup key.
 
-    ``profile`` spawns the hook as ``hermes -p <profile> tools post-setup``.
+    ``profile`` spawns the hook as ``jimmy -p <profile> tools post-setup``.
     Most hooks install machine-level artifacts (repo node_modules, shared
     pip packages) where the scope is inert, but hooks that read config or
-    write per-profile state must see the same HERMES_HOME the rest of the
+    write per-profile state must see the same JIMMY_HOME the rest of the
     drawer's writes targeted — so the scope is threaded for consistency.
     """
-    from hermes_cli.tools_config import (
+    from jimmy_cli.tools_config import (
         _get_effective_configurable_toolsets,
         valid_post_setup_keys,
     )
@@ -694,7 +694,7 @@ async def run_toolset_post_setup(
         )
 
     try:
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             _profile_cli_args(body.profile or profile)
             + ["tools", "post-setup", body.key],
             "tools-post-setup",
@@ -797,7 +797,7 @@ async def get_computer_use_status(profile: Optional[str] = None):
 
 @router.post("/api/tools/computer-use/permissions/grant")
 async def grant_computer_use_permissions(profile: Optional[str] = None):
-    """Spawn ``hermes computer-use permissions grant`` as a background action.
+    """Spawn ``jimmy computer-use permissions grant`` as a background action.
 
     macOS-only: ``cua-driver permissions grant`` launches CuaDriver via
     LaunchServices so the TCC dialog is attributed to com.trycua.driver, then
@@ -811,7 +811,7 @@ async def grant_computer_use_permissions(profile: Optional[str] = None):
             detail="Computer Use permission grants are a macOS concept.",
         )
     try:
-        proc = _spawn_hermes_action(
+        proc = _spawn_jimmy_action(
             _profile_cli_args(profile)
             + ["computer-use", "permissions", "grant"],
             "computer-use-grant",

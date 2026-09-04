@@ -12,7 +12,7 @@ import pytest
 # files that gate the app.
 from fastapi.testclient import TestClient
 
-from hermes_cli import web_server
+from jimmy_cli import web_server
 
 
 @pytest.fixture
@@ -46,16 +46,16 @@ def client_loopback():
     ("localhost", False, False),
     ("::1",       False, False),
     # --insecure (allow_public=True) NO LONGER bypasses the gate on a public
-    # bind (June 2026 hermes-0day hardening). Non-loopback always requires auth.
+    # bind (June 2026 jimmy-0day hardening). Non-loopback always requires auth.
     ("0.0.0.0",   True,  True),
     ("0.0.0.0",   False, True),
     ("192.168.1.5", False, True),
     ("10.0.0.1",  True,  True),     # allow_public ignored — LAN IP is public
     ("100.64.0.1", False, True),    # Tailscale CGNAT — treated as public
-    ("hermes-agent-prod-abc.fly.dev", False, True),
+    ("jimmy-agent-prod-abc.fly.dev", False, True),
 ])
 def test_should_require_auth_truth_table(host, allow_public, expected):
-    from hermes_cli.web_server import should_require_auth
+    from jimmy_cli.web_server import should_require_auth
     assert should_require_auth(host, allow_public) is expected
 
 
@@ -140,7 +140,7 @@ def test_start_server_insecure_public_no_longer_bypasses_gate(monkeypatch):
     June 2026 hardening: --insecure no longer disables auth. With no providers
     registered, the bind fails closed (SystemExit) and auth_required is True.
     """
-    from hermes_cli.dashboard_auth import clear_providers
+    from jimmy_cli.dashboard_auth import clear_providers
     clear_providers()
     _stub_uvicorn_run(monkeypatch)
     web_server.app.state.auth_required = None
@@ -159,7 +159,7 @@ def test_start_server_public_without_insecure_records_auth_required(monkeypatch)
     flag-stashing happens BEFORE the exit so the rest of the system can
     branch on it. (See task 3.5 tests below for the with-provider path.)
     """
-    from hermes_cli.dashboard_auth import clear_providers
+    from jimmy_cli.dashboard_auth import clear_providers
     clear_providers()
     _stub_uvicorn_run(monkeypatch)
     web_server.app.state.auth_required = None
@@ -184,8 +184,8 @@ def test_start_server_gate_with_provider_proceeds_and_sets_proxy_headers(monkeyp
     succeeds.  uvicorn is called with proxy_headers=True so X-Forwarded-Proto
     from Fly's TLS terminator is honoured for cookie Secure-flag decisions.
     """
-    from hermes_cli.dashboard_auth import clear_providers, register_provider
-    from tests.hermes_cli.conftest_dashboard_auth import StubAuthProvider
+    from jimmy_cli.dashboard_auth import clear_providers, register_provider
+    from tests.jimmy_cli.conftest_dashboard_auth import StubAuthProvider
 
     clear_providers()
     register_provider(StubAuthProvider())

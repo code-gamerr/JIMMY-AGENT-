@@ -12,7 +12,7 @@ Covers:
     sets/needs no cookie).
   * ``/auth/native/refresh`` token rotation and terminal-expiry semantics.
 
-Run: pytest tests/hermes_cli/test_dashboard_auth_native_flow.py
+Run: pytest tests/jimmy_cli/test_dashboard_auth_native_flow.py
 """
 
 from __future__ import annotations
@@ -25,14 +25,14 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from fastapi.testclient import TestClient
 
-from hermes_cli import web_server
-from hermes_cli.dashboard_auth import (
+from jimmy_cli import web_server
+from jimmy_cli.dashboard_auth import (
     clear_providers,
     register_provider,
 )
-from hermes_cli.dashboard_auth import native_flow
-from hermes_cli.dashboard_auth.base import Session
-from tests.hermes_cli.conftest_dashboard_auth import StubAuthProvider
+from jimmy_cli.dashboard_auth import native_flow
+from jimmy_cli.dashboard_auth.base import Session
+from tests.jimmy_cli.conftest_dashboard_auth import StubAuthProvider
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ def _walk_native_login(client, *, redirect_uri, challenge, state="cli-state"):
     loop_qs = parse_qs(loop.query)
     # No session cookie must be set on the native callback response.
     set_cookie = r2.headers.get("set-cookie", "")
-    assert "hermes_session_at" not in set_cookie, (
+    assert "jimmy_session_at" not in set_cookie, (
         f"native callback must NOT set a session cookie; got {set_cookie!r}"
     )
     return loop_qs["code"][0], loop_qs["state"][0]
@@ -354,8 +354,8 @@ def test_status_loopback_mode_has_no_auth_flows():
 
 @pytest.fixture
 def pw_gated_client():
-    from hermes_cli.dashboard_auth.routes import _reset_password_rate_limit
-    from tests.hermes_cli.test_dashboard_auth_password_login import (
+    from jimmy_cli.dashboard_auth.routes import _reset_password_rate_limit
+    from tests.jimmy_cli.test_dashboard_auth_password_login import (
         PasswordProvider,
     )
 
@@ -448,7 +448,7 @@ def test_native_password_login_full_roundtrip(pw_gated_client):
     code = qs["code"][0]
     # No browser session on the native branch; the PKCE cookie is cleared.
     set_cookie = r.headers.get("set-cookie", "")
-    assert "hermes_session_at" not in set_cookie, (
+    assert "jimmy_session_at" not in set_cookie, (
         f"native password login must NOT set a session cookie; got {set_cookie!r}"
     )
     assert "pkce" in set_cookie  # the clearing Set-Cookie
@@ -518,7 +518,7 @@ def test_native_password_login_rejects_cross_provider_completion(
     server-set PKCE cookie. The mismatch is rejected BEFORE credential
     verification and preserves the pending entry, so the user can still
     submit the form the flow was started for."""
-    from tests.hermes_cli.test_dashboard_auth_password_login import (
+    from tests.jimmy_cli.test_dashboard_auth_password_login import (
         PasswordProvider,
     )
 
@@ -544,7 +544,7 @@ def test_native_password_login_rejects_cross_provider_completion(
     assert r.status_code == 400, r.text
     assert "different provider" in r.json()["detail"]
     set_cookie = r.headers.get("set-cookie", "")
-    assert "hermes_session_at" not in set_cookie
+    assert "jimmy_session_at" not in set_cookie
 
     # The pending entry survived — provider A completes normally.
     r2 = pw_gated_client.post(
@@ -573,7 +573,7 @@ def test_password_login_without_broker_still_mints_cookies(pw_gated_client):
     assert r.status_code == 200, r.text
     assert r.json()["next"] == "/"
     set_cookie = r.headers.get("set-cookie", "")
-    assert "hermes_session_at" in set_cookie
+    assert "jimmy_session_at" in set_cookie
 
 
 # ---------------------------------------------------------------------------

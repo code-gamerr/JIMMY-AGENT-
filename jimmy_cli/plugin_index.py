@@ -2,7 +2,7 @@
 
 Mirrors the Skills Hub catalog pattern (``tools/skills_hub.py``): a static
 machine-readable JSON index hosted at a canonical URL, cached locally under
-``HERMES_HOME/cache/`` with a TTL, with a bundled seed file as the offline
+``JIMMY_HOME/cache/`` with a TTL, with a bundled seed file as the offline
 fallback and format reference.
 
 Fallback chain: remote index → cached copy (fresh or stale) → bundled seed.
@@ -22,13 +22,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, List, Optional
 
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 
 logger = logging.getLogger(__name__)
 
 # Canonical index location. Override via config key ``plugins.index_url``.
 DEFAULT_INDEX_URL = (
-    "https://raw.githubusercontent.com/NousResearch/hermes-plugin-index/main/index.json"
+    "https://raw.githubusercontent.com/Jimmy/jimmy-plugin-index/main/index.json"
 )
 
 # Cache the fetched index for 24 hours; a stale cache is still preferred over
@@ -91,13 +91,13 @@ class PluginIndexEntry:
 
 
 def _cache_path() -> Path:
-    return get_hermes_home() / "cache" / "plugin_index.json"
+    return get_jimmy_home() / "cache" / "plugin_index.json"
 
 
 def get_index_url() -> str:
     """Resolve the index URL: config override ``plugins.index_url`` or default."""
     try:
-        from hermes_cli.config import cfg_get, load_config_readonly
+        from jimmy_cli.config import cfg_get, load_config_readonly
 
         override = cfg_get(load_config_readonly(), "plugins", "index_url", default=None)
         if isinstance(override, str) and override.strip():

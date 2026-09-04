@@ -13,8 +13,8 @@ import os
 
 import yaml
 
-import hermes_cli.runtime_provider as rp
-from hermes_cli.model_setup_flows import _model_flow_bedrock_api_key
+import jimmy_cli.runtime_provider as rp
+from jimmy_cli.model_setup_flows import _model_flow_bedrock_api_key
 
 
 REGION = "us-east-1"
@@ -23,7 +23,7 @@ TOKEN = "test-bedrock-bearer-token"
 
 def _run_wizard(monkeypatch, selected="openai.gpt-5.6-terra"):
     """Drive the real setup flow non-interactively and return the saved config."""
-    import hermes_cli.auth as auth_mod
+    import jimmy_cli.auth as auth_mod
 
     monkeypatch.setenv("AWS_BEARER_TOKEN_BEDROCK", TOKEN)
     monkeypatch.setattr(
@@ -34,10 +34,10 @@ def _run_wizard(monkeypatch, selected="openai.gpt-5.6-terra"):
 
     _model_flow_bedrock_api_key({}, REGION)
 
-    from hermes_constants import get_hermes_home
+    from jimmy_constants import get_jimmy_home
 
-    return get_hermes_home(), yaml.safe_load(
-        (get_hermes_home() / "config.yaml").read_text(encoding="utf-8")
+    return get_jimmy_home(), yaml.safe_load(
+        (get_jimmy_home() / "config.yaml").read_text(encoding="utf-8")
     )
 
 

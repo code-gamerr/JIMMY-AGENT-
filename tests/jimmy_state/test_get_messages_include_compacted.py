@@ -14,7 +14,7 @@ job of ``include_inactive`` (audit / debug reads).
 
 import pytest
 
-from hermes_state import SessionDB
+from jimmy_state import SessionDB
 
 
 @pytest.fixture

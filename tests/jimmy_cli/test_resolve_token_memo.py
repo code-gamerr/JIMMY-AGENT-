@@ -11,13 +11,13 @@ import time
 
 import pytest
 
-import hermes_cli.auth as auth
+import jimmy_cli.auth as auth
 
 
 @pytest.fixture(autouse=True)
 def _fresh_memo(monkeypatch, tmp_path):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    monkeypatch.delenv("HERMES_PORTAL_BASE_URL", raising=False)
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+    monkeypatch.delenv("JIMMY_PORTAL_BASE_URL", raising=False)
     monkeypatch.delenv("NOUS_PORTAL_BASE_URL", raising=False)
     monkeypatch.setattr(auth, "_RESOLVE_TOKEN_CACHE", None)
     yield
@@ -33,7 +33,7 @@ def _write_valid_auth_file(tmp_path, token="memo-token"):
                     "nous": {
                         "access_token": token,
                         "refresh_token": "r",
-                        "client_id": "hermes-cli-vps",
+                        "client_id": "jimmy-cli-vps",
                         "expires_at": time.strftime(
                             "%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() + 3600)
                         ),

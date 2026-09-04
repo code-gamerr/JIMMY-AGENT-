@@ -1,4 +1,4 @@
-"""Behavior contracts for hermes_cli.worktree_gc (attended reclaim).
+"""Behavior contracts for jimmy_cli.worktree_gc (attended reclaim).
 
 Each guard gets its own contract against a REAL git repo fixture (no mocks —
 the entire value of these tests is exercising actual git verdicts):
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import worktree_gc
+from jimmy_cli import worktree_gc
 
 
 def _git(args, cwd, env=None):
@@ -63,7 +63,7 @@ def repo(tmp_path, monkeypatch):
 
 def _add_worktree(repo_path, name, branch=None):
     tree = repo_path / ".worktrees" / name
-    branch = branch or f"hermes/{name}"
+    branch = branch or f"jimmy/{name}"
     _git(["worktree", "add", str(tree), "-b", branch], repo_path)
     return tree, branch
 
@@ -76,40 +76,40 @@ def _verdict(records, name):
 
 class TestAuditVerdicts:
     def test_clean_merged_tree_reaps(self, repo):
-        _add_worktree(repo, "hermes-clean")
+        _add_worktree(repo, "jimmy-clean")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        assert _verdict(records, "hermes-clean").verdict == "reap"
+        assert _verdict(records, "jimmy-clean").verdict == "reap"
 
     def test_tracked_modifications_keep(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-dirty")
+        tree, _ = _add_worktree(repo, "jimmy-dirty")
         (tree / "README.md").write_text("edited\n")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        record = _verdict(records, "hermes-dirty")
+        record = _verdict(records, "jimmy-dirty")
         assert record.verdict == "keep"
         assert "tracked" in record.reason
 
     def test_untracked_only_is_reap_archive(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-scratch")
+        tree, _ = _add_worktree(repo, "jimmy-scratch")
         (tree / "PR_BODY_DRAFT.md").write_text("draft\n")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        record = _verdict(records, "hermes-scratch")
+        record = _verdict(records, "jimmy-scratch")
         assert record.verdict == "reap-archive"
         assert record.untracked == ["PR_BODY_DRAFT.md"]
 
     def test_unique_unpushed_commits_keep(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-work")
+        tree, _ = _add_worktree(repo, "jimmy-work")
         (tree / "new.py").write_text("x = 1\n")
         _git(["add", "."], tree)
         _git(["commit", "-m", "unique work"], tree)
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        record = _verdict(records, "hermes-work")
+        record = _verdict(records, "jimmy-work")
         assert record.verdict == "keep"
         assert "unpushed" in record.reason
 
     def test_patch_equivalent_commits_reap(self, repo):
         """The squash/rebase-merge leak: local commit unreachable from any
         remote ref but patch-equivalent to an upstream commit → merged work."""
-        tree, _ = _add_worktree(repo, "hermes-merged")
+        tree, _ = _add_worktree(repo, "jimmy-merged")
         (tree / "feat.py").write_text("y = 2\n")
         _git(["add", "."], tree)
         _git(["commit", "-m", "feat"], tree)
@@ -121,14 +121,14 @@ class TestAuditVerdicts:
              env={"GIT_COMMITTER_NAME": "other", "GIT_COMMITTER_EMAIL": "o@o"})
         _git(["push", "origin", "main"], repo)
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        assert _verdict(records, "hermes-merged").verdict == "reap"
+        assert _verdict(records, "jimmy-merged").verdict == "reap"
 
     def test_live_locked_tree_keeps(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-live")
+        tree, _ = _add_worktree(repo, "jimmy-live")
         _git(["worktree", "lock", str(tree),
-              "--reason", f"hermes pid={os.getpid()}"], repo)
+              "--reason", f"jimmy pid={os.getpid()}"], repo)
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        record = _verdict(records, "hermes-live")
+        record = _verdict(records, "jimmy-live")
         assert record.verdict == "keep"
         assert "in use" in record.reason
 
@@ -142,10 +142,10 @@ class TestAuditVerdicts:
 
 class TestReclaim:
     def test_reap_removes_tree_and_branch(self, repo):
-        tree, branch = _add_worktree(repo, "hermes-clean")
+        tree, branch = _add_worktree(repo, "jimmy-clean")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
         actions = worktree_gc.reclaim_worktrees(str(repo), records=records)
-        assert any("removed hermes-clean" in a for a in actions)
+        assert any("removed jimmy-clean" in a for a in actions)
         assert not tree.exists()
         probe = subprocess.run(
             ["git", "rev-parse", "--verify", "--quiet", branch],
@@ -154,18 +154,18 @@ class TestReclaim:
         assert probe.returncode != 0, "branch should be gone with its tree"
 
     def test_untracked_files_archived_before_removal(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-scratch")
+        tree, _ = _add_worktree(repo, "jimmy-scratch")
         (tree / "NOTES.md").write_text("important scribbles\n")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
         worktree_gc.reclaim_worktrees(str(repo), records=records)
         assert not tree.exists()
-        archive_root = Path.home() / ".hermes" / "archive" / "worktree-prune"
+        archive_root = Path.home() / ".jimmy" / "archive" / "worktree-prune"
         archived = list(archive_root.rglob("NOTES.md"))
         assert archived, "untracked file must be archived, not destroyed"
         assert archived[0].read_text() == "important scribbles\n"
 
     def test_dry_run_changes_nothing(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-clean")
+        tree, _ = _add_worktree(repo, "jimmy-clean")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
         actions = worktree_gc.reclaim_worktrees(
             str(repo), dry_run=True, records=records
@@ -176,18 +176,18 @@ class TestReclaim:
     def test_frozen_list_ignores_trees_created_after_audit(self, repo):
         """Concurrent-session trap: a tree created between audit and reclaim
         must be out of scope by construction."""
-        _add_worktree(repo, "hermes-old")
+        _add_worktree(repo, "jimmy-old")
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        late_tree, _ = _add_worktree(repo, "hermes-late")
+        late_tree, _ = _add_worktree(repo, "jimmy-late")
         worktree_gc.reclaim_worktrees(str(repo), records=records)
         assert late_tree.exists(), "tree created after the audit must survive"
 
     def test_dead_locked_tree_is_unlocked_and_reaped(self, repo):
-        tree, _ = _add_worktree(repo, "hermes-zombie")
+        tree, _ = _add_worktree(repo, "jimmy-zombie")
         _git(["worktree", "lock", str(tree),
-              "--reason", "hermes pid=999999999"], repo)
+              "--reason", "jimmy pid=999999999"], repo)
         records = worktree_gc.audit_worktrees(str(repo), with_sizes=False)
-        assert _verdict(records, "hermes-zombie").verdict == "reap"
+        assert _verdict(records, "jimmy-zombie").verdict == "reap"
         worktree_gc.reclaim_worktrees(str(repo), records=records)
         assert not tree.exists()
 
@@ -236,7 +236,7 @@ class TestBranchGC:
         assert "patch-equivalent" in by_name["fix/landed"].reason
 
     def test_checked_out_and_protected_kept(self, repo):
-        _tree, branch = _add_worktree(repo, "hermes-active")
+        _tree, branch = _add_worktree(repo, "jimmy-active")
         records = worktree_gc.audit_branches(str(repo))
         by_name = {record.name: record for record in records}
         assert by_name["main"].verdict == "keep"

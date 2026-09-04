@@ -168,7 +168,7 @@ def _render_full_markdown(sessions: List[Dict[str, Any]]) -> str:
         lines.append("")
         _append_session_messages(lines, session, heading_level=2)
     else:
-        lines.append("# Hermes sessions export")
+        lines.append("# Jimmy sessions export")
         lines.append("")
         for session in sessions:
             lines.append(f"## Session: {_heading_text(_session_title_or_id(session))}")
@@ -333,7 +333,7 @@ Formats:
 
 Options:
   filename   optional output name/path (default: auto-named;
-             CLI saves under ~/.hermes/sessions/saved/)
+             CLI saves under ~/.jimmy/sessions/saved/)
   redact     scrub API keys, tokens, and credentials before writing
 
 Examples:
@@ -369,7 +369,7 @@ def render_session_for_save(session: Dict[str, Any], fmt: str) -> str:
     if fmt == "md":
         return render_sessions_export([session], fmt="markdown")
     if fmt == "html":
-        from hermes_cli.session_export_html import generate_html_export
+        from jimmy_cli.session_export_html import generate_html_export
 
         return generate_html_export(session)
     raise ValueError(f"Unknown save format: {fmt!r}")
@@ -380,4 +380,4 @@ def default_save_filename(session_id: str, fmt: str) -> str:
     safe_id = "".join(
         ch for ch in str(session_id) if ch.isalnum() or ch in ("-", "_")
     ) or "session"
-    return f"hermes_session_{safe_id}.{fmt}"
+    return f"jimmy_session_{safe_id}.{fmt}"

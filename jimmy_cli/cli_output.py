@@ -1,4 +1,4 @@
-"""Shared CLI output helpers for Hermes CLI modules.
+"""Shared CLI output helpers for Jimmy CLI modules.
 
 Extracts the identical ``print_info/success/warning/error`` and ``prompt()``
 functions previously duplicated across setup.py, tools_config.py,
@@ -7,8 +7,8 @@ mcp_config.py, and memory_setup.py.
 
 import sys
 
-from hermes_cli.colors import Colors, color
-from hermes_cli.secret_prompt import masked_secret_prompt
+from jimmy_cli.colors import Colors, color
+from jimmy_cli.secret_prompt import masked_secret_prompt
 
 
 # ─── Print Helpers ────────────────────────────────────────────────────────────

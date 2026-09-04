@@ -83,7 +83,7 @@ def load_picker_context() -> ConfigContext:
     Replaces the inline 17-LOC config-slice that ``web_server.py`` and
     ``tui_gateway/server.py`` (×2 sites) used to do.
     """
-    from hermes_cli.config import get_compatible_custom_providers, load_config
+    from jimmy_cli.config import get_compatible_custom_providers, load_config
 
     cfg = load_config()
     model_cfg = cfg.get("model", {})
@@ -147,7 +147,7 @@ def build_models_payload(
     - ``pricing``: enrich each row with formatted per-model pricing and,
       for Nous, ``free_tier``/``unavailable_models`` so the GUI picker can
       show $/Mtok columns and gate paid models on free accounts —
-      mirroring the ``hermes model`` CLI picker. Adds network calls
+      mirroring the ``jimmy model`` CLI picker. Adds network calls
       (pricing fetch + Nous tier check); only set for interactive pickers.
     - ``capabilities``: add a per-row ``capabilities`` map
       ``{model: {fast, reasoning}}`` so pickers can gate the model-options
@@ -183,7 +183,7 @@ def build_models_payload(
       provider may still work; hiding the provider strands the user. Set for
       any surface a human is choosing from, not for programmatic resolution.
     """
-    from hermes_cli.model_switch import list_authenticated_providers
+    from jimmy_cli.model_switch import list_authenticated_providers
 
     rows = list_authenticated_providers(
         current_provider=ctx.current_provider,
@@ -225,7 +225,7 @@ def build_models_payload(
     # aggregator rows honest: they only show models the user can't get
     # from a more-specific provider.  (#45954)
     try:
-        from hermes_cli.providers import is_routing_aggregator as _is_routing_aggregator
+        from jimmy_cli.providers import is_routing_aggregator as _is_routing_aggregator
     except Exception:
         _is_routing_aggregator = None  # type: ignore[assignment]
 
@@ -348,7 +348,7 @@ def build_aux_picker_rows(
     MoA reference fan-out, and ``auxiliary_client`` unwraps a ``moa``
     provider to its aggregator slot anyway (see ``_resolve_auto``), so
     offering it here would be a choice silently rewritten behind the user's
-    back. Mirrors the same filter in ``hermes_cli/moa_cmd.py``.
+    back. Mirrors the same filter in ``jimmy_cli/moa_cmd.py``.
 
     Rows are the standard ``list_authenticated_providers`` shape. Pair with
     :func:`format_aux_picker_entries` to render them.
@@ -410,7 +410,7 @@ def _reasoning_catalog_reader(slug: str):
     model reports no restriction and the UI offers the full scale.
     """
     try:
-        from hermes_cli.models import (
+        from jimmy_cli.models import (
             nous_model_reasoning_capabilities,
             openrouter_model_reasoning_capabilities,
             warm_nous_reasoning_caps_async,
@@ -451,7 +451,7 @@ def _apply_capabilities(rows: list[dict]) -> None:
     ``minimal`` at its lowest thinking), so filtering the picker by that list
     would hide levels that demonstrably work.
     """
-    from hermes_cli.models import model_supports_fast_mode
+    from jimmy_cli.models import model_supports_fast_mode
 
     try:
         from agent.models_dev import get_model_capabilities
@@ -570,10 +570,10 @@ def _apply_custom_aliases(rows: list[dict]) -> None:
     the bare config key as ``slug``. GUI pickers compare the two to decide
     which row is active; exact equality never matches for custom providers
     (#87035). Exposing ``aliases`` — every current and legacy spelling from
-    :func:`hermes_cli.providers.custom_provider_aliases` — lets the frontend
+    :func:`jimmy_cli.providers.custom_provider_aliases` — lets the frontend
     do a membership check instead.
     """
-    from hermes_cli.providers import custom_provider_aliases
+    from jimmy_cli.providers import custom_provider_aliases
 
     for row in rows:
         if not row.get("is_user_defined"):
@@ -604,8 +604,8 @@ def _append_unconfigured_rows(
     at it but credentials are presently unavailable, keep a visible row carrying
     the saved model so GUI pickers don't silently snap to some other provider.
     """
-    from hermes_cli.auth import PROVIDER_REGISTRY
-    from hermes_cli.models import CANONICAL_PROVIDERS, _PROVIDER_LABELS
+    from jimmy_cli.auth import PROVIDER_REGISTRY
+    from jimmy_cli.models import CANONICAL_PROVIDERS, _PROVIDER_LABELS
 
     seen = {r["slug"].lower() for r in rows}
     cur = (ctx.current_provider or "").lower()
@@ -628,7 +628,7 @@ def _append_unconfigured_rows(
                 f"Configured provider missing usable credentials; paste {key_env} to reactivate. "
                 "Showing the saved model only."
                 if auth_type == "api_key" and key_env
-                else "Configured provider is not authenticated; run `hermes model` to reactivate. "
+                else "Configured provider is not authenticated; run `jimmy model` to reactivate. "
                 "Showing the saved model only."
             )
             extras.append(
@@ -666,9 +666,9 @@ def _filter_explicit_provider_rows(rows: list[dict], ctx: ConfigContext) -> list
 
     ``list_authenticated_providers`` intentionally discovers ambient / auto-
     seeded credentials (for example GitHub CLI -> Copilot). Desktop chat model
-    pickers want the narrower subset the user explicitly configured for Hermes.
+    pickers want the narrower subset the user explicitly configured for Jimmy.
     """
-    from hermes_cli.auth import is_provider_explicitly_configured
+    from jimmy_cli.auth import is_provider_explicitly_configured
 
     current_slug = str(ctx.current_provider or "").strip().lower()
     kept: list[dict] = []
@@ -705,7 +705,7 @@ def _raw_config_has_enabled_moa_preset() -> bool:
     one enabled preset (or an older flat MoA config) in their own config.yaml.
     """
     try:
-        from hermes_cli.config import read_raw_config
+        from jimmy_cli.config import read_raw_config
 
         raw = read_raw_config()
     except Exception:
@@ -748,7 +748,7 @@ def _apply_picker_hints(rows: list[dict]) -> None:
     the unconfigured skeleton rows from ``_append_unconfigured_rows`` get
     the picker's setup-hint shape.
     """
-    from hermes_cli.auth import PROVIDER_REGISTRY
+    from jimmy_cli.auth import PROVIDER_REGISTRY
 
     for row in rows:
         if "authenticated" in row:
@@ -774,7 +774,7 @@ def _apply_picker_hints(rows: list[dict]) -> None:
         row["warning"] = (
             f"paste {key_env} to activate"
             if auth_type == "api_key" and key_env
-            else f"run `hermes model` to configure ({auth_type})"
+            else f"run `jimmy model` to configure ({auth_type})"
         )
 
 
@@ -788,7 +788,7 @@ def _reorder_canonical(rows: list[dict]) -> list[dict]:
     canonical. Keying on the flag would silently demote canonical
     providers configured via the new keyed schema.
     """
-    from hermes_cli.models import CANONICAL_PROVIDERS
+    from jimmy_cli.models import CANONICAL_PROVIDERS
 
     order = {e.slug: i for i, e in enumerate(CANONICAL_PROVIDERS)}
     canon = sorted(
@@ -821,7 +821,7 @@ def _apply_pricing(
     renders strings — identical formatting to the CLI picker. All failures
     are swallowed (best-effort): a row simply gets no ``pricing`` key.
     """
-    from hermes_cli.models import (
+    from jimmy_cli.models import (
         _format_price_per_mtok,
         check_nous_free_tier,
         compute_sale_discount,
@@ -912,12 +912,12 @@ def _moa_provider_row(current_provider: str = "") -> dict | None:
     """Build the virtual ``moa`` provider row for model pickers.
 
     Shared by the CLI inventory (:func:`build_models_payload`) and the gateway
-    picker path (:func:`hermes_cli.model_switch.list_picker_providers`) so the
+    picker path (:func:`jimmy_cli.model_switch.list_picker_providers`) so the
     row shape stays in one place. Returns ``None`` when no MoA presets exist.
     """
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.moa_config import normalize_moa_config
+        from jimmy_cli.config import load_config
+        from jimmy_cli.moa_config import normalize_moa_config
 
         cfg = normalize_moa_config(load_config().get("moa") or {})
         models = list(cfg.get("presets", {}).keys())

@@ -5,7 +5,7 @@ FOREVER after its timeout fires: run()'s cleanup kills the direct child and
 then joins the pipe reader threads with an unbounded ``communicate()``.  A
 descendant (``conhost.exe`` under wmic/powershell, ``git.exe`` under a
 launcher shim) holding duplicated pipe handles keeps the pipes from EOF and
-the join never returns.  ``hermes update`` wedged exactly there inside
+the join never returns.  ``jimmy update`` wedged exactly there inside
 ``_scan_gateway_pids`` on machines where the full ``Win32_Process`` scan
 exceeds its budget.
 
@@ -26,7 +26,7 @@ import time
 
 import pytest
 
-from hermes_cli._subprocess_compat import bounded_git_probe, bounded_probe_run
+from jimmy_cli._subprocess_compat import bounded_git_probe, bounded_probe_run
 
 _PY = sys.executable
 

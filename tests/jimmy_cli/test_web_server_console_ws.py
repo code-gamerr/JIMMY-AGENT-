@@ -1,4 +1,4 @@
-"""Dashboard Hermes Console websocket tests."""
+"""Dashboard Jimmy Console websocket tests."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from hermes_cli import web_server
+from jimmy_cli import web_server
 
 
 @pytest.fixture
-def console_client(monkeypatch, _isolate_hermes_home):
+def console_client(monkeypatch, _isolate_jimmy_home):
     previous_auth_required = getattr(web_server.app.state, "auth_required", None)
     previous_bound_host = getattr(web_server.app.state, "bound_host", None)
     web_server.app.state.auth_required = False
@@ -71,13 +71,13 @@ def test_console_ws_rejects_missing_or_bad_token(console_client):
 
 
 def test_console_ws_cancel_returns_to_prompt(console_client, monkeypatch):
-    from hermes_cli.console_engine import ConsoleResult, HermesConsoleEngine
+    from jimmy_cli.console_engine import ConsoleResult, JimmyConsoleEngine
 
     def slow_execute(self, line: str, *, confirmed: bool = False):
         time.sleep(0.2)
         return ConsoleResult("ok", output="late", command=line)
 
-    monkeypatch.setattr(HermesConsoleEngine, "execute", slow_execute)
+    monkeypatch.setattr(JimmyConsoleEngine, "execute", slow_execute)
 
     with console_client.websocket_connect(_url()) as conn:
         assert conn.receive_json()["type"] == "ready"
@@ -85,4 +85,4 @@ def test_console_ws_cancel_returns_to_prompt(console_client, monkeypatch):
         conn.send_json({"type": "cancel"})
 
         complete = _recv_until(conn, "complete", status="cancelled")
-        assert complete["prompt"] == "hermes> "
+        assert complete["prompt"] == "jimmy> "

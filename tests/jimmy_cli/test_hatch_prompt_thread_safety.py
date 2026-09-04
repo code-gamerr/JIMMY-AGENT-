@@ -12,7 +12,7 @@ import builtins
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from hermes_cli.cli_commands_mixin import CLICommandsMixin
+from jimmy_cli.cli_commands_mixin import CLICommandsMixin
 
 
 class _StandIn(SimpleNamespace):

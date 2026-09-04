@@ -1,7 +1,7 @@
 """Tests for gateway restart-loop defenses (#30719).
 
 Covers:
-- Defense 1: gateway stop/restart refuse when _HERMES_GATEWAY=1
+- Defense 1: gateway stop/restart refuse when _JIMMY_GATEWAY=1
 - Defense 2: cron create rejects prompts containing gateway lifecycle commands
 - _contains_gateway_lifecycle_command pattern matching
 """
@@ -12,7 +12,7 @@ from argparse import Namespace
 
 import pytest
 
-from hermes_cli.cron import (
+from jimmy_cli.cron import (
     _contains_gateway_lifecycle_command,
     cron_command,
 )
@@ -26,31 +26,31 @@ class TestGatewayLifecyclePattern:
     """Verify the regex catches gateway lifecycle commands."""
 
     @pytest.mark.parametrize("text", [
-        "hermes gateway restart",
-        "hermes gateway stop",
-        "hermes  gateway  restart",         # double spaces
+        "jimmy gateway restart",
+        "jimmy gateway stop",
+        "jimmy  gateway  restart",         # double spaces
         "Hermez Gateway Restart".lower().replace("z", "s"),  # case handled
         "HERMES GATEWAY RESTART",           # uppercase
     ])
-    def test_hermes_gateway_commands(self, text):
+    def test_jimmy_gateway_commands(self, text):
         assert _contains_gateway_lifecycle_command(text), f"Should match: {text!r}"
 
     @pytest.mark.parametrize("text", [
         # #62891: a blocked direct restart/kill laundered through a NEW
         # launchd keepalive job wrapping a helper script, instead of a
         # direct kickstart/unload/stop/restart on the existing service.
-        "launchctl submit -l ai.hermes.gateway-hard-restart-no-photon-notice -- /bin/sh ~/.hermes/scripts/hard_restart_gateway_no_photon_notice.sh",
-        "launchctl submit -l hermes-gateway-restart-helper -- /bin/sh helper.sh",
+        "launchctl submit -l ai.jimmy.gateway-hard-restart-no-photon-notice -- /bin/sh ~/.jimmy/scripts/hard_restart_gateway_no_photon_notice.sh",
+        "launchctl submit -l jimmy-gateway-restart-helper -- /bin/sh helper.sh",
         # bootstrap loads an arbitrary plist — same laundering shape.
-        "launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.hermes.gateway.restart-once.plist",
+        "launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.jimmy.gateway.restart-once.plist",
         # The exact reported shape: split across shell line-continuations
         # (`\` immediately followed by a newline). `[^\n]*` alone can't span
         # that, so the verb and the gateway-label token land on different
         # physical lines unless continuations are normalized first.
         (
             "launchctl submit \\\n"
-            "  -l ai.hermes.gateway-hard-restart-no-photon-notice \\\n"
-            "  -- /bin/sh ~/.hermes/scripts/hard_restart_gateway_no_photon_notice.sh"
+            "  -l ai.jimmy.gateway-hard-restart-no-photon-notice \\\n"
+            "  -- /bin/sh ~/.jimmy/scripts/hard_restart_gateway_no_photon_notice.sh"
         ),
     ])
     def test_launchctl_submit_bootstrap_commands(self, text):
@@ -62,37 +62,37 @@ class TestGatewayLifecyclePattern:
         # (no trailing backslash) must not be bridged into a false match.
         text = (
             "this restarts the payment gateway\n"
-            "unrelated hermes note on the next line"
+            "unrelated jimmy note on the next line"
         )
         assert not _contains_gateway_lifecycle_command(text), f"Should NOT match: {text!r}"
 
 
     @pytest.mark.parametrize("text", [
         "restart the server application",
-        "hermes cron list",
-        "hermes update",
-        "hermes config set model claude",
+        "jimmy cron list",
+        "jimmy update",
+        "jimmy config set model claude",
         "echo 'just a normal cron job'",
         "run the backup script",
         "gateway is running fine",
-        # `hermes gateway start` is benign — starting a gateway from inside a
+        # `jimmy gateway start` is benign — starting a gateway from inside a
         # gateway is a no-op / "already running", and a legit cron job may
         # start a sibling profile's gateway. Only restart/stop/kill are the
         # foot-gun (#30719 lists only those).
-        "hermes gateway start",
-        "hermes gateway start --all",
-        # Tightened launchctl/systemctl branches: ops on NON-gateway hermes
-        # services must not be falsely blocked (the old `.*hermes` matched any
-        # hermes token).
-        "launchctl unload ai.hermes.update-checker.plist",
-        "launchctl restart ai.hermes.daemon",
+        "jimmy gateway start",
+        "jimmy gateway start --all",
+        # Tightened launchctl/systemctl branches: ops on NON-gateway jimmy
+        # services must not be falsely blocked (the old `.*jimmy` matched any
+        # jimmy token).
+        "launchctl unload ai.jimmy.update-checker.plist",
+        "launchctl restart ai.jimmy.daemon",
         # `submit` on an unrelated launchd label must not match the text
         # pattern (a cron PROMPT is prose fed to an LLM). The execution-aware
         # `contains_launchctl_submit_command` handles neutral-label submits
         # at the terminal/cron-script chokepoints instead.
         "launchctl submit -l com.example.backup -- /bin/sh backup.sh",
-        "systemctl restart hermes-meta.service",
-        "systemctl restart hermes-cron-helper",
+        "systemctl restart jimmy-meta.service",
+        "systemctl restart jimmy-cron-helper",
         # Regression (#30728 follow-up): legit prompts that merely mention an
         # unrelated gateway + a restart must NOT be blocked. The cron prompt is
         # fed to an LLM, not a shell, so substring detection on English text is
@@ -116,11 +116,11 @@ class TestCronCreateLifecycleBlock:
         monkeypatch.setattr("cron.jobs.JOBS_FILE", tmp_path / "cron" / "jobs.json")
         monkeypatch.setattr("cron.jobs.OUTPUT_DIR", tmp_path / "cron" / "output")
 
-    def test_block_hermes_gateway_restart(self, capsys):
+    def test_block_jimmy_gateway_restart(self, capsys):
         args = Namespace(
             cron_command="create",
             schedule="30m",
-            prompt="Upgrade hermes then run hermes gateway restart",
+            prompt="Upgrade jimmy then run jimmy gateway restart",
             name=None,
             deliver=None,
             repeat=None,
@@ -140,12 +140,12 @@ class TestCronCreateLifecycleBlock:
 
     def test_block_script_with_lifecycle_command(self, tmp_path, capsys, monkeypatch):
         # A no_agent job whose script IS the job (the issue's real abuse path:
-        # restart_hermes_gateway_once.sh). The script must live under
-        # HERMES_HOME/scripts so the scheduler — and the guard — resolve it.
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-        scripts_dir = tmp_path / ".hermes" / "scripts"
+        # restart_jimmy_gateway_once.sh). The script must live under
+        # JIMMY_HOME/scripts so the scheduler — and the guard — resolve it.
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+        scripts_dir = tmp_path / ".jimmy" / "scripts"
         scripts_dir.mkdir(parents=True)
-        (scripts_dir / "restart.sh").write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        (scripts_dir / "restart.sh").write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
         args = Namespace(
             cron_command="create",
             schedule="1h",
@@ -197,11 +197,11 @@ class TestCronCreateLifecycleBlock:
 # ---------------------------------------------------------------------------
 
 class TestGatewaySelfTargetingGuard:
-    """Verify hermes gateway stop/restart refuse when _HERMES_GATEWAY=1."""
+    """Verify jimmy gateway stop/restart refuse when _JIMMY_GATEWAY=1."""
 
     def test_stop_refuses_inside_gateway(self, monkeypatch):
-        monkeypatch.setenv("_HERMES_GATEWAY", "1")
-        from hermes_cli.gateway import gateway_command
+        monkeypatch.setenv("_JIMMY_GATEWAY", "1")
+        from jimmy_cli.gateway import gateway_command
         args = Namespace(gateway_command="stop", all=False, system=False)
         with pytest.raises(SystemExit) as exc_info:
             gateway_command(args)
@@ -213,8 +213,8 @@ class TestGatewaySelfTargetingGuard:
         # fire. Prove control reaches the real stop path (rather than driving
         # real signal delivery, which would trip the live-system guard) by
         # short-circuiting the first downstream call with a sentinel.
-        monkeypatch.delenv("_HERMES_GATEWAY", raising=False)
-        import hermes_cli.gateway as gw
+        monkeypatch.delenv("_JIMMY_GATEWAY", raising=False)
+        import jimmy_cli.gateway as gw
 
         class _Reached(Exception):
             pass
@@ -234,9 +234,9 @@ class TestGatewaySelfTargetingGuard:
 # ---------------------------------------------------------------------------
 
 class TestTerminalToolGatewayLifecycleGuard:
-    """terminal_tool must refuse gateway lifecycle commands when _HERMES_GATEWAY=1.
+    """terminal_tool must refuse gateway lifecycle commands when _JIMMY_GATEWAY=1.
 
-    Issue #37453: systemctl --user restart hermes-gateway runs as a child of the
+    Issue #37453: systemctl --user restart jimmy-gateway runs as a child of the
     gateway process.  When systemd delivers SIGTERM the gateway kills its own
     restart command mid-execution — the service may never restart.  The guard
     must fire before execution, unconditionally (force=True cannot bypass it).
@@ -260,21 +260,21 @@ class TestTerminalToolGatewayLifecycleGuard:
         monkeypatch.setattr(tt, "_task_env_overrides", {})
         monkeypatch.setattr(tt, "_get_env_config", self._minimal_config)
         if inside_gateway:
-            monkeypatch.setenv("_HERMES_GATEWAY", "1")
+            monkeypatch.setenv("_JIMMY_GATEWAY", "1")
         else:
-            monkeypatch.delenv("_HERMES_GATEWAY", raising=False)
+            monkeypatch.delenv("_JIMMY_GATEWAY", raising=False)
 
     @pytest.mark.parametrize("cmd", [
-        "systemctl restart hermes-gateway",
-        "systemctl --user restart hermes-gateway",
-        "systemctl stop hermes-gateway.service",
-        "hermes gateway restart",
-        "launchctl kickstart gui/501/ai.hermes.gateway",
+        "systemctl restart jimmy-gateway",
+        "systemctl --user restart jimmy-gateway",
+        "systemctl stop jimmy-gateway.service",
+        "jimmy gateway restart",
+        "launchctl kickstart gui/501/ai.jimmy.gateway",
         # #62891 exact reported shape and its bootstrap sibling.
-        "launchctl submit -l ai.hermes.gateway-hard-restart-no-photon-notice -- /bin/sh ~/.hermes/scripts/hard_restart_gateway_no_photon_notice.sh",
+        "launchctl submit -l ai.jimmy.gateway-hard-restart-no-photon-notice -- /bin/sh ~/.jimmy/scripts/hard_restart_gateway_no_photon_notice.sh",
         "launchctl submit -l com.foo -- /path/gateway",
-        "launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.hermes.gateway.restart-once.plist",
-        "pkill -f hermes.*gateway",
+        "launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.jimmy.gateway.restart-once.plist",
+        "pkill -f jimmy.*gateway",
     ])
     def test_blocks_lifecycle_commands_inside_gateway(self, monkeypatch, cmd):
         import tools.terminal_tool as tt
@@ -290,7 +290,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
 
         result = json.loads(tt.terminal_tool(
-            command="systemctl restart hermes-gateway", force=True
+            command="systemctl restart jimmy-gateway", force=True
         ))
 
         assert result["exit_code"] == 1
@@ -302,7 +302,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         script = tmp_path / "delayed-ops.sh"
-        script.write_text("#!/bin/bash\nsleep 45\nhermes gateway restart\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\nsleep 45\njimmy gateway restart\n", encoding="utf-8")
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
 
         result = json.loads(tt.terminal_tool(command=f"/bin/bash {script}"))
@@ -319,7 +319,7 @@ class TestTerminalToolGatewayLifecycleGuard:
 
         result = json.loads(tt.terminal_tool(
             command=(
-                "launchctl submit -l ai.hermes.delayed-ops -- "
+                "launchctl submit -l ai.jimmy.delayed-ops -- "
                 f"/bin/bash {script}"
             )
         ))
@@ -328,10 +328,10 @@ class TestTerminalToolGatewayLifecycleGuard:
         assert "KeepAlive" in result["error"]
 
     @pytest.mark.parametrize("command", [
-        # Neutral, non-hermes label: label-independent detection is the point
-        # (#62891 second reproduction used `ai.hermes.svc-reload-tmp`).
+        # Neutral, non-jimmy label: label-independent detection is the point
+        # (#62891 second reproduction used `ai.jimmy.svc-reload-tmp`).
         "launchctl submit -l com.foo -- /path/gateway",
-        "launchctl submit -l ai.hermes.svc-reload-tmp -- /bin/sh /tmp/h-svc-reload.sh",
+        "launchctl submit -l ai.jimmy.svc-reload-tmp -- /bin/sh /tmp/h-svc-reload.sh",
         # bootstrap variant: loads an arbitrary plist as a persistent job.
         "launchctl bootstrap gui/501 /tmp/com.foo.plist",
     ])
@@ -379,7 +379,7 @@ class TestTerminalToolGatewayLifecycleGuard:
 
         script = tmp_path / "wrapper.sh"
         script.write_text(
-            "#!/bin/bash\nlaunchctl submit -l ai.hermes.loop -- /bin/true\n"
+            "#!/bin/bash\nlaunchctl submit -l ai.jimmy.loop -- /bin/true\n"
         )
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
 
@@ -392,7 +392,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         script = tmp_path / "relative.sh"
-        script.write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
 
         class _FakeEnv:
             env = {}
@@ -411,7 +411,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         script = tmp_path / "delayed.sh"
-        script.write_text("#!/bin/bash\nhermes gateway stop\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\njimmy gateway stop\n", encoding="utf-8")
         script.chmod(0o700)
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
 
@@ -424,7 +424,7 @@ class TestTerminalToolGatewayLifecycleGuard:
 
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
         result = json.loads(tt.terminal_tool(
-            command="launchctl sub\"\"mit -l ai.hermes.loop -- /bin/true"
+            command="launchctl sub\"\"mit -l ai.jimmy.loop -- /bin/true"
         ))
 
         assert result["exit_code"] == 1
@@ -434,7 +434,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         script = tmp_path / "options.sh"
-        script.write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
         self._patch_env(monkeypatch, self._make_fake_env(), inside_gateway=True)
 
         result = json.loads(tt.terminal_tool(
@@ -447,7 +447,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         script = tmp_path / "nested.sh"
-        script.write_text("#!/bin/bash\nlaunchctl submit -l ai.hermes.loop -- /bin/true\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\nlaunchctl submit -l ai.jimmy.loop -- /bin/true\n", encoding="utf-8")
 
         class _FakeEnv:
             env = {}
@@ -467,7 +467,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         import tools.terminal_tool as tt
 
         inner = tmp_path / "inner.sh"
-        inner.write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        inner.write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
         outer = tmp_path / "outer.sh"
         outer.write_text("#!/bin/bash\n/bin/bash inner.sh\n", encoding="utf-8")
 
@@ -541,7 +541,7 @@ class TestTerminalToolGatewayLifecycleGuard:
         assert calls == [command]
 
     def test_safe_systemctl_commands_pass_through(self, monkeypatch):
-        """Non-hermes systemctl commands must not be blocked by this guard."""
+        """Non-jimmy systemctl commands must not be blocked by this guard."""
         import tools.terminal_tool as tt
 
         calls = []
@@ -571,7 +571,7 @@ class TestLifecycleGuardModule:
     def test_prompt_with_command_raises(self):
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         with pytest.raises(GatewayLifecycleBlocked) as exc:
-            check_gateway_lifecycle("please run hermes gateway restart", None)
+            check_gateway_lifecycle("please run jimmy gateway restart", None)
         assert "#30719" in str(exc.value)
 
     def test_clean_prompt_does_not_raise(self):
@@ -582,7 +582,7 @@ class TestLifecycleGuardModule:
     def test_script_with_command_raises(self, tmp_path, monkeypatch):
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "restart.sh"
-        script.write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        script.write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("clean prompt", str(script))
 
@@ -590,7 +590,7 @@ class TestLifecycleGuardModule:
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "persistent.sh"
         script.write_text(
-            "#!/bin/bash\nlaunchctl submit -l ai.hermes.loop -- /bin/true\n"
+            "#!/bin/bash\nlaunchctl submit -l ai.jimmy.loop -- /bin/true\n"
         )
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("clean prompt", str(script))
@@ -615,7 +615,7 @@ class TestLifecycleGuardModule:
         script to slip through."""
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "ops.sh"
-        script.write_text("hermes gateway stop\n", encoding="utf-8")
+        script.write_text("jimmy gateway stop\n", encoding="utf-8")
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("daily ops job", str(script))
 
@@ -624,28 +624,28 @@ class TestLifecycleGuardModule:
         decode with errors='replace' so the scan always sees the command."""
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "weird.bin"
-        script.write_bytes(b"\xfehermes gateway restart\xff")
+        script.write_bytes(b"\xfejimmy gateway restart\xff")
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("", str(script))
 
 
     def test_relative_script_resolved_under_scripts_dir(self, tmp_path, monkeypatch):
-        """A bare/relative script name resolves under HERMES_HOME/scripts (the
+        """A bare/relative script name resolves under JIMMY_HOME/scripts (the
         same place the scheduler runs it from) — otherwise the guard would read
         a nonexistent relative path and scan prompt-only content."""
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-        scripts_dir = tmp_path / ".hermes" / "scripts"
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+        scripts_dir = tmp_path / ".jimmy" / "scripts"
         scripts_dir.mkdir(parents=True)
         (scripts_dir / "restart.sh").write_text(
-            "launchctl kickstart -k gui/501/ai.hermes.gateway\n"
+            "launchctl kickstart -k gui/501/ai.jimmy.gateway\n"
         )
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("daily", "restart.sh")
 
     def test_python_script_with_pathlib_division_not_blocked(self, tmp_path):
         """#77131: a .py cron script using pathlib division (Path.home() /
-        ".hermes") must NOT be blocked.
+        ".jimmy") must NOT be blocked.
 
         Before the fix, the shell-script reference walk tokenized Python
         sources and treated pathlib's bare "/" operator as an executable
@@ -659,7 +659,7 @@ class TestLifecycleGuardModule:
         script = tmp_path / "digest.py"
         script.write_text(
             "from pathlib import Path\n"
-            'ENV = Path.home() / ".hermes" / ".env"\n'
+            'ENV = Path.home() / ".jimmy" / ".env"\n'
             'print("digest ok")\n'
         )
         check_gateway_lifecycle("clean prompt", str(script))
@@ -672,7 +672,7 @@ class TestLifecycleGuardModule:
         by the direct regex scan."""
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "evil.py"
-        script.write_text('import os\nos.system("hermes gateway restart")\n', encoding="utf-8")
+        script.write_text('import os\nos.system("jimmy gateway restart")\n', encoding="utf-8")
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("clean prompt", str(script))
 
@@ -720,7 +720,7 @@ class TestLifecycleGuardModule:
 
         from cron.lifecycle_guard import _read_referenced_script
 
-        text, unsafe = _read_referenced_script(Path("/tmp/hermes\x00binary"))
+        text, unsafe = _read_referenced_script(Path("/tmp/jimmy\x00binary"))
         assert text is None
         assert unsafe is False
 
@@ -757,7 +757,7 @@ class TestLifecycleGuardModule:
         from cron.lifecycle_guard import GatewayLifecycleBlocked, check_gateway_lifecycle
         script = tmp_path / "wrapper.sh"
         script.write_text("#!/bin/bash\n./deploy.sh\n", encoding="utf-8")
-        (tmp_path / "deploy.sh").write_text("#!/bin/bash\nhermes gateway stop\n", encoding="utf-8")
+        (tmp_path / "deploy.sh").write_text("#!/bin/bash\njimmy gateway stop\n", encoding="utf-8")
         with pytest.raises(GatewayLifecycleBlocked):
             check_gateway_lifecycle("daily ops", str(script))
 
@@ -932,7 +932,7 @@ class TestLifecycleGuardModule:
         )
 
         def _remote_read(_path: str):
-            return "MZ\x00\x00\x90\x00 hermes gateway restart \x00\x00junk"
+            return "MZ\x00\x00\x90\x00 jimmy gateway restart \x00\x00junk"
 
         result = contains_gateway_lifecycle_command_or_referenced_script(
             "bash /nonexistent/dir/helper.sh",
@@ -996,7 +996,7 @@ class TestLifecycleGuardModule:
         monkeypatch.setattr(lg, "_contains_unsafe_gateway_action", _boom)
         # Direct scan still blocks a literal lifecycle command...
         assert lg.contains_gateway_lifecycle_command_or_referenced_script(
-            "hermes gateway restart"
+            "jimmy gateway restart"
         ) is True
         # ...and a benign command fails open instead of crashing.
         assert lg.contains_gateway_lifecycle_command_or_referenced_script(
@@ -1004,8 +1004,8 @@ class TestLifecycleGuardModule:
         ) is False
 
     def test_cron_guard_total_when_home_unresolvable(self, monkeypatch):
-        """`get_hermes_home()` falls back to Path.home(), which raises
-        RuntimeError when neither HERMES_HOME nor HOME resolves
+        """`get_jimmy_home()` falls back to Path.home(), which raises
+        RuntimeError when neither JIMMY_HOME nor HOME resolves
         (arbitrary-UID containers, launchd). The cron entry point must
         treat a relative script value as unresolvable — nothing to scan —
         not crash."""
@@ -1013,7 +1013,7 @@ class TestLifecycleGuardModule:
 
         from cron.lifecycle_guard import check_gateway_lifecycle
 
-        monkeypatch.delenv("HERMES_HOME", raising=False)
+        monkeypatch.delenv("JIMMY_HOME", raising=False)
         monkeypatch.delenv("HOME", raising=False)
         monkeypatch.setattr(
             Path,
@@ -1035,7 +1035,7 @@ class TestLifecycleGuardModule:
 class TestCreateJobBlocksLifecycleCommands:
     """The regression the CLI-layer-only guard could not catch: the agent's
     `cronjob` model tool calls cron.jobs.create_job directly, bypassing
-    hermes_cli.cron.cron_create. Enforcing at create_job covers both."""
+    jimmy_cli.cron.cron_create. Enforcing at create_job covers both."""
 
     @pytest.fixture(autouse=True)
     def _setup_cron_dir(self, tmp_path, monkeypatch):
@@ -1047,7 +1047,7 @@ class TestCreateJobBlocksLifecycleCommands:
         from cron.jobs import create_job
         from cron.lifecycle_guard import GatewayLifecycleBlocked
         with pytest.raises(GatewayLifecycleBlocked):
-            create_job(prompt="then run hermes gateway restart", schedule="30m")
+            create_job(prompt="then run jimmy gateway restart", schedule="30m")
 
     def test_create_job_allows_benign_prompt(self):
         from cron.jobs import create_job
@@ -1058,12 +1058,12 @@ class TestCreateJobBlocksLifecycleCommands:
     def test_cronjob_tool_surfaces_block_as_error(self, tmp_path, monkeypatch):
         """End-to-end through the model tool: the block comes back as
         result['error'] with the #30719 hint, not an unhandled exception."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-        (tmp_path / ".hermes").mkdir(parents=True)
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+        (tmp_path / ".jimmy").mkdir(parents=True)
         from tools.cronjob_tools import cronjob
         result = json.loads(cronjob(
             action="create", schedule="0 9 * * *",
-            prompt="please run hermes gateway restart nightly",
+            prompt="please run jimmy gateway restart nightly",
         ))
         assert result.get("success") is False
         assert "#30719" in result.get("error", "")
@@ -1080,8 +1080,8 @@ class TestRestartLoopGuard:
 
     @pytest.fixture(autouse=True)
     def _isolate_state(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-        (tmp_path / ".hermes").mkdir(parents=True)
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+        (tmp_path / ".jimmy").mkdir(parents=True)
         import gateway.restart_loop_guard as rlg
         rlg.clear()
 
@@ -1171,9 +1171,9 @@ class TestTerminalToolGatewayLifecycleGuardRemote:
         monkeypatch.setattr(tt, "_task_env_overrides", {})
         monkeypatch.setattr(tt, "_get_env_config", lambda: {"env_type": "local", "cwd": "/tmp", "timeout": 60, "lifetime_seconds": 3600})
         if inside_gateway:
-            monkeypatch.setenv("_HERMES_GATEWAY", "1")
+            monkeypatch.setenv("_JIMMY_GATEWAY", "1")
         else:
-            monkeypatch.delenv("_HERMES_GATEWAY", raising=False)
+            monkeypatch.delenv("_JIMMY_GATEWAY", raising=False)
 
     def test_remote_backend_script_read_uses_env_execute(self, monkeypatch, tmp_path):
         import tools.terminal_tool as tt
@@ -1189,7 +1189,7 @@ class TestTerminalToolGatewayLifecycleGuardRemote:
             def execute(self, command, **kwargs):
                 calls.append(command)
                 if "head -c" in command and "/remote/workspace/remote.sh" in command:
-                    return {"output": "#!/bin/bash\\nhermes gateway restart\\n", "returncode": 0}
+                    return {"output": "#!/bin/bash\\njimmy gateway restart\\n", "returncode": 0}
                 return {"output": "", "returncode": 0}
 
         fake_env = _RemoteEnv()
@@ -1213,10 +1213,10 @@ class TestCronCreateLifecycleBlockExtra:
         monkeypatch.setattr("cron.jobs.OUTPUT_DIR", tmp_path / "cron" / "output")
 
     def test_cron_nested_wrapper_script_is_scanned(self, tmp_path, capsys, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-        scripts_dir = tmp_path / ".hermes" / "scripts"
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
+        scripts_dir = tmp_path / ".jimmy" / "scripts"
         scripts_dir.mkdir(parents=True)
-        (scripts_dir / "inner.sh").write_text("#!/bin/bash\nhermes gateway restart\n", encoding="utf-8")
+        (scripts_dir / "inner.sh").write_text("#!/bin/bash\njimmy gateway restart\n", encoding="utf-8")
         (scripts_dir / "outer.sh").write_text("#!/bin/bash\n/bin/bash inner.sh\n", encoding="utf-8")
         args = Namespace(
             cron_command="create",
@@ -1255,16 +1255,16 @@ class TestLifecycleGuardDataArgumentExemption:
         # Exact live false-positive shapes: SQL string literals carrying the
         # full lifecycle command as text.
         'sqlite3 db "SELECT msg FROM log WHERE msg LIKE '
-        "'%systemctl restart hermes-gateway%'\"",
+        "'%systemctl restart jimmy-gateway%'\"",
         'psql -c "SELECT * FROM events WHERE cmd = '
-        "'systemctl stop hermes-gateway'\"",
+        "'systemctl stop jimmy-gateway'\"",
         # grep/rg pattern arguments hunting for the lifecycle string.
-        "grep -c 'systemctl restart hermes-gateway' /var/log/syslog",
-        "rg 'hermes gateway restart' /home/user/.hermes/logs/",
-        "journalctl -u hermes-gateway --grep 'systemctl restart hermes-gateway'",
+        "grep -c 'systemctl restart jimmy-gateway' /var/log/syslog",
+        "rg 'jimmy gateway restart' /home/user/.jimmy/logs/",
+        "journalctl -u jimmy-gateway --grep 'systemctl restart jimmy-gateway'",
         # SQL with stop/restart column/value words but no command shape.
         'sqlite3 stats.db "SELECT stop_time, restart_reason FROM '
-        'hermes_gateway_restarts"',
+        'jimmy_gateway_restarts"',
         "psql -c \"SELECT count(*) FROM events WHERE action IN "
         "('stop','restart') AND service LIKE '%gateway%'\"",
     ])
@@ -1273,16 +1273,16 @@ class TestLifecycleGuardDataArgumentExemption:
 
     @pytest.mark.parametrize("command", [
         # Execution smuggled through or around a data sink must still block.
-        'sqlite3 db ".shell hermes gateway restart"',
-        'psql -c "\\! systemctl restart hermes-gateway"',
-        "grep 'systemctl restart hermes-gateway' cmds.txt | sh",
-        "grep gateway f | xargs systemctl restart hermes-gateway",
-        'grep "$(systemctl restart hermes-gateway)" f',
-        "grep 'restart' log; systemctl restart hermes-gateway",
-        'sqlite3 db "SELECT 1"; hermes gateway stop',
+        'sqlite3 db ".shell jimmy gateway restart"',
+        'psql -c "\\! systemctl restart jimmy-gateway"',
+        "grep 'systemctl restart jimmy-gateway' cmds.txt | sh",
+        "grep gateway f | xargs systemctl restart jimmy-gateway",
+        'grep "$(systemctl restart jimmy-gateway)" f',
+        "grep 'restart' log; systemctl restart jimmy-gateway",
+        'sqlite3 db "SELECT 1"; jimmy gateway stop',
         # Plain lifecycle commands are unaffected by the exemption.
-        "hermes gateway restart",
-        "sudo systemctl stop hermes-gateway",
+        "jimmy gateway restart",
+        "sudo systemctl stop jimmy-gateway",
     ])
     def test_command_position_lifecycle_still_blocked(self, command):
         assert self._scan(command) is True
@@ -1300,7 +1300,7 @@ class TestLifecycleGuardDataArgumentExemption:
         script.write_text("print('nightly report')\n", encoding="utf-8")
         prompt = (
             'sqlite3 db "SELECT msg FROM log '
-            "WHERE msg LIKE '%systemctl restart hermes-gateway%'\""
+            "WHERE msg LIKE '%systemctl restart jimmy-gateway%'\""
         )
         check_gateway_lifecycle(prompt, str(script))
 

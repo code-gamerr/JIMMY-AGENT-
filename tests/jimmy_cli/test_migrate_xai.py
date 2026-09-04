@@ -1,4 +1,4 @@
-"""Tests for ``hermes migrate xai`` — apply path with ruamel round-trip."""
+"""Tests for ``jimmy migrate xai`` — apply path with ruamel round-trip."""
 from __future__ import annotations
 
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.xai_retirement import (
+from jimmy_cli.xai_retirement import (
     RetirementIssue,
     apply_migration,
     find_retired_xai_refs,
@@ -22,7 +22,7 @@ def trap_config(tmp_path: Path) -> Path:
     """A config.yaml with retired models AND comments to verify round-trip."""
     p = tmp_path / "config.yaml"
     p.write_text(
-        "# Hermes config (sample)\n"
+        "# Jimmy config (sample)\n"
         "principal:\n"
         "  provider: xai             # the main model\n"
         "  model: grok-4-1-fast-non-reasoning  # retiring May 15\n"
@@ -252,7 +252,7 @@ class TestCrashDurability:
         """A config.yaml symlinked into a dotfiles repo must stay a symlink."""
         real_dir = tmp_path / "dotfiles"
         real_dir.mkdir()
-        real = real_dir / "hermes-config.yaml"
+        real = real_dir / "jimmy-config.yaml"
         real.write_text(
             "principal:\n"
             "  provider: xai\n"
@@ -291,6 +291,6 @@ class TestCrashDurability:
         apply_migration(trap_config, issues, backup=False)
 
         text = trap_config.read_text(encoding="utf-8")
-        assert "# Hermes config (sample)" in text
+        assert "# Jimmy config (sample)" in text
         assert "# the main model" in text
         assert "# not affected" in text

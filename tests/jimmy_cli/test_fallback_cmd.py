@@ -1,4 +1,4 @@
-"""Tests for `hermes fallback` — chain reading, add/remove/clear, legacy migration."""
+"""Tests for `jimmy fallback` — chain reading, add/remove/clear, legacy migration."""
 from __future__ import annotations
 
 import types
@@ -10,25 +10,25 @@ import yaml
 
 
 # ---------------------------------------------------------------------------
-# Shared fixture — isolate HERMES_HOME so save_config writes to tmp_path
+# Shared fixture — isolate JIMMY_HOME so save_config writes to tmp_path
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
 def isolated_home(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir(exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     return tmp_path
 
 
 def _write_config(home: Path, data: dict) -> None:
-    config_path = home / ".hermes" / "config.yaml"
+    config_path = home / ".jimmy" / "config.yaml"
     config_path.write_text(yaml.safe_dump(data), encoding="utf-8")
 
 
 def _read_config(home: Path) -> dict:
-    config_path = home / ".hermes" / "config.yaml"
+    config_path = home / ".jimmy" / "config.yaml"
     return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 
 
@@ -38,25 +38,25 @@ def _read_config(home: Path) -> dict:
 
 class TestReadChain:
     def test_returns_empty_list_when_unset(self):
-        from hermes_cli.fallback_cmd import _read_chain
+        from jimmy_cli.fallback_cmd import _read_chain
         assert _read_chain({}) == []
 
     def test_reads_new_list_format(self):
-        from hermes_cli.fallback_cmd import _read_chain
+        from jimmy_cli.fallback_cmd import _read_chain
         cfg = {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-                {"provider": "nous", "model": "Hermes-4-Llama-3.1-405B"},
+                {"provider": "nous", "model": "Jimmy-4-Llama-3.1-405B"},
             ]
         }
         assert _read_chain(cfg) == [
             {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-            {"provider": "nous", "model": "Hermes-4-Llama-3.1-405B"},
+            {"provider": "nous", "model": "Jimmy-4-Llama-3.1-405B"},
         ]
 
 
     def test_returns_copies_not_aliases(self):
-        from hermes_cli.fallback_cmd import _read_chain
+        from jimmy_cli.fallback_cmd import _read_chain
         cfg = {"fallback_providers": [{"provider": "nous", "model": "foo"}]}
         result = _read_chain(cfg)
         result[0]["provider"] = "mutated"
@@ -69,7 +69,7 @@ class TestReadChain:
 
 class TestExtractFallback:
     def test_extracts_from_default_field(self):
-        from hermes_cli.fallback_cmd import _extract_fallback_from_model_cfg
+        from jimmy_cli.fallback_cmd import _extract_fallback_from_model_cfg
         model_cfg = {"provider": "openrouter", "default": "anthropic/claude-sonnet-4.6"}
         assert _extract_fallback_from_model_cfg(model_cfg) == {
             "provider": "openrouter",
@@ -78,7 +78,7 @@ class TestExtractFallback:
 
 
     def test_returns_none_without_model(self):
-        from hermes_cli.fallback_cmd import _extract_fallback_from_model_cfg
+        from jimmy_cli.fallback_cmd import _extract_fallback_from_model_cfg
         assert _extract_fallback_from_model_cfg({"provider": "openrouter"}) is None
 
 
@@ -89,26 +89,26 @@ class TestExtractFallback:
 class TestListCommand:
     def test_list_empty(self, isolated_home, capsys):
         _write_config(isolated_home, {})
-        from hermes_cli.fallback_cmd import cmd_fallback_list
+        from jimmy_cli.fallback_cmd import cmd_fallback_list
         cmd_fallback_list(types.SimpleNamespace())
         out = capsys.readouterr().out
         assert "No fallback providers configured" in out
-        assert "hermes fallback add" in out
+        assert "jimmy fallback add" in out
 
     def test_list_with_entries(self, isolated_home, capsys):
         _write_config(isolated_home, {
             "model": {"provider": "anthropic", "default": "claude-sonnet-4-6"},
             "fallback_providers": [
                 {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6"},
-                {"provider": "nous", "model": "Hermes-4"},
+                {"provider": "nous", "model": "Jimmy-4"},
             ],
         })
-        from hermes_cli.fallback_cmd import cmd_fallback_list
+        from jimmy_cli.fallback_cmd import cmd_fallback_list
         cmd_fallback_list(types.SimpleNamespace())
         out = capsys.readouterr().out
         assert "Fallback chain (2 entries)" in out
         assert "anthropic/claude-sonnet-4.6" in out
-        assert "Hermes-4" in out
+        assert "Jimmy-4" in out
         # Primary should be shown too
         assert "claude-sonnet-4-6" in out
 
@@ -125,7 +125,7 @@ class TestAddCommand:
 
         def fake_picker(args=None):
             # Simulate what the real picker does: writes the selection to config["model"]
-            from hermes_cli.config import load_config, save_config
+            from jimmy_cli.config import load_config, save_config
             cfg = load_config()
             cfg["model"] = {
                 "provider": "openrouter",
@@ -135,9 +135,9 @@ class TestAddCommand:
             }
             save_config(cfg)
 
-        with patch("hermes_cli.main.select_provider_and_model", side_effect=fake_picker), \
-                patch("hermes_cli.main._require_tty"):
-            from hermes_cli.fallback_cmd import cmd_fallback_add
+        with patch("jimmy_cli.main.select_provider_and_model", side_effect=fake_picker), \
+                patch("jimmy_cli.main._require_tty"):
+            from jimmy_cli.fallback_cmd import cmd_fallback_add
             cmd_fallback_add(types.SimpleNamespace())
 
         cfg = _read_config(isolated_home)
@@ -164,14 +164,14 @@ class TestAddCommand:
 
         def fake_picker(args=None):
             # User picks the same thing that's already the primary
-            from hermes_cli.config import load_config, save_config
+            from jimmy_cli.config import load_config, save_config
             cfg = load_config()
             cfg["model"] = {"provider": "openrouter", "default": "gpt-5.4"}
             save_config(cfg)
 
-        with patch("hermes_cli.main.select_provider_and_model", side_effect=fake_picker), \
-                patch("hermes_cli.main._require_tty"):
-            from hermes_cli.fallback_cmd import cmd_fallback_add
+        with patch("jimmy_cli.main.select_provider_and_model", side_effect=fake_picker), \
+                patch("jimmy_cli.main._require_tty"):
+            from jimmy_cli.fallback_cmd import cmd_fallback_add
             cmd_fallback_add(types.SimpleNamespace())
 
         cfg = _read_config(isolated_home)
@@ -191,7 +191,7 @@ class TestAddCommand:
         })
 
         def fake_picker(args=None):
-            from hermes_cli.config import load_config, save_config
+            from jimmy_cli.config import load_config, save_config
             cfg = load_config()
             cfg["model"] = {
                 "provider": "openrouter",
@@ -201,9 +201,9 @@ class TestAddCommand:
             }
             save_config(cfg)
 
-        with patch("hermes_cli.main.select_provider_and_model", side_effect=fake_picker), \
-                patch("hermes_cli.main._require_tty"):
-            from hermes_cli.fallback_cmd import cmd_fallback_add
+        with patch("jimmy_cli.main.select_provider_and_model", side_effect=fake_picker), \
+                patch("jimmy_cli.main._require_tty"):
+            from jimmy_cli.fallback_cmd import cmd_fallback_add
             cmd_fallback_add(types.SimpleNamespace())
 
         cfg = _read_config(isolated_home)
@@ -227,14 +227,14 @@ class TestRemoveCommand:
         _write_config(isolated_home, {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "gpt-5.4"},
-                {"provider": "nous", "model": "Hermes-4"},
+                {"provider": "nous", "model": "Jimmy-4"},
                 {"provider": "anthropic", "model": "claude-sonnet-4-6"},
             ],
         })
 
-        # Picker returns index 1 (the middle entry, "nous / Hermes-4")
-        with patch("hermes_cli.setup._curses_prompt_choice", return_value=1):
-            from hermes_cli.fallback_cmd import cmd_fallback_remove
+        # Picker returns index 1 (the middle entry, "nous / Jimmy-4")
+        with patch("jimmy_cli.setup._curses_prompt_choice", return_value=1):
+            from jimmy_cli.fallback_cmd import cmd_fallback_remove
             cmd_fallback_remove(types.SimpleNamespace())
 
         cfg = _read_config(isolated_home)
@@ -244,7 +244,7 @@ class TestRemoveCommand:
         ]
         out = capsys.readouterr().out
         assert "Removed fallback" in out
-        assert "Hermes-4" in out
+        assert "Jimmy-4" in out
 
 
 # ---------------------------------------------------------------------------
@@ -257,11 +257,11 @@ class TestClearCommand:
         _write_config(isolated_home, {
             "fallback_providers": [
                 {"provider": "openrouter", "model": "gpt-5.4"},
-                {"provider": "nous", "model": "Hermes-4"},
+                {"provider": "nous", "model": "Jimmy-4"},
             ],
         })
         monkeypatch.setattr("builtins.input", lambda *a, **kw: "y")
-        from hermes_cli.fallback_cmd import cmd_fallback_clear
+        from jimmy_cli.fallback_cmd import cmd_fallback_clear
         cmd_fallback_clear(types.SimpleNamespace())
 
         cfg = _read_config(isolated_home)
@@ -279,7 +279,7 @@ class TestDispatcher:
 
     def test_unknown_subcommand_exits(self, isolated_home):
         _write_config(isolated_home, {})
-        from hermes_cli.fallback_cmd import cmd_fallback
+        from jimmy_cli.fallback_cmd import cmd_fallback
         with pytest.raises(SystemExit):
             cmd_fallback(types.SimpleNamespace(fallback_command="nope"))
 
@@ -289,7 +289,7 @@ class TestDispatcher:
 # ---------------------------------------------------------------------------
 
 class TestArgparseWiring:
-    """Verify `hermes fallback` is wired into main.py's argparse tree.
+    """Verify `jimmy fallback` is wired into main.py's argparse tree.
 
     main() builds the parser inline, so we invoke main([...]) via subprocess
     with --help to introspect registered subcommands without side effects.
@@ -299,7 +299,7 @@ class TestArgparseWiring:
         import subprocess
         import sys
         result = subprocess.run(
-            [sys.executable, "-m", "hermes_cli.main", "fallback", "--help"],
+            [sys.executable, "-m", "jimmy_cli.main", "fallback", "--help"],
             capture_output=True,
             text=True,
             timeout=30,

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from hermes_cli import web_server
+from jimmy_cli import web_server
 
 
 def test_ssh_ownership_endpoint_requires_token_and_returns_exact_nonce(monkeypatch):
@@ -14,7 +14,7 @@ def test_ssh_ownership_endpoint_requires_token_and_returns_exact_nonce(monkeypat
     assert client.get("/api/ssh/ownership").status_code == 401
     response = client.get(
         "/api/ssh/ownership",
-        headers={"X-Hermes-Session-Token": token},
+        headers={"X-Jimmy-Session-Token": token},
     )
     assert response.status_code == 200
     assert response.json() == {
@@ -33,6 +33,6 @@ def test_ssh_ownership_endpoint_is_absent_without_owner_nonce(monkeypatch):
 
     response = client.get(
         "/api/ssh/ownership",
-        headers={"X-Hermes-Session-Token": token},
+        headers={"X-Jimmy-Session-Token": token},
     )
     assert response.status_code == 404

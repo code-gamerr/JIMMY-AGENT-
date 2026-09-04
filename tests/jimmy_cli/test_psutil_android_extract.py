@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli.psutil_android import (
+from jimmy_cli.psutil_android import (
     MARKER,
     REPLACEMENT,
     PSUTIL_URL,
@@ -68,7 +68,7 @@ def test_install_psutil_android_compat_uses_patched_tree(tmp_path):
     archive = tmp_path / "psutil.tar.gz"
     _build_psutil_archive(archive, malicious_symlink=False)
 
-    from hermes_cli import main as hermes_main
+    from jimmy_cli import main as jimmy_main
 
     captured: dict[str, object] = {}
 
@@ -86,14 +86,14 @@ def test_install_psutil_android_compat_uses_patched_tree(tmp_path):
         )
 
     with patch("urllib.request.urlretrieve", side_effect=fake_urlretrieve), \
-         patch.object(hermes_main, "_run_install_with_heartbeat", side_effect=fake_run_install):
-        hermes_main._install_psutil_android_compat(
+         patch.object(jimmy_main, "_run_install_with_heartbeat", side_effect=fake_run_install):
+        jimmy_main._install_psutil_android_compat(
             ["uv", "pip"],
-            env={"HERMES_TEST": "1"},
+            env={"JIMMY_TEST": "1"},
         )
 
     assert captured["cmd"][:4] == ["uv", "pip", "install", "--no-build-isolation"]
-    assert captured["env"] == {"HERMES_TEST": "1"}
+    assert captured["env"] == {"JIMMY_TEST": "1"}
     assert REPLACEMENT in str(captured["common_py"])
 
 

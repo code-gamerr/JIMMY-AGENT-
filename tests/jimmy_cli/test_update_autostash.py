@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli import config as hermes_config
-from hermes_cli import main as hermes_main
+from jimmy_cli import config as jimmy_config
+from jimmy_cli import main as jimmy_main
 
 
 # ---------------------------------------------------------------------------
@@ -34,9 +34,9 @@ def _patch_managed_uv(request):
     def _fake_update_managed_uv(**kwargs):
         return None  # never actually self-update in tests
 
-    with patch("hermes_cli.managed_uv.resolve_uv", side_effect=_fake_resolve_uv), \
-         patch("hermes_cli.managed_uv.ensure_uv", side_effect=_fake_ensure_uv), \
-         patch("hermes_cli.managed_uv.update_managed_uv", side_effect=_fake_update_managed_uv):
+    with patch("jimmy_cli.managed_uv.resolve_uv", side_effect=_fake_resolve_uv), \
+         patch("jimmy_cli.managed_uv.ensure_uv", side_effect=_fake_ensure_uv), \
+         patch("jimmy_cli.managed_uv.update_managed_uv", side_effect=_fake_update_managed_uv):
         yield
 
 
@@ -58,15 +58,15 @@ def _patch_managed_uv(request):
 def _setup_update_mocks(monkeypatch, tmp_path):
     """Common setup for cmd_update tests."""
     (tmp_path / ".git").mkdir()
-    monkeypatch.setattr(hermes_main, "PROJECT_ROOT", tmp_path)
-    monkeypatch.setattr(hermes_main, "_stash_local_changes_if_needed", lambda *a, **kw: None)
-    monkeypatch.setattr(hermes_main, "_restore_stashed_changes", lambda *a, **kw: True)
-    monkeypatch.setattr(hermes_config, "get_missing_env_vars", lambda required_only=True: [])
-    monkeypatch.setattr(hermes_config, "get_missing_config_fields", lambda: [])
-    monkeypatch.setattr(hermes_config, "check_config_version", lambda: (5, 5))
-    monkeypatch.setattr(hermes_config, "migrate_config", lambda **kw: {"env_added": [], "config_added": []})
-    monkeypatch.setattr(hermes_main, "_upgrade_pip_before_lazy_refresh", lambda *a, **kw: None)
-    monkeypatch.setattr(hermes_main, "_refresh_active_lazy_features", lambda *a, **kw: True)
+    monkeypatch.setattr(jimmy_main, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(jimmy_main, "_stash_local_changes_if_needed", lambda *a, **kw: None)
+    monkeypatch.setattr(jimmy_main, "_restore_stashed_changes", lambda *a, **kw: True)
+    monkeypatch.setattr(jimmy_config, "get_missing_env_vars", lambda required_only=True: [])
+    monkeypatch.setattr(jimmy_config, "get_missing_config_fields", lambda: [])
+    monkeypatch.setattr(jimmy_config, "check_config_version", lambda: (5, 5))
+    monkeypatch.setattr(jimmy_config, "migrate_config", lambda **kw: {"env_added": [], "config_added": []})
+    monkeypatch.setattr(jimmy_main, "_upgrade_pip_before_lazy_refresh", lambda *a, **kw: None)
+    monkeypatch.setattr(jimmy_main, "_refresh_active_lazy_features", lambda *a, **kw: True)
 
 
 
@@ -76,31 +76,31 @@ def test_refresh_active_memory_provider_dependencies_reinstalls_active_provider(
     recorded = []
 
     monkeypatch.setattr(
-        "hermes_cli.config.load_config",
+        "jimmy_cli.config.load_config",
         lambda: {"memory": {"provider": "mem0"}},
     )
     monkeypatch.setattr(
-        "hermes_cli.memory_setup._install_dependencies",
+        "jimmy_cli.memory_setup._install_dependencies",
         lambda provider_name, force=False: recorded.append((provider_name, force)),
     )
 
-    hermes_main._refresh_active_memory_provider_dependencies()
+    jimmy_main._refresh_active_memory_provider_dependencies()
 
     assert recorded == [("mem0", True)]
 
 
 
 
-def test_reload_updated_runtime_modules_restores_new_hermes_constants_symbol(monkeypatch):
+def test_reload_updated_runtime_modules_restores_new_jimmy_constants_symbol(monkeypatch):
     """A pre-pull module object missing a new helper is repaired by reload."""
-    import hermes_constants
+    import jimmy_constants
 
-    monkeypatch.delattr(hermes_constants, "apply_subprocess_home_env", raising=False)
-    assert not hasattr(hermes_constants, "apply_subprocess_home_env")
+    monkeypatch.delattr(jimmy_constants, "apply_subprocess_home_env", raising=False)
+    assert not hasattr(jimmy_constants, "apply_subprocess_home_env")
 
-    hermes_main._reload_updated_runtime_modules()
+    jimmy_main._reload_updated_runtime_modules()
 
-    assert callable(hermes_constants.apply_subprocess_home_env)
+    assert callable(jimmy_constants.apply_subprocess_home_env)
 
 
 
@@ -171,20 +171,20 @@ def test_cmd_update_skips_stash_restore_when_reset_fails(monkeypatch, tmp_path, 
     _setup_update_mocks(monkeypatch, tmp_path)
     # Re-enable stash so it actually returns a ref
     monkeypatch.setattr(
-        hermes_main, "_stash_local_changes_if_needed",
+        jimmy_main, "_stash_local_changes_if_needed",
         lambda *a, **kw: "abc123deadbeef",
     )
     restore_calls = []
     monkeypatch.setattr(
-        hermes_main, "_restore_stashed_changes",
+        jimmy_main, "_restore_stashed_changes",
         lambda *a, **kw: restore_calls.append(1) or True,
     )
 
     side_effect, _ = _make_update_side_effect(ff_only_fails=True, reset_fails=True)
-    monkeypatch.setattr(hermes_main.subprocess, "run", side_effect)
+    monkeypatch.setattr(jimmy_main.subprocess, "run", side_effect)
 
     with pytest.raises(SystemExit, match="1"):
-        hermes_main.cmd_update(SimpleNamespace())
+        jimmy_main.cmd_update(SimpleNamespace())
 
     # Stash restore should NOT have been called
     assert len(restore_calls) == 0
@@ -207,25 +207,25 @@ def _setup_setting_test(monkeypatch, tmp_path, mode):
     _setup_update_mocks(monkeypatch, tmp_path)
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uv" if name == "uv" else None)
     monkeypatch.setattr(
-        hermes_main, "_stash_local_changes_if_needed",
+        jimmy_main, "_stash_local_changes_if_needed",
         lambda *a, **kw: "abc123deadbeef",
     )
     restore_calls = []
     discard_calls = []
     monkeypatch.setattr(
-        hermes_main, "_restore_stashed_changes",
+        jimmy_main, "_restore_stashed_changes",
         lambda *a, **kw: restore_calls.append(1) or True,
     )
     monkeypatch.setattr(
-        hermes_main, "_discard_stashed_changes",
+        jimmy_main, "_discard_stashed_changes",
         lambda *a, **kw: discard_calls.append(1) or True,
     )
     monkeypatch.setattr(
-        hermes_config, "load_config",
+        jimmy_config, "load_config",
         lambda *a, **kw: {"updates": {"non_interactive_local_changes": mode}},
     )
     side_effect, recorded = _make_update_side_effect()
-    monkeypatch.setattr(hermes_main.subprocess, "run", side_effect)
+    monkeypatch.setattr(jimmy_main.subprocess, "run", side_effect)
     return restore_calls, discard_calls, recorded
 
 
@@ -239,29 +239,29 @@ def _setup_keep_stash_test(monkeypatch, tmp_path):
     _setup_update_mocks(monkeypatch, tmp_path)
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uv" if name == "uv" else None)
     monkeypatch.setattr(
-        hermes_main, "_stash_local_changes_if_needed",
+        jimmy_main, "_stash_local_changes_if_needed",
         lambda *a, **kw: "abc123deadbeef",
     )
     restore_calls = []
     discard_calls = []
     park_calls = []
     monkeypatch.setattr(
-        hermes_main, "_restore_stashed_changes",
+        jimmy_main, "_restore_stashed_changes",
         lambda *a, **kw: restore_calls.append(1) or True,
     )
     monkeypatch.setattr(
-        hermes_main, "_discard_stashed_changes",
+        jimmy_main, "_discard_stashed_changes",
         lambda *a, **kw: discard_calls.append(1) or True,
     )
     monkeypatch.setattr(
-        hermes_main, "_park_stashed_changes",
+        jimmy_main, "_park_stashed_changes",
         lambda *a, **kw: park_calls.append(a) or None,
     )
     # Keep the update flow away from the real gateway fleet on this machine —
     # a live gateway PID would trip the test-suite kill guard and turn the
     # run into exit 1 (gateway_fleet_restart_incomplete).
     monkeypatch.setattr(
-        "hermes_cli.gateway.find_gateway_pids", lambda **kw: [], raising=False
+        "jimmy_cli.gateway.find_gateway_pids", lambda **kw: [], raising=False
     )
     return restore_calls, discard_calls, park_calls
 
@@ -271,9 +271,9 @@ def test_update_keep_stash_parks_instead_of_restoring(monkeypatch, tmp_path):
     in git stash) — never re-applied, never discarded."""
     restore_calls, discard_calls, park_calls = _setup_keep_stash_test(monkeypatch, tmp_path)
     side_effect, _ = _make_update_side_effect()
-    monkeypatch.setattr(hermes_main.subprocess, "run", side_effect)
+    monkeypatch.setattr(jimmy_main.subprocess, "run", side_effect)
 
-    hermes_main.cmd_update(SimpleNamespace(yes=True, keep_stash=True))
+    jimmy_main.cmd_update(SimpleNamespace(yes=True, keep_stash=True))
 
     assert len(park_calls) == 1
     assert park_calls[0][0] == "abc123deadbeef"
@@ -286,9 +286,9 @@ def test_update_without_keep_stash_still_restores(monkeypatch, tmp_path):
     the autostash is auto-restored under --yes."""
     restore_calls, discard_calls, park_calls = _setup_keep_stash_test(monkeypatch, tmp_path)
     side_effect, _ = _make_update_side_effect()
-    monkeypatch.setattr(hermes_main.subprocess, "run", side_effect)
+    monkeypatch.setattr(jimmy_main.subprocess, "run", side_effect)
 
-    hermes_main.cmd_update(SimpleNamespace(yes=True, keep_stash=False))
+    jimmy_main.cmd_update(SimpleNamespace(yes=True, keep_stash=False))
 
     assert restore_calls == [1]
     assert park_calls == []
@@ -300,10 +300,10 @@ def test_update_keep_stash_failure_path_still_preserves(monkeypatch, tmp_path, c
     existing preserved-in-stash message fires (working tree unknown)."""
     restore_calls, discard_calls, park_calls = _setup_keep_stash_test(monkeypatch, tmp_path)
     side_effect, _ = _make_update_side_effect(ff_only_fails=True, reset_fails=True)
-    monkeypatch.setattr(hermes_main.subprocess, "run", side_effect)
+    monkeypatch.setattr(jimmy_main.subprocess, "run", side_effect)
 
     with pytest.raises(SystemExit, match="1"):
-        hermes_main.cmd_update(SimpleNamespace(yes=True, keep_stash=True))
+        jimmy_main.cmd_update(SimpleNamespace(yes=True, keep_stash=True))
 
     assert restore_calls == []
     assert park_calls == []
@@ -315,7 +315,7 @@ def test_update_parser_accepts_keep_stash():
     """The flag parses and defaults off."""
     import argparse
 
-    from hermes_cli.subcommands.update import build_update_parser
+    from jimmy_cli.subcommands.update import build_update_parser
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -333,7 +333,7 @@ def test_update_parser_accepts_keep_stash():
 
 def test_bootstrap_marker_not_autostashed_by_update(tmp_path):
     """#38529: the Desktop bootstrap marker must be git-ignored so that
-    ``hermes update``'s ``git stash push --include-untracked`` does not sweep it
+    ``jimmy update``'s ``git stash push --include-untracked`` does not sweep it
     into an autostash on every run.
 
     Behavioral + hermetic: build a throwaway repo that adopts the project's real
@@ -346,7 +346,7 @@ def test_bootstrap_marker_not_autostashed_by_update(tmp_path):
     if shutil.which("git") is None:
         pytest.skip("git not available")
 
-    repo_gitignore = Path(hermes_main.__file__).resolve().parents[1] / ".gitignore"
+    repo_gitignore = Path(jimmy_main.__file__).resolve().parents[1] / ".gitignore"
 
     def git(*args):
         return subprocess.run(
@@ -361,21 +361,21 @@ def test_bootstrap_marker_not_autostashed_by_update(tmp_path):
     git("add", "-A")
     git("commit", "-qm", "init")
 
-    marker = tmp_path / ".hermes-bootstrap-complete"
+    marker = tmp_path / ".jimmy-bootstrap-complete"
     marker.write_text("")
 
-    # Exact flags used by hermes update (hermes_cli/main.py).
-    git("stash", "push", "--include-untracked", "-m", "hermes-update-autostash")
+    # Exact flags used by jimmy update (jimmy_cli/main.py).
+    git("stash", "push", "--include-untracked", "-m", "jimmy-update-autostash")
 
     assert marker.exists(), (
-        ".hermes-bootstrap-complete was swept into the update autostash — it must "
+        ".jimmy-bootstrap-complete was swept into the update autostash — it must "
         "be listed in .gitignore so `git stash -u` skips it (#38529)."
     )
     # It must not even register as a dirty/untracked change.
     status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=tmp_path, capture_output=True, text=True
     ).stdout
-    assert ".hermes-bootstrap-complete" not in status
+    assert ".jimmy-bootstrap-complete" not in status
 
 
 # ---------------------------------------------------------------------------
@@ -418,20 +418,20 @@ def test_update_autostash_survives_undeletable_untracked_dir(tmp_path):
     (tmp_path / "tracked.txt").write_text("v2 local change\n")
     pkg = tmp_path / "packaging" / "homebrew"
     pkg.mkdir(parents=True)
-    (pkg / "hermes-agent.rb").write_text("formula\n")
+    (pkg / "jimmy-agent.rb").write_text("formula\n")
     os.chmod(pkg, 0o555)  # undeletable contents, like a root-owned dir
     try:
-        stash_ref = hermes_main._stash_local_changes_if_needed(["git"], tmp_path)
+        stash_ref = jimmy_main._stash_local_changes_if_needed(["git"], tmp_path)
         assert stash_ref
 
         # The tracked change is stashed; simulate the updater's checkout window.
         assert (tmp_path / "tracked.txt").read_text() == "v1\n"
 
-        restored = hermes_main._restore_stashed_changes(
+        restored = jimmy_main._restore_stashed_changes(
             ["git"], tmp_path, stash_ref, prompt_user=False
         )
         assert restored is True
         assert (tmp_path / "tracked.txt").read_text() == "v2 local change\n"
-        assert (pkg / "hermes-agent.rb").read_text() == "formula\n"
+        assert (pkg / "jimmy-agent.rb").read_text() == "formula\n"
     finally:
         os.chmod(pkg, 0o755)

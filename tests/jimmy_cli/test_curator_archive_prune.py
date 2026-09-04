@@ -1,4 +1,4 @@
-"""Tests for `hermes curator archive` and `hermes curator prune`.
+"""Tests for `jimmy curator archive` and `jimmy curator prune`.
 
 Covers:
 - archive refuses pinned skills with an `unpin` hint
@@ -23,7 +23,7 @@ def _ns(**kwargs):
 
 
 def test_archive_refuses_pinned(monkeypatch, capsys):
-    import hermes_cli.curator as curator_cli
+    import jimmy_cli.curator as curator_cli
     import tools.skill_usage as skill_usage
 
     monkeypatch.setattr(skill_usage, "get_record", lambda name: {"pinned": True})
@@ -38,7 +38,7 @@ def test_archive_refuses_pinned(monkeypatch, capsys):
     assert called == []
     out = capsys.readouterr().out
     assert "pinned" in out.lower()
-    assert "hermes curator unpin" in out
+    assert "jimmy curator unpin" in out
 
 
 
@@ -73,9 +73,9 @@ def _mk_record(name, *, idle_days=0, pinned=False, state="active", created_idle_
 
 def test_archive_and_prune_registered():
     import argparse
-    import hermes_cli.curator as curator_cli
+    import jimmy_cli.curator as curator_cli
 
-    parser = argparse.ArgumentParser(prog="hermes curator")
+    parser = argparse.ArgumentParser(prog="jimmy curator")
     curator_cli.register_cli(parser)
 
     args = parser.parse_args(["archive", "my-skill"])

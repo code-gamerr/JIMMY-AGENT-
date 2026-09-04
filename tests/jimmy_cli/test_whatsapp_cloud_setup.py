@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.setup_whatsapp_cloud import (
+from jimmy_cli.setup_whatsapp_cloud import (
     _validate_phone_number_id,
     _validate_waba_id,
     _validate_app_id,
@@ -92,20 +92,20 @@ class TestWabaIdValidator:
 
 @pytest.fixture
 def isolated_home(tmp_path, monkeypatch):
-    """Redirect HERMES_HOME so save_env_value writes into a temp .env."""
+    """Redirect JIMMY_HOME so save_env_value writes into a temp .env."""
     home = tmp_path / "home"
-    hermes = home / ".hermes"
-    hermes.mkdir(parents=True)
+    jimmy = home / ".jimmy"
+    jimmy.mkdir(parents=True)
     monkeypatch.setattr(Path, "home", lambda: home)
-    monkeypatch.setenv("HERMES_HOME", str(hermes))
+    monkeypatch.setenv("JIMMY_HOME", str(jimmy))
     for key in list(os.environ):
         if key.startswith("WHATSAPP_CLOUD_"):
             monkeypatch.delenv(key, raising=False)
-    return hermes
+    return jimmy
 
 
-def _env_value(hermes_home: Path, key: str) -> str | None:
-    env_file = hermes_home / ".env"
+def _env_value(jimmy_home: Path, key: str) -> str | None:
+    env_file = jimmy_home / ".env"
     if not env_file.exists():
         return None
     for line in env_file.read_text().splitlines():

@@ -1,7 +1,7 @@
-"""Tests for the Phase 4 s6 dispatch helper in hermes_cli.gateway.
+"""Tests for the Phase 4 s6 dispatch helper in jimmy_cli.gateway.
 
 `_dispatch_via_service_manager_if_s6` decides whether a
-`hermes gateway start/stop/restart` invocation should be routed to
+`jimmy gateway start/stop/restart` invocation should be routed to
 the in-container S6ServiceManager instead of falling through to the
 host systemd/launchd/windows code path.
 """
@@ -52,7 +52,7 @@ def test_dispatch_all_handles_partial_failure(
 ) -> None:
     """A failure on one profile must not skip the others; the helper
     reports each failure and the success count."""
-    from hermes_cli import gateway as gw
+    from jimmy_cli import gateway as gw
 
     class _FailOnWriter(_ListingRecorder):
         def stop(self, name: str) -> None:
@@ -62,10 +62,10 @@ def test_dispatch_all_handles_partial_failure(
 
     rec = _FailOnWriter(["coder", "writer", "assistant"])
     monkeypatch.setattr(
-        "hermes_cli.service_manager.detect_service_manager", lambda: "s6",
+        "jimmy_cli.service_manager.detect_service_manager", lambda: "s6",
     )
     monkeypatch.setattr(
-        "hermes_cli.service_manager.get_service_manager", lambda: rec,
+        "jimmy_cli.service_manager.get_service_manager", lambda: rec,
     )
     assert gw._dispatch_all_via_service_manager_if_s6("stop") is True
     # The two successful ones were called; writer raised before recording.
@@ -104,11 +104,11 @@ def _stub_s6(monkeypatch: pytest.MonkeyPatch, *, on_s6: bool) -> _CallRecorder:
     fire (on_s6=True) or return False (on_s6=False)."""
     rec = _CallRecorder()
     monkeypatch.setattr(
-        "hermes_cli.service_manager.detect_service_manager",
+        "jimmy_cli.service_manager.detect_service_manager",
         lambda: "s6" if on_s6 else "systemd",
     )
     monkeypatch.setattr(
-        "hermes_cli.service_manager.get_service_manager", lambda: rec,
+        "jimmy_cli.service_manager.get_service_manager", lambda: rec,
     )
     return rec
 
@@ -124,22 +124,22 @@ def test_redirect_falls_back_when_sleep_missing(
     back to the in-process ``_block_until_terminated`` heartbeat so the
     container keeps running.
     """
-    from hermes_cli import gateway as gw
+    from jimmy_cli import gateway as gw
 
     rec = _stub_s6(monkeypatch, on_s6=True)
-    monkeypatch.setattr("hermes_cli.gateway._profile_suffix", lambda: "")
+    monkeypatch.setattr("jimmy_cli.gateway._profile_suffix", lambda: "")
 
     def missing_sleep(file: str, args: list[str]) -> None:
         raise FileNotFoundError(2, "No such file or directory", file)
 
-    monkeypatch.setattr("hermes_cli.gateway.os.execvp", missing_sleep)
+    monkeypatch.setattr("jimmy_cli.gateway.os.execvp", missing_sleep)
     block_calls: list[bool] = []
     monkeypatch.setattr(
-        "hermes_cli.gateway._block_until_terminated",
+        "jimmy_cli.gateway._block_until_terminated",
         lambda: block_calls.append(True),
     )
-    monkeypatch.delenv("HERMES_S6_SUPERVISED_CHILD", raising=False)
-    monkeypatch.delenv("HERMES_GATEWAY_NO_SUPERVISE", raising=False)
+    monkeypatch.delenv("JIMMY_S6_SUPERVISED_CHILD", raising=False)
+    monkeypatch.delenv("JIMMY_GATEWAY_NO_SUPERVISE", raising=False)
 
     # Must not raise FileNotFoundError — that was the #36208 crash.
     result = gw._maybe_redirect_run_to_s6_supervision(_Args())

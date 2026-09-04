@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jimmy</title>
+  <meta name="description" content="Jimmy orchestrates OpenClaw, Munder Difflin, and ECC on your machine — real processes, live SSE, experience memory." />
+  <meta name="theme-color" content="#05070a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <header class="top">
+    <a class="logo" href="#top">Jimmy</a>
+    <nav>
+      <a href="#loop">Loop</a>
+      <a href="#agents">Agents</a>
+      <a href="#run">Run</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- HERO: one composition — brand + product surface -->
+    <section id="top" class="hero">
+      <div class="hero-left">
+        <p class="wordmark">Jimmy</p>
+        <h1>The local control plane for the agents you already run.</h1>
+        <p class="sub">One goal in. Real worker out. Live stream of what actually happened.</p>
+        <div class="cta-row">
+          <a class="cta" href="#run">Run Command Center</a>
+          <a class="cta-quiet" href="peer-research/JIMMY_AI_PEER_SCRAPE.xlsx">60-site research.xlsx</a>
+        </div>
+      </div>
+
+      <div class="hero-right" aria-label="Command Center preview">
+        <div class="terminal" id="terminal">
+          <div class="terminal-bar">
+            <span class="traffic"></span>
+            <span class="path">127.0.0.1 · jimmy/events</span>
+            <span class="pill" id="pill">SSE</span>
+          </div>
+          <div class="terminal-meta">
+            <span id="tid">task —</span>
+            <span id="tstate">—</span>
+          </div>
+          <p class="goal" id="tgoal">—</p>
+          <pre id="tlog" class="log" aria-live="polite"></pre>
+          <div class="agent-bar" id="agentsBar"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOOP -->
+    <section id="loop" class="block">
+      <p class="kicker">Execution loop</p>
+      <h2>Nothing is simulated for the UI.</h2>
+      <ol class="steps">
+        <li><b>01</b><span>Plan</span><em>Route the goal to an adapter</em></li>
+        <li><b>02</b><span>Execute</span><em>Spawn a real process in that cwd</em></li>
+        <li><b>03</b><span>Observe</span><em>Stream stdout, exit, files over SSE</em></li>
+        <li><b>04</b><span>Remember</span><em>Store strategies that worked</em></li>
+      </ol>
+    </section>
+
+    <!-- AGENTS -->
+    <section id="agents" class="block">
+      <p class="kicker">Adapters</p>
+      <h2>Three trees stay intact. Jimmy only routes.</h2>
+      <ul class="agents">
+        <li>
+          <strong>OpenClaw</strong>
+          <code>openclaw/</code>
+          <p>Messaging gateway. Real <code>openclaw.mjs</code> probes — real stderr if Node fails the gate.</p>
+        </li>
+        <li>
+          <strong>Munder Difflin</strong>
+          <code>munder-difflin/</code>
+          <p>Coding floor. Git inspect + coding CLI / oneshot in that workspace. Hive assign when present.</p>
+        </li>
+        <li>
+          <strong>ECC</strong>
+          <code>ECC/</code>
+          <p>Harness OS. <code>ecc.js</code> consult, status, doctor, memory — same process contract.</p>
+        </li>
+      </ul>
+      <p class="aside">Also registered: <code>research</code> and <code>landing</code> adapters under the same engine.</p>
+    </section>
+
+    <!-- CONTRACT -->
+    <section class="block slim">
+      <p class="kicker">Local contract</p>
+      <ul class="chips">
+        <li>Bind <code>127.0.0.1</code></li>
+        <li>Token <code>JIMMY_HOME/jimmy/auth.json</code></li>
+        <li>Allowlisted commands</li>
+        <li>Audit log</li>
+        <li>States: QUEUED → PLANNING → ROUTING → RUNNING → COMPLETED</li>
+      </ul>
+    </section>
+
+    <!-- RUN -->
+    <section id="run" class="run">
+      <p class="wordmark sm">Jimmy</p>
+      <h2>Start on this machine.</h2>
+      <div class="cmd">
+        <code id="cmd">jimmy command-center</code>
+        <button type="button" id="copy">Copy</button>
+      </div>
+      <div class="cta-row center">
+        <a class="cta" href="../jimmy/ui/command-center.html">Open UI</a>
+        <a class="cta-quiet" href="../jimmy/ARCHITECTURE.md">Architecture</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Jimmy</span>
+    <a href="peer-research/ANALYSIS.md">Peer research notes</a>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

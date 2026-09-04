@@ -25,15 +25,15 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban_db as kb
+from jimmy_cli import kanban_db as kb
 
 
 @pytest.fixture
 def kanban_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Isolated HERMES_HOME with an empty kanban DB."""
-    home = tmp_path / ".hermes"
+    """Isolated JIMMY_HOME with an empty kanban DB."""
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb.init_db()
     return home
@@ -312,7 +312,7 @@ def test_complete_task_closes_review_to_done(kanban_home: Path) -> None:
         )
         assert kb.get_task(conn, tid).status == "review"
         # The review lane has no active run — the exact state that used to
-        # make `hermes kanban complete` a no-op (#54823).
+        # make `jimmy kanban complete` a no-op (#54823).
         assert kb.get_task(conn, tid).current_run_id is None
 
         ok = kb.complete_task(conn, tid, summary="LGTM — merged", result="approved")
@@ -379,8 +379,8 @@ def test_review_dispatch_gate_prevents_phantom_reviewer(
     task parked in ``review`` (this deployment explicitly waits for a human).
     Flipping the knob back on proves the gate, not
     something else, is what suppressed the claim."""
-    import hermes_cli.config as cfgmod
-    import hermes_cli.profiles as profmod
+    import jimmy_cli.config as cfgmod
+    import jimmy_cli.profiles as profmod
 
     with kb.connect() as conn:
         tid = kb.create_task(conn, title="park", assignee="worker")
@@ -425,8 +425,8 @@ def test_active_pr_guard_skipped_for_review_lane_but_defers_ready_lane(
     a ready-lane task is a duplicate-work signal and stays deferred.
     Rate-limit cooldown still applies in the review lane.
     """
-    import hermes_cli.config as cfgmod
-    import hermes_cli.profiles as profmod
+    import jimmy_cli.config as cfgmod
+    import jimmy_cli.profiles as profmod
 
     monkeypatch.setattr(profmod, "profile_exists", lambda name: True)
     monkeypatch.setattr(
@@ -478,8 +478,8 @@ def test_active_pr_guard_skipped_for_review_lane_but_defers_ready_lane(
 def test_review_dispatch_preserves_task_skills_and_adds_reviewer_skill(
     kanban_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import hermes_cli.config as cfgmod
-    import hermes_cli.profiles as profmod
+    import jimmy_cli.config as cfgmod
+    import jimmy_cli.profiles as profmod
 
     monkeypatch.setattr(profmod, "profile_exists", lambda name: True)
     monkeypatch.setattr(
@@ -531,8 +531,8 @@ def test_review_dispatch_honors_global_and_per_profile_caps(
     kanban_home: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import hermes_cli.config as cfgmod
-    import hermes_cli.profiles as profmod
+    import jimmy_cli.config as cfgmod
+    import jimmy_cli.profiles as profmod
 
     monkeypatch.setattr(profmod, "profile_exists", lambda _name: True)
     monkeypatch.setattr(

@@ -1,6 +1,6 @@
 """Welcome banner, ASCII art, skills summary, and update check for the CLI.
 
-Pure display functions with no HermesCLI state dependency.
+Pure display functions with no JimmyCLI state dependency.
 """
 import json
 import logging
@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 from urllib.parse import urlparse
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 # rich and prompt_toolkit are imported lazily (inside the functions that use
@@ -44,7 +44,7 @@ def cprint(text: str):
         _pt_print(_PT_ANSI(text))
     except Exception:
         # prompt_toolkit needs a real console. On Windows, a redirected or
-        # absent stdout (pythonw.exe, CI, `hermes ... > file`) raises
+        # absent stdout (pythonw.exe, CI, `jimmy ... > file`) raises
         # NoConsoleScreenBufferError from its Win32Output — display helpers
         # must never crash the caller over that, so degrade to plain print.
         print(text)
@@ -57,7 +57,7 @@ def cprint(text: str):
 def _skin_color(key: str, fallback: str) -> str:
     """Get a color from the active skin, or return fallback."""
     try:
-        from hermes_cli.skin_engine import get_active_skin
+        from jimmy_cli.skin_engine import get_active_skin
         return get_active_skin().get_color(key, fallback)
     except Exception:
         return fallback
@@ -65,16 +65,16 @@ def _skin_color(key: str, fallback: str) -> str:
 # ASCII Art & Branding
 # =========================================================================
 
-from hermes_cli import __version__ as VERSION, __release_date__ as RELEASE_DATE
+from jimmy_cli import __version__ as VERSION, __release_date__ as RELEASE_DATE
 
-HERMES_AGENT_LOGO = """[bold #FFD700]     ██╗██╗███╗   ███╗███╗   ███╗██╗   ██╗[/]
+JIMMY_AGENT_LOGO = """[bold #FFD700]     ██╗██╗███╗   ███╗███╗   ███╗██╗   ██╗[/]
 [bold #FFD700]     ██║██║████╗ ████║████╗ ████║╚██╗ ██╔╝[/]
 [#FFBF00]     ██║██║██╔████╔██║██╔████╔██║ ╚████╔╝ [/]
 [#FFBF00]██   ██║██║██║╚██╔╝██║██║╚██╔╝██║  ╚██╔╝  [/]
 [#CD7F32]╚█████╔╝██║██║ ╚═╝ ██║██║ ╚═╝ ██║   ██║   [/]
 [#CD7F32] ╚════╝ ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝   ╚═╝   [/]"""
 
-HERMES_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+JIMMY_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
 [#CD7F32]⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀[/]
 [#FFBF00]⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀[/]
 [#FFBF00]⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀[/]
@@ -135,11 +135,11 @@ def get_available_skills() -> Dict[str, List[str]]:
 _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 
 # Sentinel returned when we know an update exists but can't count commits
-# (e.g. nix-built hermes — no local git history to count against).
+# (e.g. nix-built jimmy — no local git history to count against).
 UPDATE_AVAILABLE_NO_COUNT = -1
 
-_UPSTREAM_REPO_URL = "https://github.com/NousResearch/hermes-agent.git"
-_OFFICIAL_REPO_CANONICAL = "github.com/nousresearch/hermes-agent"
+_UPSTREAM_REPO_URL = "https://github.com/Jimmy/jimmy-agent.git"
+_OFFICIAL_REPO_CANONICAL = "github.com/jimmy-agent/jimmy-agent"
 
 
 def _canonical_github_remote(url: str | None) -> str:
@@ -207,7 +207,7 @@ def _github_compare_behind(current_rev: str, target_rev: str) -> Optional[int]:
     if not (_is_full_sha(current_rev) and _is_full_sha(target_rev)):
         return None
     url = (
-        "https://api.github.com/repos/nousresearch/hermes-agent/"
+        "https://api.github.com/repos/jimmy-agent/jimmy-agent/"
         f"compare/{current_rev}...{target_rev}"
     )
     try:
@@ -218,7 +218,7 @@ def _github_compare_behind(current_rev: str, target_rev: str) -> Optional[int]:
             headers={
                 "Accept": "application/vnd.github+json",
                 # api.github.com 403s requests without a User-Agent.
-                "User-Agent": "hermes-cli-update-check",
+                "User-Agent": "jimmy-cli-update-check",
             },
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -285,7 +285,7 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
         # Passive probe via HTTPS ls-remote (never SSH — no hardware-key
         # prompts). Tip SHAs alone can't distinguish "behind" from a local
         # carried commit sitting AHEAD of origin/main, and misreporting an
-        # ahead checkout as behind nudges the user into `hermes update`,
+        # ahead checkout as behind nudges the user into `jimmy update`,
         # which can wipe their carried work.
         upstream_rev = _upstream_main_sha()
         if upstream_rev is None:
@@ -324,7 +324,7 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
         # exception below is swallowed, and stale refs get compared against
         # HEAD — silently degrading the passive check until a human removes
         # the lock (git never self-heals these).
-        from hermes_cli.gitlock import clear_stale_git_locks
+        from jimmy_cli.gitlock import clear_stale_git_locks
 
         clear_stale_git_locks(repo_dir)
 
@@ -388,9 +388,9 @@ def check_for_updates() -> Optional[int]:
 
 
 def _check_for_updates_disabled_legacy() -> Optional[int]:
-    """Check whether a Hermes update is available.
+    """Check whether a Jimmy update is available.
 
-    Two paths: if ``HERMES_REVISION`` is set (nix builds embed it), compare
+    Two paths: if ``JIMMY_REVISION`` is set (nix builds embed it), compare
     it to upstream main via ``git ls-remote``. Otherwise look for a local
     git checkout and count commits behind ``origin/main``.
 
@@ -398,19 +398,19 @@ def _check_for_updates_disabled_legacy() -> Optional[int]:
     if behind but the count is unknown, ``0`` if up-to-date, or ``None`` if
     the check failed or doesn't apply. Cached for 6 hours.
     """
-    hermes_home = get_hermes_home()
-    cache_file = hermes_home / ".update_check"
-    embedded_rev = os.environ.get("HERMES_REVISION") or None
+    jimmy_home = get_jimmy_home()
+    cache_file = jimmy_home / ".update_check"
+    embedded_rev = os.environ.get("JIMMY_REVISION") or None
 
     # Docker images have no working tree to count commits against — the
     # published image excludes `.git` (see .dockerignore) and sets no
-    # HERMES_REVISION (that's nix-only). Returning None makes both the Rich
+    # JIMMY_REVISION (that's nix-only). Returning None makes both the Rich
     # banner (build_welcome_banner) and the Ink badge (branding.tsx, guarded
     # on `typeof === 'number' && > 0`) show nothing. The dashboard's REST
-    # `/api/hermes/update/check` endpoint short-circuits docker the same way
+    # `/api/jimmy/update/check` endpoint short-circuits docker the same way
     # (web_server.py); mirror that here so the banner/TUI surfaces agree.
     try:
-        from hermes_cli.config import detect_install_method, get_project_root
+        from jimmy_cli.config import detect_install_method, get_project_root
         if detect_install_method(get_project_root()) in {"docker", "apt"}:
             return None
     except Exception:
@@ -435,11 +435,11 @@ def _check_for_updates_disabled_legacy() -> Optional[int]:
         behind = _check_via_rev(embedded_rev)
     else:
         # Prefer the running code's location over the profile-scoped path.
-        # $HERMES_HOME/hermes-agent/ may be a stale copy from --clone-all;
+        # $JIMMY_HOME/jimmy-agent/ may be a stale copy from --clone-all;
         # Path(__file__) always resolves to the actual installed checkout.
         repo_dir = Path(__file__).parent.parent.resolve()
         if not (repo_dir / ".git").exists():
-            repo_dir = hermes_home / "hermes-agent"
+            repo_dir = jimmy_home / "jimmy-agent"
         if not (repo_dir / ".git").exists():
             # No git checkout and no embedded revision — can't determine
             # update status. This is the Docker path (already short-circuited
@@ -460,16 +460,16 @@ def _check_for_updates_disabled_legacy() -> Optional[int]:
 
 
 def _resolve_repo_dir() -> Optional[Path]:
-    """Return the active Hermes git checkout, or None if this isn't a git install.
+    """Return the active Jimmy git checkout, or None if this isn't a git install.
 
     Prefers the running code's location over the profile-scoped path
-    because ``$HERMES_HOME/hermes-agent/`` may be a stale copy carried
+    because ``$JIMMY_HOME/jimmy-agent/`` may be a stale copy carried
     over by ``--clone-all``.
     """
     repo_dir = Path(__file__).parent.parent.resolve()
     if not (repo_dir / ".git").exists():
-        hermes_home = get_hermes_home()
-        repo_dir = hermes_home / "hermes-agent"
+        jimmy_home = get_jimmy_home()
+        repo_dir = jimmy_home / "jimmy-agent"
     return repo_dir if (repo_dir / ".git").exists() else None
 
 
@@ -503,7 +503,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
     the active checkout.  When no checkout is available — the canonical case
     is the published Docker image, which excludes ``.git`` from the build
     context — we fall back to the baked-in build SHA (see
-    ``hermes_cli/build_info.py``) and return it as a frozen
+    ``jimmy_cli/build_info.py``) and return it as a frozen
     ``upstream == local`` state with ``ahead=0``.  A built image is by
     definition pinned to one commit, so "ahead" is always zero and the
     banner correctly shows ``· upstream <sha>`` with no carried-commits
@@ -529,7 +529,7 @@ def _compute_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]
     if repo_dir is None:
         # No git checkout — try the baked build SHA (Docker image path).
         try:
-            from hermes_cli.build_info import get_build_sha
+            from jimmy_cli.build_info import get_build_sha
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
@@ -543,7 +543,7 @@ def _compute_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]
         # Live-git lookup failed (e.g. shallow clone without origin/main).
         # Fall back to the baked build SHA if available.
         try:
-            from hermes_cli.build_info import get_build_sha
+            from jimmy_cli.build_info import get_build_sha
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
@@ -570,7 +570,7 @@ def _compute_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]
     return {"upstream": upstream, "local": local, "ahead": max(ahead, 0)}
 
 
-_RELEASE_URL_BASE = "https://github.com/NousResearch/hermes-agent/releases/tag"
+_RELEASE_URL_BASE = "https://github.com/Jimmy/jimmy-agent/releases/tag"
 _latest_release_cache: Optional[tuple] = None  # (tag, url) once resolved
 
 
@@ -578,8 +578,8 @@ def get_latest_release_tag(repo_dir: Optional[Path] = None) -> Optional[tuple]:
     """Return ``(tag, release_url)`` for the latest git tag, or None.
 
     Local-only — runs ``git describe --tags --abbrev=0`` against the
-    Hermes checkout. Cached per-process. Release URL always points at the
-    canonical NousResearch/hermes-agent repo (forks don't get a link).
+    Jimmy checkout. Cached per-process. Release URL always points at the
+    canonical Jimmy/jimmy-agent repo (forks don't get a link).
     """
     global _latest_release_cache
     if _latest_release_cache is not None:
@@ -698,14 +698,14 @@ def get_update_result(timeout: float = 0.5) -> Optional[int]:
 
 def _format_update_notice(behind: int) -> str:
     """Render the update warning line for a non-zero ``behind`` result."""
-    from hermes_cli.config import get_managed_update_command, recommended_update_command
+    from jimmy_cli.config import get_managed_update_command, recommended_update_command
     if behind > 0:
         commits_word = "commit" if behind == 1 else "commits"
         return (
             f"[bold yellow]⚠ {behind} {commits_word} behind[/]"
             f"[dim yellow] — run [bold]{recommended_update_command()}[/bold] to update[/]"
         )
-    # UPDATE_AVAILABLE_NO_COUNT: nix-built hermes; we know an update
+    # UPDATE_AVAILABLE_NO_COUNT: nix-built jimmy; we know an update
     # exists but not by how much, and we don't know how the user
     # installed it (nix run, profile, system flake, home-manager).
     managed_cmd = get_managed_update_command()
@@ -795,7 +795,7 @@ _BANNER_SNAPSHOT_VERSION = 1
 
 
 def _banner_snapshot_path() -> Path:
-    return get_hermes_home() / "cache" / "banner_snapshot.json"
+    return get_jimmy_home() / "cache" / "banner_snapshot.json"
 
 
 def banner_snapshot_fingerprint() -> Optional[str]:
@@ -803,8 +803,8 @@ def banner_snapshot_fingerprint() -> Optional[str]:
     import hashlib
     parts = [f"v{_BANNER_SNAPSHOT_VERSION}"]
     try:
-        from hermes_cli.config import get_config_path
-        for p in (get_config_path(), get_hermes_home() / ".env"):
+        from jimmy_cli.config import get_config_path
+        for p in (get_config_path(), get_jimmy_home() / ".env"):
             try:
                 st = p.stat()
                 parts.append(f"{p.name}:{st.st_mtime_ns}:{st.st_size}")
@@ -983,12 +983,12 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
 
     # Use skin's custom caduceus art if provided
     try:
-        from hermes_cli.skin_engine import get_active_skin
+        from jimmy_cli.skin_engine import get_active_skin
         _bskin = get_active_skin()
-        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERMES_CADUCEUS
+        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else JIMMY_CADUCEUS
     except Exception:
         _bskin = None
-        _hero = HERMES_CADUCEUS
+        _hero = JIMMY_CADUCEUS
     left_lines = ["", _hero, ""]
     if (provider or "").strip().lower() == "moa":
         # MoA virtual provider: ``model`` is a preset name. Show the preset and
@@ -996,8 +996,8 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
         preset_name = model
         agg_label = ""
         try:
-            from hermes_cli.config import load_config
-            from hermes_cli.moa_config import normalize_moa_config
+            from jimmy_cli.config import load_config
+            from jimmy_cli.moa_config import normalize_moa_config
 
             _moa = normalize_moa_config(load_config().get("moa") or {})
             _preset = _moa.get("presets", {}).get(preset_name)
@@ -1019,7 +1019,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
             # is wrong and how to fix it.
             left_lines.append(
                 f"[bold red]no model configured[/] "
-                f"[dim {dim}]— run /model or hermes setup[/]"
+                f"[dim {dim}]— run /model or jimmy setup[/]"
             )
         else:
             model_short = model.split("/")[-1] if "/" in model else model
@@ -1030,7 +1030,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
             ctx_str = f" [dim {dim}]·[/] [dim {dim}]{_format_context_length(context_length)} context[/]" if context_length else ""
             left_lines.append(f"[{accent}]{model_short}[/]{ctx_str} [dim {dim}]·[/] [dim {dim}]Jimmy[/]")
 
-    if os.getenv("HERMES_YOLO_MODE"):
+    if os.getenv("JIMMY_YOLO_MODE"):
         left_lines.append(f"[bold red]⚠ YOLO mode[/] [dim {dim}]— all approval prompts bypassed[/]")
     left_lines.append(f"[dim {dim}]{cwd}[/]")
     if session_id:
@@ -1103,14 +1103,14 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     # key cache mentions any MCP server, skip the section outright.
     mcp_status = []
     try:
-        from hermes_cli.config import load_config as _load_cfg
+        from jimmy_cli.config import load_config as _load_cfg
         _has_native_mcp = bool((_load_cfg() or {}).get("mcp_servers"))
     except Exception:
         _has_native_mcp = True  # can't tell — take the full path
     _has_portable_mcp = False
     if not _has_native_mcp:
         try:
-            from hermes_cli.plugins import get_portable_mcp_server_names_nowait
+            from jimmy_cli.plugins import get_portable_mcp_server_names_nowait
             _has_portable_mcp = bool(get_portable_mcp_server_names_nowait())
         except Exception:
             _has_portable_mcp = True  # can't tell — take the full path
@@ -1209,8 +1209,8 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     # understand why tool counts may not match what's actually reachable
     # (codex builds its own tool list inside the spawned subprocess).
     try:
-        from hermes_cli.codex_runtime_switch import get_current_runtime
-        from hermes_cli.config import load_config as _load_cfg
+        from jimmy_cli.codex_runtime_switch import get_current_runtime
+        from jimmy_cli.config import load_config as _load_cfg
         if get_current_runtime(_load_cfg()) == "codex_app_server":
             right_lines.append(
                 f"[bold {accent}]Runtime:[/] [{text}]codex app-server[/] "
@@ -1220,7 +1220,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
         pass
     # Show active profile name when not 'default'
     try:
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
         _profile_name = get_active_profile_name()
         if _profile_name and _profile_name != "default":
             right_lines.append(f"[bold {accent}]Profile:[/] [{text}]{_profile_name}[/]")
@@ -1267,7 +1267,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     console.print()
     term_width = shutil.get_terminal_size().columns
     if term_width >= 95:
-        _logo = _bskin.banner_logo if _bskin and hasattr(_bskin, 'banner_logo') and _bskin.banner_logo else HERMES_AGENT_LOGO
+        _logo = _bskin.banner_logo if _bskin and hasattr(_bskin, 'banner_logo') and _bskin.banner_logo else JIMMY_AGENT_LOGO
         console.print(_logo)
         console.print()
     console.print(outer_panel)

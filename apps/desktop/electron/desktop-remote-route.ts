@@ -23,7 +23,7 @@ interface SshRouteConfig {
   keyPath?: string
   mode: 'ssh'
   port?: number
-  remoteHermesPath?: string
+  remoteJimmyPath?: string
   remoteProfile?: string
   user?: string
 }
@@ -101,7 +101,7 @@ function routeIdentity(route: StoredRoute): null | string {
       keyPath: ssh.keyPath || '',
       kind: 'ssh',
       port: ssh.port || 22,
-      remoteHermesPath: ssh.remoteHermesPath || '',
+      remoteJimmyPath: ssh.remoteJimmyPath || '',
       remoteProfile: ssh.remoteProfile || '',
       user: ssh.user || ''
     })
@@ -220,8 +220,8 @@ export function resolveDesktopRemoteRoute({
 
     if (!envToken) {
       throw new Error(
-        'HERMES_DESKTOP_REMOTE_URL is set but HERMES_DESKTOP_REMOTE_TOKEN is not. ' +
-          'Both must be provided to connect to a remote Hermes backend.'
+        'JIMMY_DESKTOP_REMOTE_URL is set but JIMMY_DESKTOP_REMOTE_TOKEN is not. ' +
+          'Both must be provided to connect to a remote Jimmy backend.'
       )
     }
 

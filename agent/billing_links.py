@@ -74,7 +74,7 @@ def is_nous_inference_route(provider: str, base_url: str) -> bool:
     """True when the failing route is the Nous-managed inference gateway."""
     if (provider or "").strip().lower() == "nous":
         return True
-    return base_url_host_matches(str(base_url or ""), "inference-api.nousresearch.com")
+    return base_url_host_matches(str(base_url or ""), "inference-api.jimmy-agent.com")
 
 
 def _nous_billing_url() -> Optional[str]:

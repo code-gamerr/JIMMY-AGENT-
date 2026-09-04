@@ -1,4 +1,4 @@
-"""Tests for `hermes curator run` CLI behavior."""
+"""Tests for `jimmy curator run` CLI behavior."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def _args(**kwargs):
 
 def test_run_defaults_to_synchronous(monkeypatch, capsys):
     import agent.curator as curator_state
-    import hermes_cli.curator as curator_cli
+    import jimmy_cli.curator as curator_cli
 
     calls = []
     monkeypatch.setattr(curator_state, "is_enabled", lambda: True)
@@ -36,7 +36,7 @@ def test_run_defaults_to_synchronous(monkeypatch, capsys):
 
 def test_dry_run_default_reports_synchronous_wording(monkeypatch, capsys):
     import agent.curator as curator_state
-    import hermes_cli.curator as curator_cli
+    import jimmy_cli.curator as curator_cli
 
     monkeypatch.setattr(curator_state, "is_enabled", lambda: True)
     monkeypatch.setattr(
@@ -49,4 +49,4 @@ def test_dry_run_default_reports_synchronous_wording(monkeypatch, capsys):
 
     out = capsys.readouterr().out
     assert "When the report lands" not in out
-    assert "Read the report with `hermes curator status`" in out
+    assert "Read the report with `jimmy curator status`" in out

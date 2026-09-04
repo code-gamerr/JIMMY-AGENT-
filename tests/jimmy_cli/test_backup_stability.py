@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.backup import (
+from jimmy_cli.backup import (
     BackupInProgressError,
     _atomic_output_path,
     _backup_operation_lock,
@@ -16,7 +16,7 @@ from hermes_cli.backup import (
 
 
 def test_backup_lock_rejects_a_second_operation(tmp_path) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
 
     with _backup_operation_lock(home):
@@ -51,12 +51,12 @@ def test_atomic_output_keeps_previous_file_after_failure(tmp_path) -> None:
 
 
 def test_quick_snapshot_is_published_with_manifest(tmp_path, monkeypatch) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
     (home / "config.yaml").write_text("model: {}\n", encoding="utf-8")
     published: list[tuple[Path, Path]] = []
 
-    from hermes_cli import backup
+    from jimmy_cli import backup
 
     real_replace = backup.os.replace
 
@@ -71,7 +71,7 @@ def test_quick_snapshot_is_published_with_manifest(tmp_path, monkeypatch) -> Non
         real_replace(source, destination)
 
     monkeypatch.setattr(backup.os, "replace", replace)
-    snapshot_id = create_quick_snapshot(hermes_home=home)
+    snapshot_id = create_quick_snapshot(jimmy_home=home)
 
     assert snapshot_id is not None
     assert len(published) == 1
@@ -83,22 +83,22 @@ def test_quick_snapshot_is_published_with_manifest(tmp_path, monkeypatch) -> Non
 
 
 def test_quick_snapshot_listing_ignores_partial_directories(tmp_path) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     partial = home / "state-snapshots" / ".unfinished.1.partial"
     partial.mkdir(parents=True)
     (partial / "manifest.json").write_text('{"id":"unfinished"}', encoding="utf-8")
 
-    assert list_quick_snapshots(hermes_home=home) == []
+    assert list_quick_snapshots(jimmy_home=home) == []
 
 
 def test_failed_automatic_backup_preserves_previous_archive(tmp_path, monkeypatch) -> None:
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
     (home / "state.db").write_bytes(b"not-a-database")
     archive = tmp_path / "automatic.zip"
     archive.write_bytes(b"previous-valid-backup")
 
-    monkeypatch.setattr("hermes_cli.backup._safe_copy_db", lambda _src, _dst: False)
+    monkeypatch.setattr("jimmy_cli.backup._safe_copy_db", lambda _src, _dst: False)
 
     assert _write_full_zip_backup(archive, home) is None
     assert archive.read_bytes() == b"previous-valid-backup"

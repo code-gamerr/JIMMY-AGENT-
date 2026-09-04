@@ -1,16 +1,16 @@
 ---
 sidebar_position: 3
 title: "Android / Termux"
-description: "Run Hermes Agent directly on an Android phone with Termux"
+description: "Run Jimmy directly on an Android phone with Termux"
 ---
 
-# Hermes on Android with Termux
+# Jimmy on Android with Termux
 
 :::warning Tier 2 platform
 Termux (Android) is a [Tier 2 platform](./platform-support.md#tier-2). The installer script and documentation here are maintained on a best-effort basis only. Commits to `main` may break these packages at any point in time.
 :::
 
-Hermes Agent can run directly on an Android phone through [Termux](https://termux.dev/).
+Jimmy can run directly on an Android phone through [Termux](https://termux.dev/).
 
 It gives you a working local CLI on the phone, plus the core extras that are currently known to install cleanly on Android.
 
@@ -18,7 +18,7 @@ It gives you a working local CLI on the phone, plus the core extras that are cur
 
 The tested Termux bundle installs:
 
-- the Hermes CLI
+- the Jimmy CLI
 - cron support
 - PTY/background terminal support
 - Telegram gateway support (manual / best-effort background runs)
@@ -42,23 +42,23 @@ A few features still need desktop/server-style dependencies that are not publish
 - Docker-based terminal isolation is not available inside Termux
 - Android may still suspend Termux background jobs, so gateway persistence is best-effort rather than a normal managed service
 
-That does not stop Hermes from working well as a phone-native CLI agent — it just means the recommended mobile install is intentionally narrower than the desktop/server install.
+That does not stop Jimmy from working well as a phone-native CLI agent — it just means the recommended mobile install is intentionally narrower than the desktop/server install.
 
 ---
 
 ## Community-maintained native `pkg` option
 
 :::caution Contributor-operated distribution
-This APT repository is **community-maintained by `@adybag14-cyber` and is not an official NousResearch distribution**. NousResearch does not build, sign, host, or audit these packages. Enabling the repository means trusting the contributor-operated repository and its signing key. Termux itself remains a Tier 2 / best-effort platform.
+This APT repository is **community-maintained by `@adybag14-cyber` and is not an official Jimmy distribution**. Jimmy does not build, sign, host, or audit these packages. Enabling the repository means trusting the contributor-operated repository and its signing key. Termux itself remains a Tier 2 / best-effort platform.
 :::
 
-For users who prefer a native package-manager install rather than building Python/Rust dependencies on the phone, a community-maintained APT repository is available. The repository bootstrap and packaging sources are published in [`adybag14-cyber/termux-python`](https://github.com/adybag14-cyber/termux-python), with the Hermes package build in [`adybag14-cyber/termux-hermes`](https://github.com/adybag14-cyber/termux-hermes).
+For users who prefer a native package-manager install rather than building Python/Rust dependencies on the phone, a community-maintained APT repository is available. The repository bootstrap and packaging sources are published in [`adybag14-cyber/termux-python`](https://github.com/adybag14-cyber/termux-python), with the Jimmy package build in [`adybag14-cyber/termux-jimmy`](https://github.com/adybag14-cyber/termux-jimmy).
 
-Install the repository key/source and Hermes with:
+Install the repository key/source and Jimmy with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adybag14-cyber/termux-python/main/scripts/setup_apt_repo.sh | bash
-pkg install hermes-agent
+pkg install jimmy-agent
 ```
 
 The repository signing-key fingerprint currently documented by the community distribution is:
@@ -67,23 +67,23 @@ The repository signing-key fingerprint currently documented by the community dis
 EAD24A2124EFA7393A78B7B14699F966313F7A6B
 ```
 
-APT-managed Hermes installs are marked with install method `apt`. Hermes therefore does not run its Git self-updater against package-owned files; use the package manager instead:
+APT-managed Jimmy installs are marked with install method `apt`. Jimmy therefore does not run its Git self-updater against package-owned files; use the package manager instead:
 
 ```bash
 pkg update
-pkg upgrade hermes-agent
+pkg upgrade jimmy-agent
 ```
 
-Packaging/repository/signing problems for this option should be reported to the community packaging repositories above. Hermes runtime bugs can still be reported here, keeping in mind that Android/Termux support is best-effort.
+Packaging/repository/signing problems for this option should be reported to the community packaging repositories above. Jimmy runtime bugs can still be reported here, keeping in mind that Android/Termux support is best-effort.
 
 ---
 
 ## Option 1: One-line installer
 
-Hermes now ships a Termux-aware installer path:
+Jimmy now ships a Termux-aware installer path:
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+curl -fsSL https://jimmy-agent.jimmy-agent.com/install.sh | bash
 ```
 
 On Termux, the installer automatically:
@@ -91,7 +91,7 @@ On Termux, the installer automatically:
 - uses `pkg` for system packages
 - creates the venv with `python -m venv`
 - attempts the broad `.[termux-all]` extra first and falls back to the smaller `.[termux]` extra (then a base install) — the curl installer matches this order automatically
-- links `hermes` into `$PREFIX/bin` so it stays on your Termux PATH
+- links `jimmy` into `$PREFIX/bin` so it stays on your Termux PATH
 - skips the untested browser / WhatsApp bootstrap
 
 If you want the explicit commands or need to debug a failed install, use the manual path below.
@@ -116,11 +116,11 @@ Why these packages?
 - `ripgrep` — fast file search
 - `ffmpeg` — media / TTS conversions
 
-### 2. Clone Hermes
+### 2. Clone Jimmy
 
 ```bash
-git clone https://github.com/NousResearch/hermes-agent.git
-cd hermes-agent
+git clone https://github.com/Jimmy/jimmy-agent.git
+cd jimmy-agent
 ```
 
 ### 3. Create a virtual environment
@@ -146,25 +146,25 @@ If you only want the minimal core agent, this also works:
 python -m pip install -e '.' -c constraints-termux.txt
 ```
 
-### 5. Put `hermes` on your Termux PATH
+### 5. Put `jimmy` on your Termux PATH
 
 ```bash
-ln -sf "$PWD/venv/bin/hermes" "$PREFIX/bin/hermes"
+ln -sf "$PWD/venv/bin/jimmy" "$PREFIX/bin/jimmy"
 ```
 
-`$PREFIX/bin` is already on PATH in Termux, so this makes the `hermes` command persist across new shells without re-activating the venv every time.
+`$PREFIX/bin` is already on PATH in Termux, so this makes the `jimmy` command persist across new shells without re-activating the venv every time.
 
 ### 6. Verify the install
 
 ```bash
-hermes --version
-hermes doctor
+jimmy --version
+jimmy doctor
 ```
 
-### 7. Start Hermes
+### 7. Start Jimmy
 
 ```bash
-hermes
+jimmy
 ```
 
 ---
@@ -174,15 +174,15 @@ hermes
 ### Configure a model
 
 ```bash
-hermes model
+jimmy model
 ```
 
-Or set keys directly in `~/.hermes/.env`.
+Or set keys directly in `~/.jimmy/.env`.
 
 ### Re-run the full interactive setup wizard later
 
 ```bash
-hermes setup
+jimmy setup
 ```
 
 ### Install optional Node dependencies manually
@@ -245,7 +245,7 @@ export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk)"
 python -m pip install -e '.[termux]' -c constraints-termux.txt
 ```
 
-### `hermes doctor` says ripgrep or Node is missing
+### `jimmy doctor` says ripgrep or Node is missing
 
 Install them with Termux packages:
 
@@ -281,5 +281,5 @@ If you hit a new Android-specific issue, please open a GitHub issue with:
 - your Android version
 - `termux-info`
 - `python --version`
-- `hermes doctor`
+- `jimmy doctor`
 - the exact install command and full error output

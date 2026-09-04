@@ -1,8 +1,8 @@
-"""Verify `hermes -c` picks the session the user most recently used."""
+"""Verify `jimmy -c` picks the session the user most recently used."""
 
 from __future__ import annotations
 
-from hermes_cli.main import _resolve_last_session
+from jimmy_cli.main import _resolve_last_session
 
 
 class _FakeDB:
@@ -26,14 +26,14 @@ class _FakeDB:
 
 def test_search_sessions_exposes_last_active_column(tmp_path, monkeypatch):
     # End-to-end: SessionDB must surface last_active and order by MRU.
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
-    import hermes_state
+    import jimmy_state
 
     from pathlib import Path
 
-    db = hermes_state.SessionDB(db_path=Path(tmp_path / "state.db"))
+    db = jimmy_state.SessionDB(db_path=Path(tmp_path / "state.db"))
     try:
         db.create_session("s_started_later", source="cli")
         db.create_session("s_active_later", source="cli")
@@ -103,16 +103,16 @@ class _WorkspaceAwareDB:
 def test_resolve_last_session_real_db_prefers_workspace(monkeypatch, tmp_path):
     # End-to-end through the real SessionDB + _resolve_last_session: -c from
     # repo A picks repo A's session even though repo B is globally newer.
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
-    import hermes_state
+    import jimmy_state
     from pathlib import Path
 
     repo_a = tmp_path / "repo-a"
     repo_a.mkdir()
     state_db = Path(tmp_path / "state.db")
-    real_db = hermes_state.SessionDB
+    real_db = jimmy_state.SessionDB
     db = real_db(db_path=state_db)
     try:
         db.create_session("repo_a", source="cli", cwd=str(repo_a), git_repo_root=str(repo_a))
@@ -126,10 +126,10 @@ def test_resolve_last_session_real_db_prefers_workspace(monkeypatch, tmp_path):
 
     monkeypatch.chdir(repo_a)
     monkeypatch.setattr(
-        "hermes_cli.main.subprocess.run",
+        "jimmy_cli.main.subprocess.run",
         lambda cmd, **kw: __import__("subprocess").CompletedProcess(
             cmd, 0, stdout=str(repo_a), stderr=""
         ),
     )
-    monkeypatch.setattr("hermes_state.SessionDB", lambda: real_db(db_path=state_db))
+    monkeypatch.setattr("jimmy_state.SessionDB", lambda: real_db(db_path=state_db))
     assert _resolve_last_session("cli") == "repo_a"

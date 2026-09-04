@@ -4,7 +4,7 @@ No React, no JavaScript dependency. Listed providers come from the
 registry; clicking a provider sends a GET to
 ``/auth/login?provider=<name>``.
 
-Visual styling mirrors the Nous Research design system (the
+Visual styling mirrors the Jimmy design system (the
 ``@nous-research/ui`` package the React dashboard uses): the same
 ``Collapse`` / ``Rules Compressed`` typeface, amber-on-dark colour
 tokens (``#170d02`` / ``#ffac02`` / ``#fff``), uppercase + wide-tracking
@@ -17,13 +17,13 @@ bundle loaded.
 Test-stable class names: the existing test suite extracts the
 ``class="provider-btn"`` anchor href to walk the OAuth flow. That
 class name MUST NOT change without updating
-``tests/hermes_cli/test_dashboard_auth_401_reauth.py``.
+``tests/jimmy_cli/test_dashboard_auth_401_reauth.py``.
 """
 from __future__ import annotations
 
 import html
 
-from hermes_cli.dashboard_auth import list_session_providers
+from jimmy_cli.dashboard_auth import list_session_providers
 
 # Inline minimal CSS. The dashboard's full skin lives in the React
 # bundle, which we deliberately do NOT load here — the login page must

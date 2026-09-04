@@ -2,7 +2,7 @@ import argparse
 import json
 from types import SimpleNamespace
 
-from hermes_cli import plugins_cmd
+from jimmy_cli import plugins_cmd
 
 
 def _args(**kwargs):
@@ -60,18 +60,18 @@ def test_discover_all_plugins_includes_entrypoint_plugins(monkeypatch, tmp_path)
 
     dist = SimpleNamespace(
         version="0.1.0",
-        metadata={"Summary": "Karpathy-style LLM Wikis for Hermes"},
+        metadata={"Summary": "Karpathy-style LLM Wikis for Jimmy"},
     )
     entry_point = SimpleNamespace(
         name="wiki",
-        value="adapters.hermes.cli_plugin",
-        group="hermes_agent.plugins",
+        value="adapters.jimmy.cli_plugin",
+        group="jimmy_agent.plugins",
         dist=dist,
     )
 
     monkeypatch.setattr(plugins_cmd, "_plugins_dir", lambda: user_dir)
     monkeypatch.setattr(
-        "hermes_cli.plugins.get_bundled_plugins_dir",
+        "jimmy_cli.plugins.get_bundled_plugins_dir",
         lambda: bundled_dir,
     )
     monkeypatch.setattr(
@@ -86,9 +86,9 @@ def test_discover_all_plugins_includes_entrypoint_plugins(monkeypatch, tmp_path)
         (
             "wiki",
             "0.1.0",
-            "Karpathy-style LLM Wikis for Hermes",
+            "Karpathy-style LLM Wikis for Jimmy",
             "entrypoint",
-            "adapters.hermes.cli_plugin",
+            "adapters.jimmy.cli_plugin",
             "wiki",
         )
     ]
@@ -104,17 +104,17 @@ def test_declared_capabilities_for_entrypoint_uses_distribution_metadata(
     plugin_ep = SimpleNamespace(
         name="thread-namer",
         value="thread_namer.plugin:register",
-        group="hermes_agent.plugins",
+        group="jimmy_agent.plugins",
         dist=SimpleNamespace(version="1.0", metadata={"Summary": ""}),
     )
     capability_ep = SimpleNamespace(
         name="thread-namer.gateway.platform_actions",
         value="thread_namer.plugin:register",
-        group="hermes_agent.plugin_capabilities",
+        group="jimmy_agent.plugin_capabilities",
     )
     monkeypatch.setattr(plugins_cmd, "_plugins_dir", lambda: user_dir)
     monkeypatch.setattr(
-        "hermes_cli.plugins.get_bundled_plugins_dir", lambda: bundled_dir
+        "jimmy_cli.plugins.get_bundled_plugins_dir", lambda: bundled_dir
     )
     monkeypatch.setattr(
         plugins_cmd.importlib.metadata,

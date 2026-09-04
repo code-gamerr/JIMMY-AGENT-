@@ -2,11 +2,11 @@
 
 
 def _write_env(monkeypatch, tmp_path, content):
-    hermes_home = tmp_path / ".hermes"
-    hermes_home.mkdir()
-    (hermes_home / ".env").write_text(content, encoding="utf-8")
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
-    return hermes_home
+    jimmy_home = tmp_path / ".jimmy"
+    jimmy_home.mkdir()
+    (jimmy_home / ".env").write_text(content, encoding="utf-8")
+    monkeypatch.setenv("JIMMY_HOME", str(jimmy_home))
+    return jimmy_home
 
 
 class TestDeprecatedCwdWarning:
@@ -19,7 +19,7 @@ class TestDeprecatedCwdWarning:
         monkeypatch.setenv("MESSAGING_CWD", "/process/message-path")
         monkeypatch.setenv("TERMINAL_CWD", "/process/terminal-path")
 
-        from hermes_cli.config import warn_deprecated_cwd_env_vars
+        from jimmy_cli.config import warn_deprecated_cwd_env_vars
 
         warn_deprecated_cwd_env_vars()
 
@@ -36,7 +36,7 @@ class TestDeprecatedCwdWarning:
         monkeypatch.delenv("MESSAGING_CWD", raising=False)
         monkeypatch.delenv("TERMINAL_CWD", raising=False)
 
-        from hermes_cli.config import warn_deprecated_cwd_env_vars
+        from jimmy_cli.config import warn_deprecated_cwd_env_vars
 
         warn_deprecated_cwd_env_vars()
 
@@ -49,14 +49,14 @@ class TestDeprecatedCwdWarning:
     def test_dotenv_terminal_cwd_warns_with_explicit_config(
         self, monkeypatch, tmp_path, capsys
     ):
-        hermes_home = _write_env(
+        jimmy_home = _write_env(
             monkeypatch, tmp_path, "TERMINAL_CWD=/legacy/path\n"
         )
-        (hermes_home / "config.yaml").write_text(
+        (jimmy_home / "config.yaml").write_text(
             "terminal:\n  cwd: /current/path\n", encoding="utf-8"
         )
 
-        from hermes_cli.config import warn_deprecated_cwd_env_vars
+        from jimmy_cli.config import warn_deprecated_cwd_env_vars
 
         warn_deprecated_cwd_env_vars()
 
@@ -72,14 +72,14 @@ class TestDeprecatedCwdWarning:
         )
         monkeypatch.setenv("TERMINAL_CWD", "/process/bridge")
 
-        from hermes_cli.config import warn_deprecated_cwd_env_vars
+        from jimmy_cli.config import warn_deprecated_cwd_env_vars
 
         warn_deprecated_cwd_env_vars()
 
         assert capsys.readouterr().err == ""
 
     def test_dotenv_read_failure_is_silent(self, monkeypatch, capsys):
-        import hermes_cli.config as config_module
+        import jimmy_cli.config as config_module
 
         def raise_read_error():
             raise OSError("permission denied")

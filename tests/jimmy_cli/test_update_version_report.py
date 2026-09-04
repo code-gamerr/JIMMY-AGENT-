@@ -1,4 +1,4 @@
-"""Version transition reporting after ``hermes update``.
+"""Version transition reporting after ``jimmy update``.
 
 Ported from PrimeIntellect-ai/prime-agent#630: a successful self-update
 reports both versions (``v0.19.4 → v0.20.0``) when the pyproject version
@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import update_cmd
+from jimmy_cli import update_cmd
 
 
 def _write_pyproject(root: Path, version: str) -> None:
     (root / "pyproject.toml").write_text(
-        f'[project]\nname = "hermes-agent"\nversion = "{version}"\n',
+        f'[project]\nname = "jimmy-agent"\nversion = "{version}"\n',
         encoding="utf-8",
     )
 

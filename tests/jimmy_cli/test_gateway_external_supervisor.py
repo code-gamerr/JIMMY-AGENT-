@@ -4,12 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 
-import hermes_cli.gateway as gateway
+import jimmy_cli.gateway as gateway
 
 
 def _clear_native_supervisor_markers(monkeypatch):
     monkeypatch.delenv("INVOCATION_ID", raising=False)
-    monkeypatch.delenv("HERMES_S6_SUPERVISED_CHILD", raising=False)
+    monkeypatch.delenv("JIMMY_S6_SUPERVISED_CHILD", raising=False)
     monkeypatch.setenv("XPC_SERVICE_NAME", "0")
 
 
@@ -48,7 +48,7 @@ def test_update_hands_external_supervisor_gateway_back_without_watcher(monkeypat
         lambda _pid: [
             "python",
             "-m",
-            "hermes_cli.main",
+            "jimmy_cli.main",
             "gateway",
             "run",
             "--external-supervisor",
@@ -73,7 +73,7 @@ def test_update_hands_generated_launchd_inner_argv_back_without_watcher(monkeypa
         lambda _pid: [
             "/usr/bin/python3",
             "-m",
-            "hermes_cli.main",
+            "jimmy_cli.main",
             "--profile",
             "work",
             "gateway",
@@ -95,18 +95,18 @@ def test_update_hands_generated_launchd_inner_argv_back_without_watcher(monkeypa
 
 def test_update_follows_wrapper_upgrade_of_stale_plist_argv(monkeypatch):
     """stderr_timestamp upgrades stale inner argv so update sees the flag."""
-    from hermes_cli.stderr_timestamp import _prepare_child_command
+    from jimmy_cli.stderr_timestamp import _prepare_child_command
 
     stale = [
         "/usr/bin/python3",
         "-m",
-        "hermes_cli.main",
+        "jimmy_cli.main",
         "gateway",
         "run",
         "--replace",
     ]
     upgraded = _prepare_child_command(
-        stale, {"XPC_SERVICE_NAME": "ai.hermes.gateway-work"}
+        stale, {"XPC_SERVICE_NAME": "ai.jimmy.gateway-work"}
     )
     assert upgraded[-1] == "--external-supervisor"
 
@@ -129,7 +129,7 @@ def test_update_still_uses_detached_watcher_without_supervisor_flag(monkeypatch)
         lambda _pid: [
             "python",
             "-m",
-            "hermes_cli.main",
+            "jimmy_cli.main",
             "gateway",
             "run",
             "--replace",

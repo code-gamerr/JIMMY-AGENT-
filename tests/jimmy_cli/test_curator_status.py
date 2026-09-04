@@ -1,4 +1,4 @@
-"""Tests for `hermes curator status` output.
+"""Tests for `jimmy curator status` output.
 
 Covers:
 - y0shualee's "least recently active" semantic (view/patch/use all count as activity).
@@ -21,22 +21,22 @@ import pytest
 
 @pytest.fixture
 def curator_status_env(tmp_path, monkeypatch):
-    """Isolated HERMES_HOME with real agent-created skills on disk."""
-    home = tmp_path / ".hermes"
+    """Isolated JIMMY_HOME with real agent-created skills on disk."""
+    home = tmp_path / ".jimmy"
     skills = home / "skills"
     skills.mkdir(parents=True)
     (home / "logs").mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     import importlib
-    import hermes_constants
-    importlib.reload(hermes_constants)
+    import jimmy_constants
+    importlib.reload(jimmy_constants)
     from tools import skill_usage
     importlib.reload(skill_usage)
     from agent import curator
     importlib.reload(curator)
-    from hermes_cli import curator as curator_cli
+    from jimmy_cli import curator as curator_cli
     importlib.reload(curator_cli)
 
     def _write_skill(name: str) -> None:
@@ -48,7 +48,7 @@ def curator_status_env(tmp_path, monkeypatch):
             "description: test\n"
             "version: 1.0.0\n"
             "metadata:\n"
-            "  hermes:\n"
+            "  jimmy:\n"
             "    agent_created: true\n"
             "---\n"
             f"# {name}\n"
@@ -88,7 +88,7 @@ def test_adopt_subcommand_is_registered():
     callable — a handler nobody can dispatch to is dead code."""
     import argparse
 
-    import hermes_cli.curator as curator_cli
+    import jimmy_cli.curator as curator_cli
 
     parser = argparse.ArgumentParser()
     curator_cli.register_cli(parser)

@@ -19,7 +19,7 @@ def test_azure_openai_env_aliases_resolve(monkeypatch):
     monkeypatch.delenv("AZURE_FOUNDRY_API_KEY", raising=False)
     monkeypatch.delenv("AZURE_FOUNDRY_BASE_URL", raising=False)
 
-    from hermes_cli.runtime_provider import _resolve_azure_foundry_runtime
+    from jimmy_cli.runtime_provider import _resolve_azure_foundry_runtime
 
     runtime = _resolve_azure_foundry_runtime(
         requested_provider="azure-foundry",
@@ -37,13 +37,13 @@ def test_auto_prefers_azure_before_openrouter(monkeypatch):
     monkeypatch.setenv("AZURE_FOUNDRY_BASE_URL", "https://example.openai.azure.com")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
 
-    from hermes_cli.auth import resolve_provider
+    from jimmy_cli.auth import resolve_provider
 
     assert resolve_provider("auto") == "azure-foundry"
 
 
 def test_nous_provider_rejected():
-    from hermes_cli.auth import AuthError, resolve_provider
+    from jimmy_cli.auth import AuthError, resolve_provider
 
     with pytest.raises(AuthError, match="removed"):
         resolve_provider("nous")
@@ -55,21 +55,21 @@ def test_managed_tool_gateway_module_absent():
 
     root = Path(__file__).resolve().parents[2]
     assert not (root / "tools" / "managed_tool_gateway.py").exists()
-    assert not (root / "hermes_cli" / "nous_subscription.py").exists()
+    assert not (root / "jimmy_cli" / "nous_subscription.py").exists()
     assert not (root / "plugins" / "model-providers" / "nous").exists()
     assert importlib.util.find_spec("tools.managed_tool_gateway") is None
-    assert importlib.util.find_spec("hermes_cli.nous_subscription") is None
+    assert importlib.util.find_spec("jimmy_cli.nous_subscription") is None
 
 
 def test_dual_home_prefers_graphy_when_fresh(tmp_path, monkeypatch):
-    monkeypatch.delenv("HERMES_HOME", raising=False)
+    monkeypatch.delenv("JIMMY_HOME", raising=False)
     monkeypatch.delenv("GRAPHY_HOME", raising=False)
     monkeypatch.setattr("sys.platform", "win32")
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
 
     import importlib
-    import hermes_constants
+    import jimmy_constants
 
-    importlib.reload(hermes_constants)
-    home = hermes_constants._get_platform_default_hermes_home()
+    importlib.reload(jimmy_constants)
+    home = jimmy_constants._get_platform_default_jimmy_home()
     assert home.name == "graphy"

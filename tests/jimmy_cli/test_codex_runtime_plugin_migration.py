@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_cli.codex_runtime_plugin_migration import (
+from jimmy_cli.codex_runtime_plugin_migration import (
     MIGRATION_MARKER,
     MIGRATION_END_MARKER,
-    _build_hermes_tools_mcp_entry,
+    _build_jimmy_tools_mcp_entry,
     _format_toml_value,
     _looks_like_test_tempdir,
     _strip_existing_managed_block,
@@ -66,7 +66,7 @@ class TestTomlValueFormatter:
         migrate({"mcp_servers": {"x": {"command": "y"}}},
                 codex_home=tmp_path,
                 discover_plugins=False,
-                expose_hermes_tools=False,
+                expose_jimmy_tools=False,
                 default_permission_profile=None)
         # config.toml should exist
         assert (tmp_path / "config.toml").exists()
@@ -90,7 +90,7 @@ class TestTomlValueFormatter:
             {"mcp_servers": {"x": {"command": "y"}}},
             codex_home=tmp_path,
             discover_plugins=False,
-            expose_hermes_tools=False,
+            expose_jimmy_tools=False,
             default_permission_profile=None,
         )
         # Error surfaced
@@ -158,7 +158,7 @@ class TestStripExistingManagedBlock:
         assert "mcp_servers.fs" not in out
 
 
-# ---- end-to-end migrate(, expose_hermes_tools=False) ----
+# ---- end-to-end migrate(, expose_jimmy_tools=False) ----
 
 class TestMigrate:
 
@@ -167,7 +167,7 @@ class TestMigrate:
     def test_plugin_discovery_writes_plugin_blocks(self, tmp_path, monkeypatch):
         """Discovered curated plugins land as [plugins."<name>@<marketplace>"]
         blocks. This is what OpenClaw calls 'migrate native codex plugins.'"""
-        from hermes_cli import codex_runtime_plugin_migration as crpm
+        from jimmy_cli import codex_runtime_plugin_migration as crpm
 
         def fake_query(codex_home=None, timeout=8.0):
             return [
@@ -190,14 +190,14 @@ class TestMigrate:
     def test_plugin_discovery_failure_non_fatal(self, tmp_path, monkeypatch):
         """If codex isn't installed or RPC fails, MCP migration still
         completes. The error surfaces in the report but doesn't abort."""
-        from hermes_cli import codex_runtime_plugin_migration as crpm
+        from jimmy_cli import codex_runtime_plugin_migration as crpm
 
         def fake_query_fails(codex_home=None, timeout=8.0):
             return [], "codex CLI not available"
         monkeypatch.setattr(crpm, "_query_codex_plugins", fake_query_fails)
 
         report = migrate({"mcp_servers": {"x": {"command": "y"}}},
-                         codex_home=tmp_path, discover_plugins=True, expose_hermes_tools=False)
+                         codex_home=tmp_path, discover_plugins=True, expose_jimmy_tools=False)
         assert report.written
         assert report.migrated == ["x"]
         assert report.plugin_query_error == "codex CLI not available"
@@ -210,7 +210,7 @@ class TestMigrate:
 
 
     def test_full_migration_round_trip(self, tmp_path):
-        hermes_cfg = {
+        jimmy_cfg = {
             "mcp_servers": {
                 "filesystem": {
                     "command": "npx",
@@ -222,7 +222,7 @@ class TestMigrate:
                 },
             }
         }
-        report = migrate(hermes_cfg, codex_home=tmp_path, expose_hermes_tools=False)
+        report = migrate(jimmy_cfg, codex_home=tmp_path, expose_jimmy_tools=False)
         assert report.written
         text = (tmp_path / "config.toml").read_text()
         assert "[mcp_servers.filesystem]" in text
@@ -235,7 +235,7 @@ class TestMigrate:
 
     def test_preserves_user_mcp_server_outside_managed_block(self, tmp_path):
         """Quirk #6: when a user adds their own MCP server entry directly
-        to ~/.codex/config.toml outside Hermes' managed block, re-running
+        to ~/.codex/config.toml outside Jimmy' managed block, re-running
         migration must preserve it. Tested both above and below the
         managed block."""
         target = tmp_path / "config.toml"
@@ -245,9 +245,9 @@ class TestMigrate:
             'args = ["--above"]\n'
         )
         # First migrate — adds managed block below user content
-        migrate({"mcp_servers": {"hermes-mcp": {"command": "npx"}}},
+        migrate({"mcp_servers": {"jimmy-mcp": {"command": "npx"}}},
                 codex_home=tmp_path, discover_plugins=False,
-                expose_hermes_tools=False)
+                expose_jimmy_tools=False)
         text = target.read_text()
         assert "user-above" in text, "user MCP server above managed block got nuked"
         assert 'command = "/usr/bin/above-server"' in text
@@ -257,21 +257,21 @@ class TestMigrate:
             text + "\n[mcp_servers.user-below]\ncommand = \"below-server\"\n"
         )
         # Re-migrate — both should survive
-        migrate({"mcp_servers": {"hermes-mcp": {"command": "npx"}}},
+        migrate({"mcp_servers": {"jimmy-mcp": {"command": "npx"}}},
                 codex_home=tmp_path, discover_plugins=False,
-                expose_hermes_tools=False)
+                expose_jimmy_tools=False)
         final = target.read_text()
         assert "user-above" in final
         assert "user-below" in final
         # And our managed block is still there with the new content
-        assert "[mcp_servers.hermes-mcp]" in final
+        assert "[mcp_servers.jimmy-mcp]" in final
 
 
 
     def test_summary_reports_migration_count(self, tmp_path):
         report = migrate({
             "mcp_servers": {"a": {"command": "x"}, "b": {"command": "y"}}
-        }, codex_home=tmp_path, expose_hermes_tools=False)
+        }, codex_home=tmp_path, expose_jimmy_tools=False)
         summary = report.summary()
         assert "Migrated 2 MCP server(s)" in summary
         assert "- a" in summary
@@ -286,7 +286,7 @@ class TestStripUnmanagedPluginTables:
 
     When codex itself writes ``[plugins."<name>@<marketplace>"]`` tables
     (via the user running ``codex plugins enable`` directly), re-running
-    ``hermes codex-runtime migrate`` would re-emit them inside the managed
+    ``jimmy codex-runtime migrate`` would re-emit them inside the managed
     block and the resulting duplicate-table-header would crash codex.
     """
 
@@ -362,10 +362,10 @@ class TestStripUnmanagedPluginTables:
             )
 
         monkeypatch.setattr(
-            "hermes_cli.codex_runtime_plugin_migration._query_codex_plugins",
+            "jimmy_cli.codex_runtime_plugin_migration._query_codex_plugins",
             fake_query,
         )
-        migrate({}, codex_home=tmp_path, discover_plugins=True, expose_hermes_tools=False)
+        migrate({}, codex_home=tmp_path, discover_plugins=True, expose_jimmy_tools=False)
         new_text = target.read_text()
         # Only ONE [plugins."tasks@openai-curated"] header should remain — inside
         # the managed block — not the original outside-the-block copy.
@@ -380,44 +380,44 @@ class TestStripUnmanagedPluginTables:
         tomllib.loads(new_text)
 
 
-# ---- Bug C: HERMES_HOME tempdir leak into ~/.codex/config.toml ----
+# ---- Bug C: JIMMY_HOME tempdir leak into ~/.codex/config.toml ----
 
 
-class TestHermesHomeLeakGuard:
+class TestJimmyHomeLeakGuard:
     """Regression tests for issue #26250 Bug C.
 
-    Previously ``_build_hermes_tools_mcp_entry()`` read ``HERMES_HOME``
+    Previously ``_build_jimmy_tools_mcp_entry()`` read ``JIMMY_HOME``
     directly from ``os.environ``, so a pytest ``monkeypatch.setenv`` would
     leak a transient tempdir path into the user's real ``~/.codex/config.toml``
-    once codex spawned the hermes-tools MCP subprocess.
+    once codex spawned the jimmy-tools MCP subprocess.
     """
 
 
 
 
-    def test_real_hermes_home_propagates(self, monkeypatch, tmp_path):
-        """A legitimate HERMES_HOME (not a tempdir path) DOES propagate so the
+    def test_real_jimmy_home_propagates(self, monkeypatch, tmp_path):
+        """A legitimate JIMMY_HOME (not a tempdir path) DOES propagate so the
         MCP subprocess sees the same config as the parent CLI."""
         # Use a path that looks real — under /Users or /home, not /var/folders.
         # We can't easily create one in the test, so just use a stable path
         # outside any tempdir-detector needle. The detector checks for tempdir
         # markers, not for path existence.
-        real_path = "/Users/alice/.hermes"
-        monkeypatch.setenv("HERMES_HOME", real_path)
-        entry = _build_hermes_tools_mcp_entry()
+        real_path = "/Users/alice/.jimmy"
+        monkeypatch.setenv("JIMMY_HOME", real_path)
+        entry = _build_jimmy_tools_mcp_entry()
         env = entry.get("env", {})
-        assert env.get("HERMES_HOME") == real_path
+        assert env.get("JIMMY_HOME") == real_path
 
-    def test_unset_hermes_home_omits_env_key(self, monkeypatch):
-        """When HERMES_HOME is unset in the environment, the MCP entry MUST
+    def test_unset_jimmy_home_omits_env_key(self, monkeypatch):
+        """When JIMMY_HOME is unset in the environment, the MCP entry MUST
         NOT bake in a resolved-default path. The codex subprocess should
-        inherit whatever HERMES_HOME its launcher (systemd, gateway, shell)
+        inherit whatever JIMMY_HOME its launcher (systemd, gateway, shell)
         sets at runtime, rather than being pinned to migrate-time defaults.
         Regression guard for issue #26250 follow-up review."""
-        monkeypatch.delenv("HERMES_HOME", raising=False)
-        entry = _build_hermes_tools_mcp_entry()
+        monkeypatch.delenv("JIMMY_HOME", raising=False)
+        entry = _build_jimmy_tools_mcp_entry()
         env = entry.get("env", {})
-        assert "HERMES_HOME" not in env, (
-            f"HERMES_HOME should not be set when env var is unset, got: "
-            f"{env.get('HERMES_HOME')!r}"
+        assert "JIMMY_HOME" not in env, (
+            f"JIMMY_HOME should not be set when env var is unset, got: "
+            f"{env.get('JIMMY_HOME')!r}"
         )

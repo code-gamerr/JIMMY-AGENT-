@@ -17,10 +17,10 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@hermes/plugin-sdk": ["./src/sdk/index.ts"],
-      "@hermes/shared/billing": ["../shared/src/billing-types.ts"],
-      "@hermes/shared/translucency": ["../shared/src/translucency.ts"],
-      "@hermes/shared": ["../shared/src/index.ts"]
+      "@jimmy/plugin-sdk": ["./src/sdk/index.ts"],
+      "@jimmy/shared/billing": ["../shared/src/billing-types.ts"],
+      "@jimmy/shared/translucency": ["../shared/src/translucency.ts"],
+      "@jimmy/shared": ["../shared/src/index.ts"]
     }
   },
   "include": ["src", "../shared/src"],

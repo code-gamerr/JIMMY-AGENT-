@@ -1,8 +1,8 @@
-"""Pydantic request/response models for the Hermes dashboard web server.
+"""Pydantic request/response models for the Jimmy dashboard web server.
 
-Extracted verbatim from ``hermes_cli/web_server.py`` (pure schema move).
+Extracted verbatim from ``jimmy_cli/web_server.py`` (pure schema move).
 ``web_server`` re-exports every name here, so existing imports like
-``from hermes_cli.web_server import ConfigUpdate`` keep working.
+``from jimmy_cli.web_server import ConfigUpdate`` keep working.
 """
 
 from __future__ import annotations
@@ -142,7 +142,7 @@ class ModelAssignment(BaseModel):
     # ``model.api_key`` (main slot) or ``auxiliary.<task>.api_key`` (aux
     # slots) — where the runtime resolvers read it — so a self-hosted
     # endpoint that requires auth works from the GUI. Mirrors the key the
-    # ``hermes model`` custom flow collects.
+    # ``jimmy model`` custom flow collects.
     api_key: str = ""
     confirm_expensive_model: bool = False
     profile: Optional[str] = None
@@ -510,7 +510,7 @@ class BackupRequest(BaseModel):
 
 class ImportRequest(BaseModel):
     archive: str
-    # Pass --force to `hermes import`. The spawned action runs with
+    # Pass --force to `jimmy import`. The spawned action runs with
     # stdin=DEVNULL, so the CLI's interactive "Continue? [y/N]" overwrite
     # prompt hits EOF and auto-aborts ("Aborted.", exit 1) whenever the
     # target already has a config — which it always does when the dashboard
@@ -584,8 +584,8 @@ class ProfileCreate(BaseModel):
     # Empty list = leave the seeded bundle untouched (legacy behaviour).
     keep_skills: List[str] = []
     # Skills-hub identifiers to install into the new profile. Installed async
-    # via a subprocess scoped to the profile (`hermes -p <name> skills install`)
-    # because skills_hub.SKILLS_DIR is import-time-bound and the HERMES_HOME
+    # via a subprocess scoped to the profile (`jimmy -p <name> skills install`)
+    # because skills_hub.SKILLS_DIR is import-time-bound and the JIMMY_HOME
     # override can't redirect it. Returns spawned PIDs for the UI to poll.
     hub_skills: List[str] = []
 
@@ -598,7 +598,7 @@ class ProfileExport(BaseModel):
     # Optional extra root-level files to stage into the archive, filename →
     # text content (e.g. desktop.json — the desktop appearance overlay).
     extra_files: Dict[str, str] = {}
-    # Where to write the archive. Empty → a staging path under HERMES_HOME.
+    # Where to write the archive. Empty → a staging path under JIMMY_HOME.
     output: str = ""
 
 

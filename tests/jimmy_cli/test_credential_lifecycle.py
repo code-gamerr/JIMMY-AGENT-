@@ -3,7 +3,7 @@
 A provider API key can live in .env, auth.json's credential_pool, and
 config.yaml mirrors at once. These tests drive the REAL dashboard endpoint
 handlers (PUT/DELETE /api/env) against real on-disk fixtures in a temp
-HERMES_HOME (tests/conftest.py isolation) and assert every store agrees
+JIMMY_HOME (tests/conftest.py isolation) and assert every store agrees
 afterwards.
 
 All fake secrets are constructed at runtime so no key-shaped literal ever
@@ -15,10 +15,10 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from hermes_cli.web_server import _SESSION_TOKEN, app
+from jimmy_cli.web_server import _SESSION_TOKEN, app
 
 client = TestClient(app)
-HEADERS = {"X-Hermes-Session-Token": _SESSION_TOKEN}
+HEADERS = {"X-Jimmy-Session-Token": _SESSION_TOKEN}
 
 # Runtime-constructed fake credentials (never literal key-shaped strings).
 FAKE_ZAI_KEY = "zk-" + "a" * 24
@@ -27,12 +27,12 @@ NEW_KEY = "zk-" + "c" * 24
 
 
 @pytest.fixture
-def hermes_home(monkeypatch, tmp_path):
-    """Fresh HERMES_HOME with .env + auth.json + config.yaml fixtures."""
+def jimmy_home(monkeypatch, tmp_path):
+    """Fresh JIMMY_HOME with .env + auth.json + config.yaml fixtures."""
     home = tmp_path / "cred_home"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    from hermes_cli.config import invalidate_env_cache
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    from jimmy_cli.config import invalidate_env_cache
 
     invalidate_env_cache()
     return home
@@ -42,7 +42,7 @@ def _write_env(home, **pairs):
     home.joinpath(".env").write_text(
         "".join(f"{k}={v}\n" for k, v in pairs.items()), encoding="utf-8"
     )
-    from hermes_cli.config import invalidate_env_cache
+    from jimmy_cli.config import invalidate_env_cache
 
     invalidate_env_cache()
 
@@ -89,10 +89,10 @@ def _zai_pool_fixture():
 
 
 
-def test_delete_clears_provider_models_cache(hermes_home):
-    _write_env(hermes_home, ZAI_API_KEY=FAKE_ZAI_KEY)
-    _write_auth(hermes_home, {"zai": [_zai_pool_fixture()["zai"][0]]})
-    cache_path = hermes_home / "provider_models_cache.json"
+def test_delete_clears_provider_models_cache(jimmy_home):
+    _write_env(jimmy_home, ZAI_API_KEY=FAKE_ZAI_KEY)
+    _write_auth(jimmy_home, {"zai": [_zai_pool_fixture()["zai"][0]]})
+    cache_path = jimmy_home / "provider_models_cache.json"
     cache_path.write_text(
         json.dumps({"zai": {"models": ["glm-5"], "ts": 0}}), encoding="utf-8"
     )
@@ -115,12 +115,12 @@ def _write_config(home, text):
     home.joinpath("config.yaml").write_text(text, encoding="utf-8")
 
 
-def test_update_rotates_config_yaml_model_mirror(hermes_home):
+def test_update_rotates_config_yaml_model_mirror(jimmy_home):
     old = "sk-oe-" + "f" * 24
     new = "sk-oe-" + "g" * 24
-    _write_env(hermes_home, OPENAI_API_KEY=old)
+    _write_env(jimmy_home, OPENAI_API_KEY=old)
     _write_config(
-        hermes_home,
+        jimmy_home,
         "model:\n"
         "  provider: custom\n"
         "  default: my-model\n"
@@ -134,11 +134,11 @@ def test_update_rotates_config_yaml_model_mirror(hermes_home):
     assert resp.status_code == 200
     assert "model.api_key" in resp.json().get("config_updates", [])
 
-    cfg_text = hermes_home.joinpath("config.yaml").read_text(encoding="utf-8")
+    cfg_text = jimmy_home.joinpath("config.yaml").read_text(encoding="utf-8")
     assert old not in cfg_text, "stale old key left in config.yaml (#62269)"
     assert new in cfg_text, "config.yaml mirror not rotated to the new key"
 
-    from hermes_cli.config import load_env
+    from jimmy_cli.config import load_env
 
     assert load_env()["OPENAI_API_KEY"] == new
 

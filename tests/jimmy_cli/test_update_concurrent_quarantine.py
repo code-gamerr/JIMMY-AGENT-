@@ -1,5 +1,5 @@
-"""Tests for issue #26670 — concurrent hermes.exe detection and improved
-quarantine retry / reboot-deferred fallback during `hermes update` on Windows.
+"""Tests for issue #26670 — concurrent jimmy.exe detection and improved
+quarantine retry / reboot-deferred fallback during `jimmy update` on Windows.
 
 These tests force ``_is_windows`` to return ``True`` via patching so the
 Windows-specific code paths can be exercised on any host.
@@ -17,22 +17,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hermes_cli import main as cli_main
+from jimmy_cli import main as cli_main
 
 
-# Tests in this module either exercise the REAL _detect_concurrent_hermes_instances
-# helper (and need the autouse stub in tests/hermes_cli/conftest.py disabled),
+# Tests in this module either exercise the REAL _detect_concurrent_jimmy_instances
+# helper (and need the autouse stub in tests/jimmy_cli/conftest.py disabled),
 # or supply their own explicit return value via patch.object. Mark the whole
 # module so the conftest fixture skips its default stub.
 pytestmark = pytest.mark.real_concurrent_gate
 
 
 # ---------------------------------------------------------------------------
-# _detect_concurrent_hermes_instances
+# _detect_concurrent_jimmy_instances
 # ---------------------------------------------------------------------------
 
 
-def _make_proc(pid: int, exe: str, name: str = "hermes.exe"):
+def _make_proc(pid: int, exe: str, name: str = "jimmy.exe"):
     """Build a duck-typed psutil Process stand-in with the .info dict."""
     proc = MagicMock()
     proc.info = {"pid": pid, "exe": exe, "name": name}
@@ -105,14 +105,14 @@ def test_detect_concurrent_parents_call_robust_to_one_bad_hop(_winp, tmp_path):
     ancestor independently, so one unreadable hop never strands the launcher.
     """
     scripts_dir = tmp_path
-    shim = scripts_dir / "hermes.exe"
+    shim = scripts_dir / "jimmy.exe"
     shim.write_bytes(b"")
     me = os.getpid()
     launcher_pid = me + 100
 
     rows = [
         _make_proc(me, str(shim), "python.exe"),
-        _make_proc(launcher_pid, str(shim), "hermes.exe"),
+        _make_proc(launcher_pid, str(shim), "jimmy.exe"),
     ]
     # ancestor_exe=None → every ancestor's .exe() raises OSError. The helper
     # must swallow it per-ancestor and not crash; the launcher won't be
@@ -123,10 +123,10 @@ def test_detect_concurrent_parents_call_robust_to_one_bad_hop(_winp, tmp_path):
         ancestor_exe=None,
     )
     with patch.dict(sys.modules, {"psutil": fake_psutil}):
-        result = cli_main._detect_concurrent_hermes_instances(scripts_dir)
+        result = cli_main._detect_concurrent_jimmy_instances(scripts_dir)
 
     # No crash; helper completes. (Degenerate stub: launcher exe unreadable.)
-    assert result == [(launcher_pid, "hermes.exe")]
+    assert result == [(launcher_pid, "jimmy.exe")]
 
 
 
@@ -139,22 +139,22 @@ def test_detect_concurrent_parents_call_robust_to_one_bad_hop(_winp, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _quarantine_running_hermes_exe — retry, then report
+# _quarantine_running_jimmy_exe — retry, then report
 # ---------------------------------------------------------------------------
 
 
 @patch.object(cli_main, "_is_windows", return_value=True)
 def test_quarantine_succeeds_first_attempt(_winp, tmp_path):
     """When the rename works immediately, no warning, single rename pair returned."""
-    shim = tmp_path / "hermes.exe"
+    shim = tmp_path / "jimmy.exe"
     shim.write_bytes(b"old")
 
-    pairs = cli_main._quarantine_running_hermes_exe(tmp_path)
+    pairs = cli_main._quarantine_running_jimmy_exe(tmp_path)
 
     assert len(pairs) == 1
     orig, quarantine = pairs[0]
     assert orig == shim
-    assert quarantine.name.startswith("hermes.exe.old.")
+    assert quarantine.name.startswith("jimmy.exe.old.")
     assert quarantine.exists()
     assert not shim.exists()
 
@@ -162,17 +162,17 @@ def test_quarantine_succeeds_first_attempt(_winp, tmp_path):
 @patch.object(cli_main, "_is_windows", return_value=True)
 def test_quarantine_reports_a_lock_it_cannot_break(_winp, tmp_path, capsys, monkeypatch):
     """Every retry failed: name the likely culprits, queue nothing for reboot."""
-    shim = tmp_path / "hermes.exe"
+    shim = tmp_path / "jimmy.exe"
     shim.write_bytes(b"locked")
 
     def always_fails(self, target):
         raise OSError(32, "The process cannot access the file (simulated lock)")
 
-    monkeypatch.setattr(cli_main, "_hermes_exe_shims", lambda d: [shim])
+    monkeypatch.setattr(cli_main, "_jimmy_exe_shims", lambda d: [shim])
     with patch.object(Path, "rename", always_fails), patch(
         "time.sleep", lambda *_a, **_k: None
     ):
-        pairs = cli_main._quarantine_running_hermes_exe(tmp_path)
+        pairs = cli_main._quarantine_running_jimmy_exe(tmp_path)
 
     captured = capsys.readouterr().out.lower()
 
@@ -197,7 +197,7 @@ def test_pause_windows_gateways_for_update_stops_profile_and_unmapped_pids(
     capsys,
 ):
     import gateway.status as status_mod
-    import hermes_cli.gateway as gateway_mod
+    import jimmy_cli.gateway as gateway_mod
 
     profile_home = tmp_path / "profiles" / "work"
     profile_home.mkdir(parents=True)
@@ -220,7 +220,7 @@ def test_pause_windows_gateways_for_update_stops_profile_and_unmapped_pids(
     monkeypatch.setattr(
         gateway_mod,
         "_capture_gateway_argv",
-        lambda pid: ["pythonw.exe", "-m", "hermes_cli.main", "gateway", "run"]
+        lambda pid: ["pythonw.exe", "-m", "jimmy_cli.main", "gateway", "run"]
         if pid == 202
         else None,
     )
@@ -241,7 +241,7 @@ def test_pause_windows_gateways_for_update_stops_profile_and_unmapped_pids(
         "unmapped": [
             {
                 "pid": 202,
-                "argv": ["pythonw.exe", "-m", "hermes_cli.main", "gateway", "run"],
+                "argv": ["pythonw.exe", "-m", "jimmy_cli.main", "gateway", "run"],
             }
         ],
     }
@@ -355,7 +355,7 @@ def test_pause_kill_set_covers_venv_guard_abort_set(
     the guard reported the venv-side launcher, so the update aborted forever
     despite a "successful" pause.
     """
-    import hermes_cli.gateway as gateway_mod
+    import jimmy_cli.gateway as gateway_mod
     import gateway.status as status_mod
 
     venv_exe = str(cli_main.PROJECT_ROOT / "venv" / "Scripts" / "python.exe")
@@ -429,7 +429,7 @@ def test_pause_kill_set_covers_venv_guard_abort_set(
 GATEWAY_ARGV = [
     r"C:\x\venv\Scripts\python.exe",
     "-m",
-    "hermes_cli.main",
+    "jimmy_cli.main",
     "gateway",
     "run",
 ]
@@ -486,7 +486,7 @@ def test_unreadable_argv_falls_back_to_the_captured_prefix(monkeypatch):
     anything else still refuses.
     """
     monkeypatch.setitem(sys.modules, "psutil", _fake_psutil_cmdlines({}))
-    gateway_prefix = r"venv\Scripts\python.exe -m hermes_cli.main gateway run"
+    gateway_prefix = r"venv\Scripts\python.exe -m jimmy_cli.main gateway run"
 
     assert cli_main._leftover_pausable_gateway_pids(
         [(300, "python.exe", gateway_prefix)]

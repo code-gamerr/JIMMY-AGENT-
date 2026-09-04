@@ -1,6 +1,6 @@
-"""``hermes plugins`` CLI subcommand — install, update, remove, and list plugins.
+"""``jimmy plugins`` CLI subcommand — install, update, remove, and list plugins.
 
-Plugins are installed from Git repositories into ``~/.hermes/plugins/``.
+Plugins are installed from Git repositories into ``~/.jimmy/plugins/``.
 Supports full URLs and ``owner/repo`` shorthand (resolves to GitHub).
 
 After install, if the plugin ships an ``after-install.md`` file it is
@@ -8,7 +8,7 @@ rendered with Rich Markdown.  Otherwise a default confirmation is shown.
 """
 
 from __future__ import annotations
-from hermes_cli.cli_output import line_input
+from jimmy_cli.cli_output import line_input
 
 import functools
 import importlib.metadata
@@ -24,10 +24,10 @@ import urllib.parse
 from pathlib import Path
 from typing import Any, Optional
 
-from hermes_constants import get_hermes_home
-from hermes_cli._subprocess_compat import noninteractive_git_env
-from hermes_cli.config import cfg_get
-from hermes_cli.secret_prompt import masked_secret_prompt
+from jimmy_constants import get_jimmy_home
+from jimmy_cli._subprocess_compat import noninteractive_git_env
+from jimmy_cli.config import cfg_get
+from jimmy_cli.secret_prompt import masked_secret_prompt
 from utils import atomic_write_text
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 def _resolve_git_executable() -> Optional[str]:
     """Resolve a git binary for subprocess use when ``PATH`` may be minimal.
 
-    Matches other Hermes subprocess resolution: :func:`shutil.which` first,
+    Matches other Jimmy subprocess resolution: :func:`shutil.which` first,
     then common Git for Windows install paths and POSIX defaults.
     """
     found = shutil.which("git")
@@ -91,7 +91,7 @@ def _scan_on_install_enabled() -> bool:
     scanning). Disable via ``plugins.scan_on_install: false`` in config.yaml.
     """
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         return bool(cfg_get(config, "plugins", "scan_on_install", default=True))
     except Exception:
@@ -147,7 +147,7 @@ _SUPPORTED_MANIFEST_VERSION = 1
 
 def _plugins_dir() -> Path:
     """Return the user plugins directory, creating it if needed."""
-    plugins = get_hermes_home() / "plugins"
+    plugins = get_jimmy_home() / "plugins"
     plugins.mkdir(parents=True, exist_ok=True)
     return plugins
 
@@ -170,7 +170,7 @@ def _sanitize_plugin_name(
     trailing slashes are stripped, and the resolved target must still live
     inside *plugins_dir*. Install paths leave this at the default ``False``
     because a freshly-cloned plugin always lands top-level under
-    ``~/.hermes/plugins/<name>/``.
+    ``~/.jimmy/plugins/<name>/``.
     """
     if not name:
         raise ValueError("Plugin name must not be empty.")
@@ -343,7 +343,7 @@ def _read_manifest(plugin_dir: Path) -> dict:
         if not portable_file.exists() and not portable_file.is_symlink():
             return {}
         try:
-            from hermes_cli.agent_plugins import read_agent_plugin_manifest
+            from jimmy_cli.agent_plugins import read_agent_plugin_manifest
 
             manifest, _ = read_agent_plugin_manifest(plugin_dir)
             return manifest
@@ -382,12 +382,12 @@ def _copy_example_files(plugin_dir: Path, console) -> None:
 
 
 def _missing_requires_env_names(manifest: dict) -> list[str]:
-    """Return declared ``requires_env`` names that are unset in ``~/.hermes/.env``."""
+    """Return declared ``requires_env`` names that are unset in ``~/.jimmy/.env``."""
     requires_env = manifest.get("requires_env") or []
     if not requires_env:
         return []
 
-    from hermes_cli.config import get_env_value
+    from jimmy_cli.config import get_env_value
 
     env_specs: list[dict] = []
     for entry in requires_env:
@@ -402,7 +402,7 @@ def _missing_requires_env_names(manifest: dict) -> list[str]:
 def _print_python_dependencies(manifest: dict, console) -> None:
     """Surface declared python_dependencies at install time (#64165).
 
-    Declaration seam ONLY — Hermes never auto-installs plugin pip
+    Declaration seam ONLY — Jimmy never auto-installs plugin pip
     dependencies (isolation design deferred; see #64165 / #15220). We print
     the declared requirements with a copy-pasteable install hint.
     """
@@ -449,8 +449,8 @@ def _prompt_plugin_env_vars(manifest: dict, console) -> None:
     if not requires_env:
         return
 
-    from hermes_cli.config import get_env_value, save_env_value  # noqa: F811
-    from hermes_constants import display_hermes_home
+    from jimmy_cli.config import get_env_value, save_env_value  # noqa: F811
+    from jimmy_constants import display_jimmy_home
 
     # Normalise to list-of-dicts
     env_specs: list[dict] = []
@@ -487,15 +487,15 @@ def _prompt_plugin_env_vars(manifest: dict, console) -> None:
             else:
                 value = line_input(f"  {name}: ").strip()
         except (EOFError, KeyboardInterrupt):
-            console.print(f"\n[dim]  Skipped (you can set these later in {display_hermes_home()}/.env)[/dim]")
+            console.print(f"\n[dim]  Skipped (you can set these later in {display_jimmy_home()}/.env)[/dim]")
             return
 
         if value:
             save_env_value(name, value)
             os.environ[name] = value
-            console.print(f"  [green]✓[/green] Saved to {display_hermes_home()}/.env")
+            console.print(f"  [green]✓[/green] Saved to {display_jimmy_home()}/.env")
         else:
-            console.print(f"  [dim]  Skipped (set {name} in {display_hermes_home()}/.env later)[/dim]")
+            console.print(f"  [dim]  Skipped (set {name} in {display_jimmy_home()}/.env later)[/dim]")
 
     console.print()
 
@@ -561,7 +561,7 @@ _EXACT_COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _INSTALL_METADATA_FILE = ".install-metadata.json"
 
 def _install_metadata_path() -> Path:
-    return get_hermes_home() / "plugins" / _INSTALL_METADATA_FILE
+    return get_jimmy_home() / "plugins" / _INSTALL_METADATA_FILE
 
 
 def _read_install_metadata() -> dict[str, dict[str, object]]:
@@ -786,7 +786,7 @@ def _install_plugin_core(
         ).is_symlink()
         if not has_native_manifest and has_portable_manifest:
             try:
-                from hermes_cli.agent_plugins import read_agent_plugin_manifest
+                from jimmy_cli.agent_plugins import read_agent_plugin_manifest
 
                 manifest, diagnostics = read_agent_plugin_manifest(tmp_target)
                 for diagnostic in diagnostics:
@@ -815,12 +815,12 @@ def _install_plugin_core(
                     f"'{mv}' (expected an integer).",
                 ) from None
             if mv_int > _SUPPORTED_MANIFEST_VERSION:
-                from hermes_cli.config import recommended_update_command
+                from jimmy_cli.config import recommended_update_command
 
                 raise PluginOperationError(
                     f"Plugin '{plugin_name}' requires manifest_version {mv}, "
                     f"but this installer only supports up to {_SUPPORTED_MANIFEST_VERSION}. "
-                    f"Run {recommended_update_command()} to update Hermes.",
+                    f"Run {recommended_update_command()} to update Jimmy.",
                 ) from None
 
         # Security scan the clone BEFORE anything is moved into place
@@ -838,7 +838,7 @@ def _install_plugin_core(
         if target.exists() and not force:
             raise PluginOperationError(
                 f"Plugin '{plugin_name}' already exists. Use force reinstall "
-                f"or run `hermes plugins update {plugin_name}`."
+                f"or run `jimmy plugins update {plugin_name}`."
             )
         prior = old_metadata.get(plugin_name)
         if (
@@ -911,7 +911,7 @@ def _resolve_index_name(identifier: str, console) -> tuple[str, Optional[str]]:
     is an exact 40-character commit SHA (the pin format the installer
     accepts); tag refs are surfaced as advisory output instead.
     """
-    from hermes_cli.plugin_index import SECURITY_FOOTER, load_index, resolve_name
+    from jimmy_cli.plugin_index import SECURITY_FOOTER, load_index, resolve_name
 
     entries, source = load_index()
     entry, candidates = resolve_name(entries, identifier)
@@ -927,7 +927,7 @@ def _resolve_index_name(identifier: str, console) -> tuple[str, Optional[str]]:
         else:
             console.print(
                 f"[red]Error:[/red] Plugin '{identifier}' was not found in the "
-                f"community index ({source}). Use `hermes plugins search <term>` to "
+                f"community index ({source}). Use `jimmy plugins search <term>` to "
                 "browse, or install directly with an owner/repo identifier."
             )
         sys.exit(1)
@@ -1026,7 +1026,7 @@ def cmd_install(
     ).exists():
         console.print(
             f"[yellow]Warning:[/yellow] {installed_name} doesn't contain plugin.yaml, "
-            f"plugin.json, or __init__.py. It may not be a valid Hermes plugin.",
+            f"plugin.json, or __init__.py. It may not be a valid Jimmy plugin.",
         )
 
     _prompt_plugin_env_vars(installed_manifest, console)
@@ -1061,7 +1061,7 @@ def cmd_install(
     else:
         console.print(
             f"[dim]Plugin installed but not enabled. "
-            f"Run `hermes plugins enable {installed_name}` to activate.[/dim]",
+            f"Run `jimmy plugins enable {installed_name}` to activate.[/dim]",
         )
 
     # Capability consent (#64228): if the manifest declares capabilities,
@@ -1076,7 +1076,7 @@ def cmd_install(
         )
 
     console.print("[dim]Restart the gateway for the plugin to take effect:[/dim]")
-    console.print("[dim]  hermes gateway restart[/dim]")
+    console.print("[dim]  jimmy gateway restart[/dim]")
     console.print()
 
 
@@ -1105,7 +1105,7 @@ def cmd_update(name: str) -> None:
         console.print(
             f"[red]Error:[/red] Plugin '{name}' is pinned to "
             f"{install_record.get('revision')}. To move it, run "
-            f"`hermes plugins install {recorded_source} --force "
+            f"`jimmy plugins install {recorded_source} --force "
             "--ref <40-character commit SHA>`."
         )
         sys.exit(1)
@@ -1160,7 +1160,7 @@ def cmd_update(name: str) -> None:
                     _save_disabled_set(disabled)
                 console.print(
                     f"[red]Plugin '{name}' has been disabled.[/red] Review the "
-                    f"findings, then re-enable with `hermes plugins enable {name}` "
+                    f"findings, then re-enable with `jimmy plugins enable {name}` "
                     f"if you trust them.",
                 )
 
@@ -1183,7 +1183,7 @@ def cmd_update(name: str) -> None:
         updated_manifest, plugin_id
     )
     if declared_caps:
-        from hermes_cli.plugin_capabilities import (
+        from jimmy_cli.plugin_capabilities import (
             declared_set_changed,
             pending_capabilities,
         )
@@ -1261,7 +1261,7 @@ def _get_disabled_set() -> set:
     listed in ``plugins.enabled``.
     """
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         disabled = cfg_get(config, "plugins", "disabled", default=[])
         return set(disabled) if isinstance(disabled, list) else set()
@@ -1271,7 +1271,7 @@ def _get_disabled_set() -> set:
 
 def _save_disabled_set(disabled: set) -> None:
     """Write the disabled plugins list to config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     config = load_config()
     if "plugins" not in config:
         config["plugins"] = {}
@@ -1285,7 +1285,7 @@ _BASIC_AUTH_PLUGIN_KEYS = frozenset({"basic", "dashboard_auth/basic"})
 def ensure_basic_auth_plugin_enabled_in_config(cfg: dict) -> bool:
     """Re-enable the bundled basic dashboard-auth plugin in *cfg*.
 
-    ``hermes setup`` / ``hermes plugins disable basic`` can park the plugin
+    ``jimmy setup`` / ``jimmy plugins disable basic`` can park the plugin
     in ``plugins.disabled`` while ``dashboard.basic_auth`` is configured.
     The basic provider is a bundled backend that still respects the
     deny-list, so password auth silently fails until the block is removed.
@@ -1313,7 +1313,7 @@ def _get_enabled_set() -> set:
     the key is missing (same behaviour as "nothing enabled yet").
     """
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         plugins_cfg = config.get("plugins", {})
         if not isinstance(plugins_cfg, dict):
@@ -1326,7 +1326,7 @@ def _get_enabled_set() -> set:
 
 def _save_enabled_set(enabled: set) -> None:
     """Write the enabled plugins list to config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     config = load_config()
     if "plugins" not in config:
         config["plugins"] = {}
@@ -1342,7 +1342,7 @@ def _resolve_plugin_key(name: str) -> Optional[str]:
     returns the canonical key the loader gates on (``manifest.key`` or, for a
     flat plugin, the bare name). Returns ``None`` when no plugin matches.
 
-    This is the single normalization point so ``hermes plugins enable`` /
+    This is the single normalization point so ``jimmy plugins enable`` /
     ``disable`` write the same key that ``PluginManager`` matches against —
     nested category plugins (e.g. ``observability/langfuse``) included.
     """
@@ -1384,7 +1384,7 @@ def _resolve_plugin_key_and_source(name: str) -> Optional[tuple]:
 
 def _set_plugin_entry_flag(plugin_id: str, key: str, value: bool) -> None:
     """Write ``plugins.entries.<plugin_id>.<key> = value`` into config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     config = load_config()
     plugins_cfg = config.setdefault("plugins", {})
     if not isinstance(plugins_cfg, dict):
@@ -1413,7 +1413,7 @@ def cmd_enable(name: str, allow_tool_override: Optional[bool] = None) -> None:
     trusted and never prompted.
     """
     from rich.console import Console
-    from hermes_cli.relay_plugin_cutover import (
+    from jimmy_cli.relay_plugin_cutover import (
         LEGACY_RELAY_PLUGIN_KEYS,
         RELAY_PLUGINS_CONFIG_ENV,
     )
@@ -1422,7 +1422,7 @@ def cmd_enable(name: str, allow_tool_override: Optional[bool] = None) -> None:
     if name in LEGACY_RELAY_PLUGIN_KEYS:
         console.print(
             f"[red]Plugin '{name}' was removed.[/red] Relay lifecycle is owned "
-            f"by Hermes core; configure {RELAY_PLUGINS_CONFIG_ENV} instead."
+            f"by Jimmy core; configure {RELAY_PLUGINS_CONFIG_ENV} instead."
         )
         sys.exit(1)
 
@@ -1437,7 +1437,7 @@ def cmd_enable(name: str, allow_tool_override: Optional[bool] = None) -> None:
     if key in LEGACY_RELAY_PLUGIN_KEYS:
         console.print(
             f"[red]Plugin '{key}' was removed.[/red] Relay lifecycle is owned "
-            f"by Hermes core; configure {RELAY_PLUGINS_CONFIG_ENV} instead."
+            f"by Jimmy core; configure {RELAY_PLUGINS_CONFIG_ENV} instead."
         )
         sys.exit(1)
 
@@ -1474,7 +1474,7 @@ def cmd_enable(name: str, allow_tool_override: Optional[bool] = None) -> None:
         console.print(f"[dim]Plugin '{key}' is already enabled.[/dim]")
 
     # Built-in tool override is a privileged grant. Bundled plugins ship with
-    # Hermes core and are trusted; every other source needs operator opt-in.
+    # Jimmy core and are trusted; every other source needs operator opt-in.
     if source == "bundled":
         return
 
@@ -1497,7 +1497,7 @@ def cmd_enable(name: str, allow_tool_override: Optional[bool] = None) -> None:
 
 def _declared_capabilities_from_manifest(manifest: dict, plugin_name: str = "?") -> list:
     """Extract + normalize the ``capabilities:`` declaration from a manifest."""
-    from hermes_cli.plugin_capabilities import parse_declared_capabilities
+    from jimmy_cli.plugin_capabilities import parse_declared_capabilities
 
     return parse_declared_capabilities(
         (manifest or {}).get("capabilities"), plugin_name
@@ -1510,7 +1510,7 @@ def _declared_capabilities_for_key(key: str) -> list:
         # entry = (name, version, description, source, dir_path, key)
         if entry[5] == key or entry[0] == key:
             if entry[3] == "entrypoint":
-                from hermes_cli.plugins import discover_entrypoint_manifests
+                from jimmy_cli.plugins import discover_entrypoint_manifests
 
                 for manifest in discover_entrypoint_manifests():
                     if key in (manifest.key, manifest.name):
@@ -1526,7 +1526,7 @@ def _declared_capabilities_for_key(key: str) -> list:
 
 def _print_capability_list(console, capabilities: list) -> None:
     """Render the consent screen body: one line per capability."""
-    from hermes_cli.plugin_capabilities import CAPABILITY_REGISTRY
+    from jimmy_cli.plugin_capabilities import CAPABILITY_REGISTRY
 
     for cap in capabilities:
         spec = CAPABILITY_REGISTRY.get(cap)
@@ -1556,7 +1556,7 @@ def _run_capability_consent(
 
     Returns True when consent was granted.
     """
-    from hermes_cli.plugin_capabilities import (
+    from jimmy_cli.plugin_capabilities import (
         pending_capabilities,
         record_consent,
     )
@@ -1585,8 +1585,8 @@ def _run_capability_consent(
         console.print(
             "  [yellow]Non-interactive session: capabilities NOT granted "
             "(fail closed).[/yellow] Run "
-            f"`hermes plugins capabilities {plugin_id}` to review and "
-            f"`hermes plugins enable {plugin_id}` to grant interactively."
+            f"`jimmy plugins capabilities {plugin_id}` to review and "
+            f"`jimmy plugins enable {plugin_id}` to grant interactively."
         )
         return False
 
@@ -1605,16 +1605,16 @@ def _run_capability_consent(
     console.print(
         f"  [dim]Declined. {plugin_id} stays enabled with these capabilities "
         "off; it should degrade gracefully (ctx.has_capability()). Re-run "
-        f"`hermes plugins enable {plugin_id}` to grant later.[/dim]"
+        f"`jimmy plugins enable {plugin_id}` to grant later.[/dim]"
     )
     return False
 
 
 def cmd_capabilities(name: Optional[str] = None) -> None:
-    """``hermes plugins capabilities [<id>]`` — declared vs granted."""
+    """``jimmy plugins capabilities [<id>]`` — declared vs granted."""
     from rich.console import Console
 
-    from hermes_cli.plugin_capabilities import granted_capabilities
+    from jimmy_cli.plugin_capabilities import granted_capabilities
 
     console = Console()
 
@@ -1628,7 +1628,7 @@ def cmd_capabilities(name: Optional[str] = None) -> None:
         granted = granted_capabilities(key)
         # Legacy grants surface too: report capabilities live via deprecated
         # allow_* keys so `capabilities` shows the true effective state.
-        from hermes_cli.plugin_capabilities import (
+        from jimmy_cli.plugin_capabilities import (
             CAPABILITY_REGISTRY,
             plugin_capability_granted,
         )
@@ -1702,7 +1702,7 @@ def _resolve_tool_override_grant(
     else:
         console.print(
             f"[dim]{key} may not override built-in tools. Re-run "
-            f"`hermes plugins enable {key} --allow-tool-override` to grant "
+            f"`jimmy plugins enable {key} --allow-tool-override` to grant "
             "this later.[/dim]"
         )
 
@@ -1757,7 +1757,7 @@ def _read_manifest_info(d: Path, prefix: str):
         if not portable_file.exists() and not portable_file.is_symlink():
             return None
         try:
-            from hermes_cli.agent_plugins import read_agent_plugin_manifest
+            from jimmy_cli.agent_plugins import read_agent_plugin_manifest
 
             manifest, _ = read_agent_plugin_manifest(d)
             name = manifest["name"]
@@ -1880,7 +1880,7 @@ def _discover_all_plugins() -> list:
     # and model-providers/ — model providers load through the dedicated
     # provider registry (providers/__init__.py), not the general PluginManager
     # opt-in surface, so listing them as toggleable plugins is misleading.
-    from hermes_cli.plugins import get_bundled_plugins_dir
+    from jimmy_cli.plugins import get_bundled_plugins_dir
     repo_plugins = get_bundled_plugins_dir()
     for base, source, skip in (
         (repo_plugins, "bundled", {"memory", "context_engine", "model-providers"}),
@@ -1895,13 +1895,13 @@ def _discover_all_plugins() -> list:
 
 
 def _discover_entrypoint_plugins() -> list[tuple[str, str, str, str]]:
-    """Return plugin entries advertised through ``hermes_agent.plugins``.
+    """Return plugin entries advertised through ``jimmy_agent.plugins``.
 
     Entry-point plugins are installed as Python packages, so they do not have a
-    plugin directory under ``~/.hermes/plugins``. Include package metadata here
-    so ``hermes plugins list`` can show and enable them.
+    plugin directory under ``~/.jimmy/plugins``. Include package metadata here
+    so ``jimmy plugins list`` can show and enable them.
     """
-    from hermes_cli.plugins import ENTRY_POINTS_GROUP
+    from jimmy_cli.plugins import ENTRY_POINTS_GROUP
 
     try:
         eps = importlib.metadata.entry_points()
@@ -1938,7 +1938,7 @@ def _plugin_status(name: str, enabled: set, disabled: set, key: str = "") -> str
 
 
 def _filter_plugin_entries(entries: list, args: Any, enabled: set, disabled: set) -> list:
-    """Apply ``hermes plugins list`` CLI filters."""
+    """Apply ``jimmy plugins list`` CLI filters."""
     filtered = entries
     if getattr(args, "no_bundled", False) or getattr(args, "user", False):
         filtered = [entry for entry in filtered if entry[3] != "bundled"]
@@ -1959,7 +1959,7 @@ def cmd_list(args: Any | None = None) -> None:
     entries = _discover_all_plugins()
     if not entries:
         console.print("[dim]No plugins installed.[/dim]")
-        console.print("[dim]Install with:[/dim] hermes plugins install owner/repo")
+        console.print("[dim]Install with:[/dim] jimmy plugins install owner/repo")
         return
 
     enabled = _get_enabled_set()
@@ -2010,9 +2010,9 @@ def cmd_list(args: Any | None = None) -> None:
     console.print()
     console.print(table)
     console.print()
-    console.print("[dim]Compact view:[/dim] hermes plugins list --plain --no-bundled")
-    console.print("[dim]Interactive toggle:[/dim] hermes plugins")
-    console.print("[dim]Enable/disable:[/dim] hermes plugins enable/disable <name>")
+    console.print("[dim]Compact view:[/dim] jimmy plugins list --plain --no-bundled")
+    console.print("[dim]Interactive toggle:[/dim] jimmy plugins")
+    console.print("[dim]Enable/disable:[/dim] jimmy plugins enable/disable <name>")
     console.print("[dim]Plugins are opt-in by default — only 'enabled' plugins load.[/dim]")
 
 
@@ -2034,7 +2034,7 @@ def _discover_context_engines() -> list[tuple[str, str]]:
     """Return [(name, description), ...] for available context engines.
 
     Includes repo-shipped engines from ``plugins/context_engine/`` AND
-    plugin-registered engines (third-party engines installed as Hermes
+    plugin-registered engines (third-party engines installed as Jimmy
     plugins via ``ctx.register_context_engine``). Repo-shipped descriptions
     win when a plugin-registered engine collides on name.
     """
@@ -2051,7 +2051,7 @@ def _discover_context_engines() -> list[tuple[str, str]]:
         pass
 
     try:
-        from hermes_cli.plugins import discover_plugins, get_plugin_context_engine
+        from jimmy_cli.plugins import discover_plugins, get_plugin_context_engine
         discover_plugins()
         plugin_engine = get_plugin_context_engine()
         if plugin_engine and getattr(plugin_engine, "name", None) and plugin_engine.name not in seen:
@@ -2065,7 +2065,7 @@ def _discover_context_engines() -> list[tuple[str, str]]:
 def _get_current_memory_provider() -> str:
     """Return the current memory.provider from config (empty = built-in)."""
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         return cfg_get(config, "memory", "provider", default="") or ""
     except Exception:
@@ -2075,7 +2075,7 @@ def _get_current_memory_provider() -> str:
 def _get_current_context_engine() -> str:
     """Return the current context.engine from config."""
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         config = load_config()
         return cfg_get(config, "context", "engine", default="compressor") or "compressor"
     except Exception:
@@ -2084,7 +2084,7 @@ def _get_current_context_engine() -> str:
 
 def _save_memory_provider(name: str) -> None:
     """Persist memory.provider to config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     config = load_config()
     if "memory" not in config:
         config["memory"] = {}
@@ -2094,7 +2094,7 @@ def _save_memory_provider(name: str) -> None:
 
 def _save_context_engine(name: str) -> None:
     """Persist context.engine to config.yaml."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     config = load_config()
     if "context" not in config:
         config["context"] = {}
@@ -2104,7 +2104,7 @@ def _save_context_engine(name: str) -> None:
 
 def _configure_memory_provider() -> bool:
     """Launch a radio picker for memory providers. Returns True if changed."""
-    from hermes_cli.curses_ui import curses_radiolist
+    from jimmy_cli.curses_ui import curses_radiolist
 
     current = _get_current_memory_provider()
     providers = _discover_memory_providers()
@@ -2142,7 +2142,7 @@ def _configure_memory_provider() -> bool:
 
 def _configure_context_engine() -> bool:
     """Launch a radio picker for context engines. Returns True if changed."""
-    from hermes_cli.curses_ui import curses_radiolist
+    from jimmy_cli.curses_ui import curses_radiolist
 
     current = _get_current_context_engine()
     engines = _discover_context_engines()
@@ -2204,7 +2204,7 @@ def cmd_show(name: str) -> None:
 
     if match is None:
         console.print(f"[red]Plugin '{name}' not found.[/red]")
-        console.print("[dim]List installed plugins:[/dim] hermes plugins list")
+        console.print("[dim]List installed plugins:[/dim] jimmy plugins list")
         sys.exit(1)
 
     pname, version, description, source, dir_path, key = match
@@ -2248,7 +2248,7 @@ def cmd_toggle() -> None:
     # canonical key (``web/firecrawl``), while the manifest name may differ
     # (``web-firecrawl``). Persisting the bare name here caused the two
     # forms to drift: the menu would write ``web-firecrawl`` to
-    # plugins.disabled, but ``hermes plugins enable web/firecrawl`` cleared
+    # plugins.disabled, but ``jimmy plugins enable web/firecrawl`` cleared
     # only the key — so "explicit disable wins" kept a bundled backend off
     # forever (pi314's #40190 symptom). Keys keep every surface aligned.
     plugin_keys = []
@@ -2285,7 +2285,7 @@ def cmd_toggle() -> None:
 
     if not has_plugins and not has_categories:
         console.print("[dim]No plugins installed and no provider categories available.[/dim]")
-        console.print("[dim]Install with:[/dim] hermes plugins install owner/repo")
+        console.print("[dim]Install with:[/dim] jimmy plugins install owner/repo")
         return
 
     # Non-TTY fallback
@@ -2306,7 +2306,7 @@ def cmd_toggle() -> None:
 def _run_composite_ui(curses, plugin_keys, plugin_labels, plugin_selected,
                       disabled, categories, console):
     """Custom curses screen with checkboxes + category action rows."""
-    from hermes_cli.curses_ui import flush_stdin
+    from jimmy_cli.curses_ui import flush_stdin
 
     chosen = set(plugin_selected)
     n_plugins = len(plugin_keys)
@@ -2573,7 +2573,7 @@ def _run_composite_ui(curses, plugin_keys, plugin_labels, plugin_selected,
 def _run_composite_fallback(plugin_keys, plugin_labels, plugin_selected,
                             disabled, categories, console):
     """Text-based fallback for the composite plugins UI."""
-    from hermes_cli.colors import Colors, color
+    from jimmy_cli.colors import Colors, color
 
     print(color("\n  Plugins", Colors.YELLOW))
 
@@ -2720,7 +2720,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
 
     # Check the plugin manager for tools this plugin registered
     try:
-        from hermes_cli.plugins import discover_plugins, get_plugin_manager
+        from jimmy_cli.plugins import discover_plugins, get_plugin_manager
         discover_plugins()  # idempotent — ensures plugins are loaded
         manager = get_plugin_manager()
         for _key, loaded in manager._plugins.items():
@@ -2735,7 +2735,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
 
     # Fallback: read provides_tools from manifest on disk and query registry
     try:
-        from hermes_cli.plugins import get_bundled_plugins_dir
+        from jimmy_cli.plugins import get_bundled_plugins_dir
         for base in (get_bundled_plugins_dir(), _plugins_dir()):
             if not base.is_dir():
                 continue
@@ -2761,7 +2761,7 @@ def _toggle_plugin_toolset(name: str, *, enable: bool) -> None:
     if not toolset_key:
         return
 
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     config = load_config()
     platform_toolsets = config.get("platform_toolsets")
@@ -2824,7 +2824,7 @@ def dashboard_set_agent_plugin_enabled(name: str, *, enabled: bool) -> dict[str,
 
 
 def _user_installed_plugin_dir(name: str) -> Optional[Path]:
-    """Resolved path under ``~/.hermes/plugins/<name>`` if it exists."""
+    """Resolved path under ``~/.jimmy/plugins/<name>`` if it exists."""
     plugins_dir = _plugins_dir()
     try:
         target = _sanitize_plugin_name(name, plugins_dir, allow_subdir=True)
@@ -2834,7 +2834,7 @@ def _user_installed_plugin_dir(name: str) -> Optional[Path]:
 
 
 def dashboard_update_user_plugin(name: str) -> dict[str, Any]:
-    """``git pull`` inside ``~/.hermes/plugins/<name>``."""
+    """``git pull`` inside ``~/.jimmy/plugins/<name>``."""
     target = _user_installed_plugin_dir(name)
     if target is None:
         return {
@@ -2853,7 +2853,7 @@ def dashboard_update_user_plugin(name: str) -> dict[str, Any]:
             "ok": False,
             "error": (
                 f"Plugin '{name}' is pinned to {install_record.get('revision')}; "
-                f"run `hermes plugins install {recorded_source} --force "
+                f"run `jimmy plugins install {recorded_source} --force "
                 "--ref <40-character commit SHA>` to move it."
             ),
         }
@@ -2875,7 +2875,7 @@ def dashboard_update_user_plugin(name: str) -> dict[str, Any]:
             metadata[target.name] = install_record
             _write_install_metadata(metadata)
 
-    # Sibling of the CLI ``hermes plugins update`` path: drop bytecode
+    # Sibling of the CLI ``jimmy plugins update`` path: drop bytecode
     # compiled from the pre-pull plugin revision.
     _clear_plugin_bytecode(target)
 
@@ -2890,7 +2890,7 @@ def _clear_plugin_bytecode(target: Path) -> int:
     """Remove ``__pycache__`` dirs under a just-updated plugin checkout.
 
     Plugin dirs live outside the main repo, so the launch-time checkout
-    fingerprint sweep in ``hermes_cli.main`` never covers them. After a
+    fingerprint sweep in ``jimmy_cli.main`` never covers them. After a
     ``git pull`` changes a plugin's ``.py`` files, stale bytecode here can
     produce the same ImportError class as #6207/#60242 in whichever
     process imports the plugin next. Never raises.
@@ -2939,7 +2939,7 @@ def _git_pull_plugin_dir(target: Path) -> tuple[bool, str]:
     would be overwritten by merge" — making the plugin permanently
     un-updatable until they hand-run git. Same UX class Factory Droid fixed
     in v0.188 ("Updating a plugin marketplace now succeeds when its checkout
-    has local changes"), and the same autostash approach ``hermes update``
+    has local changes"), and the same autostash approach ``jimmy update``
     already uses for the main checkout (PR #70161).
 
     Flow: clean tree → plain pull (unchanged). Dirty tree → stash push
@@ -2962,7 +2962,7 @@ def _git_pull_plugin_dir(target: Path) -> tuple[bool, str]:
             push = _run_plugin_git(
                 git_exe, target,
                 "stash", "push", "--include-untracked",
-                "-m", "hermes-plugin-update-autostash",
+                "-m", "jimmy-plugin-update-autostash",
             )
             post_stash = _stash_ref(git_exe, target)
             stash_created = bool(post_stash) and post_stash != pre_stash
@@ -3028,7 +3028,7 @@ def _git_pull_plugin_dir(target: Path) -> tuple[bool, str]:
 
 
 def dashboard_remove_user_plugin(name: str) -> dict[str, Any]:
-    """Delete a plugin tree under ``~/.hermes/plugins/`` only."""
+    """Delete a plugin tree under ``~/.jimmy/plugins/`` only."""
     plugins_dir = _plugins_dir()
     for n, _ver, _d, src, _path, _key in _discover_all_plugins():
         if n == name and src == "bundled":
@@ -3052,7 +3052,7 @@ def cmd_plugin_doctor(target: str = ".", *, ci: bool = False) -> None:
     """Validate one plugin through runtime discovery and registration."""
     from rich.console import Console
 
-    from hermes_cli.plugin_dev import doctor_plugin
+    from jimmy_cli.plugin_dev import doctor_plugin
 
     report = doctor_plugin(target)
     Console().print(report.format_text())
@@ -3070,7 +3070,7 @@ def cmd_search(
     """Search the community plugin index (fuzzy on name/description/tags)."""
     from rich.console import Console
 
-    from hermes_cli.plugin_index import (
+    from jimmy_cli.plugin_index import (
         SECURITY_FOOTER,
         load_index,
         search_index,
@@ -3114,12 +3114,12 @@ def cmd_search(
             desc = desc[:67] + "..."
         table.add_row(e.name, desc, e.author, ", ".join(e.tags))
     console.print(table)
-    console.print(f"[dim]Index source: {source}. Install: hermes plugins install <name>[/dim]")
+    console.print(f"[dim]Index source: {source}. Install: jimmy plugins install <name>[/dim]")
     console.print(f"[dim]{SECURITY_FOOTER}[/dim]")
 
 
 def plugins_command(args) -> None:
-    """Dispatch hermes plugins subcommands."""
+    """Dispatch jimmy plugins subcommands."""
     action = getattr(args, "plugins_action", None)
 
     if action == "install":
@@ -3164,7 +3164,7 @@ def plugins_command(args) -> None:
     elif action == "doctor":
         cmd_plugin_doctor(args.target, ci=getattr(args, "ci", False))
     elif action == "pack":
-        from hermes_cli.plugin_packs import pack_command
+        from jimmy_cli.plugin_packs import pack_command
 
         pack_command(args)
     elif action in {"show", "info"}:

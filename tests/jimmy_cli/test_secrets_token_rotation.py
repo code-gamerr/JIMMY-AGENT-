@@ -1,4 +1,4 @@
-"""Tests for `hermes secrets bitwarden token` / `hermes secrets onepassword token`.
+"""Tests for `jimmy secrets bitwarden token` / `jimmy secrets onepassword token`.
 
 The rotation command must: verify the candidate token BEFORE persisting,
 never touch .env on a rejected token, store + clear caches on success,
@@ -12,8 +12,8 @@ from unittest import mock
 
 import pytest
 
-from hermes_cli import onepassword_secrets_cli as op_cli
-from hermes_cli import secrets_cli as bw_cli
+from jimmy_cli import onepassword_secrets_cli as op_cli
+from jimmy_cli import secrets_cli as bw_cli
 
 
 # ---------------------------------------------------------------------------

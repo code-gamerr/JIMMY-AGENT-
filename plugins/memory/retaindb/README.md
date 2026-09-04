@@ -10,13 +10,13 @@ Cloud memory API with hybrid search (Vector + BM25 + Reranking) and 7 memory typ
 ## Setup
 
 ```bash
-hermes memory setup    # select "retaindb"
+jimmy memory setup    # select "retaindb"
 ```
 
 Or manually:
 ```bash
-hermes config set memory.provider retaindb
-echo "RETAINDB_API_KEY=your-key" >> ~/.hermes/.env
+jimmy config set memory.provider retaindb
+echo "RETAINDB_API_KEY=your-key" >> ~/.jimmy/.env
 ```
 
 ## Config

@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { HermesReadDirResult } from '@/global'
-import type * as HermesModule from '@/hermes'
+import type { JimmyReadDirResult } from '@/global'
+import type * as JimmyModule from '@/jimmy'
 
 import { $pluginRecords, publishPlugin, setPluginEnabled } from './plugins-store'
 import { discoverRuntimePlugins, loadRuntimePlugin, watchRuntimePlugins } from './runtime-loader'
 
-// getStatus would supply the connected backend's hermes_home — a REMOTE path in
+// getStatus would supply the connected backend's jimmy_home — a REMOTE path in
 // remote mode. The disk scanner must NOT derive the plugin root from it (#66899).
-const getStatus = vi.fn(async () => ({ hermes_home: '/remote/box/.hermes' }))
+const getStatus = vi.fn(async () => ({ jimmy_home: '/remote/box/.jimmy' }))
 
-vi.mock('@/hermes', async importActual => ({
-  ...(await importActual<typeof HermesModule>()),
+vi.mock('@/jimmy', async importActual => ({
+  ...(await importActual<typeof JimmyModule>()),
   getStatus: () => getStatus()
 }))
 
 const desktopPluginsRoot = vi.fn<() => Promise<string>>()
 const agentPluginsRoot = vi.fn<() => Promise<string>>()
-const readDir = vi.fn<(path: string) => Promise<HermesReadDirResult>>()
+const readDir = vi.fn<(path: string) => Promise<JimmyReadDirResult>>()
 const readFileText = vi.fn<(path: string) => Promise<{ text: string }>>()
 const watchDirectory = vi.fn<(path: string) => Promise<{ id: string }>>()
 const watchPreviewFile = vi.fn<(path: string) => Promise<{ id: string }>>()
@@ -32,7 +32,7 @@ beforeEach(() => {
   watchPreviewFile.mockReset()
   onPreviewFileChanged.mockReset()
   getStatus.mockClear()
-  ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = {
+  ;(window as unknown as { jimmyDesktop: unknown }).jimmyDesktop = {
     agentPluginsRoot,
     desktopPluginsRoot,
     onPreviewFileChanged,
@@ -44,23 +44,23 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+  delete (window as unknown as { jimmyDesktop?: unknown }).jimmyDesktop
 })
 
 describe('scanDiskPlugins (#66899)', () => {
-  it('scans the Electron-resolved local roots, never the backend hermes_home', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+  it('scans the Electron-resolved local roots, never the backend jimmy_home', async () => {
+    desktopPluginsRoot.mockResolvedValue('/local/.jimmy/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.jimmy/plugins')
     readDir.mockResolvedValue({ entries: [] })
 
     await discoverRuntimePlugins()
 
     expect(desktopPluginsRoot).toHaveBeenCalled()
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/plugins')
-    // The remote backend's hermes_home must never feed the local plugin scan.
+    expect(readDir).toHaveBeenCalledWith('/local/.jimmy/desktop-plugins')
+    expect(readDir).toHaveBeenCalledWith('/local/.jimmy/plugins')
+    // The remote backend's jimmy_home must never feed the local plugin scan.
     expect(getStatus).not.toHaveBeenCalled()
-    expect(readDir).not.toHaveBeenCalledWith('/remote/box/.hermes/desktop-plugins')
+    expect(readDir).not.toHaveBeenCalledWith('/remote/box/.jimmy/desktop-plugins')
   })
 
   it('no-ops when the resolvers yield no local root', async () => {
@@ -73,11 +73,11 @@ describe('scanDiskPlugins (#66899)', () => {
   })
 
   it('probes desktop/plugin.js inside agent-plugin packages (unified packaging)', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+    desktopPluginsRoot.mockResolvedValue('/local/.jimmy/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.jimmy/plugins')
     readDir.mockImplementation(async dir =>
-      dir === '/local/.hermes/plugins'
-        ? { entries: [{ isDirectory: true, name: 'my-feature', path: '/local/.hermes/plugins/my-feature' }] }
+      dir === '/local/.jimmy/plugins'
+        ? { entries: [{ isDirectory: true, name: 'my-feature', path: '/local/.jimmy/plugins/my-feature' }] }
         : { entries: [] }
     )
     // No desktop half in this package — probe must target desktop/plugin.js.
@@ -85,28 +85,28 @@ describe('scanDiskPlugins (#66899)', () => {
 
     await discoverRuntimePlugins()
 
-    expect(readFileText).toHaveBeenCalledWith('/local/.hermes/plugins/my-feature/desktop/plugin.js')
+    expect(readFileText).toHaveBeenCalledWith('/local/.jimmy/plugins/my-feature/desktop/plugin.js')
     // The Python half's files must never be probed as a desktop entry.
-    expect(readFileText).not.toHaveBeenCalledWith('/local/.hermes/plugins/my-feature/plugin.js')
+    expect(readFileText).not.toHaveBeenCalledWith('/local/.jimmy/plugins/my-feature/plugin.js')
   })
 
   it('still scans the standalone root when agentPluginsRoot is absent (older shell)', async () => {
-    delete (window.hermesDesktop as unknown as { agentPluginsRoot?: unknown }).agentPluginsRoot
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
+    delete (window.jimmyDesktop as unknown as { agentPluginsRoot?: unknown }).agentPluginsRoot
+    desktopPluginsRoot.mockResolvedValue('/local/.jimmy/desktop-plugins')
     readDir.mockResolvedValue({ entries: [] })
 
     await discoverRuntimePlugins()
 
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
+    expect(readDir).toHaveBeenCalledWith('/local/.jimmy/desktop-plugins')
     expect(readDir).toHaveBeenCalledTimes(1)
   })
 
   it('loads a unified desktop half OPT-IN: inventoried but not activated by default', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+    desktopPluginsRoot.mockResolvedValue('/local/.jimmy/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.jimmy/plugins')
     readDir.mockImplementation(async dir =>
-      dir === '/local/.hermes/plugins'
-        ? { entries: [{ isDirectory: true, name: 'uni', path: '/local/.hermes/plugins/uni' }] }
+      dir === '/local/.jimmy/plugins'
+        ? { entries: [{ isDirectory: true, name: 'uni', path: '/local/.jimmy/plugins/uni' }] }
         : { entries: [] }
     )
 
@@ -144,7 +144,7 @@ describe('scanDiskPlugins (#66899)', () => {
       await discoverRuntimePlugins()
 
       // Inventoried for Settings → Plugins, but the root's opt-in posture wins:
-      // ~/.hermes/plugins stays installed-but-inert until the user toggles it.
+      // ~/.jimmy/plugins stays installed-but-inert until the user toggles it.
       expect($pluginRecords.get().uni).toMatchObject({ kind: 'disk', status: 'disabled' })
       expect(register).not.toHaveBeenCalled()
 
@@ -162,9 +162,9 @@ describe('scanDiskPlugins (#66899)', () => {
 })
 
 describe('watchRuntimePlugins dir watch (#66899)', () => {
-  it('watches both Electron-resolved local roots, never the backend hermes_home', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+  it('watches both Electron-resolved local roots, never the backend jimmy_home', async () => {
+    desktopPluginsRoot.mockResolvedValue('/local/.jimmy/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.jimmy/plugins')
     readDir.mockResolvedValue({ entries: [] })
     watchDirectory.mockResolvedValue({ id: 'watch-1' })
 
@@ -172,9 +172,9 @@ describe('watchRuntimePlugins dir watch (#66899)', () => {
     // Drain the async scan + startDirWatches chains.
     await vi.waitFor(() => expect(watchDirectory).toHaveBeenCalledTimes(2))
 
-    expect(watchDirectory).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
-    expect(watchDirectory).toHaveBeenCalledWith('/local/.hermes/plugins')
-    expect(watchDirectory).not.toHaveBeenCalledWith('/remote/box/.hermes/desktop-plugins')
+    expect(watchDirectory).toHaveBeenCalledWith('/local/.jimmy/desktop-plugins')
+    expect(watchDirectory).toHaveBeenCalledWith('/local/.jimmy/plugins')
+    expect(watchDirectory).not.toHaveBeenCalledWith('/remote/box/.jimmy/desktop-plugins')
     expect(getStatus).not.toHaveBeenCalled()
   })
 })
@@ -182,7 +182,7 @@ describe('watchRuntimePlugins dir watch (#66899)', () => {
 describe('bundled-shadowed disk copies', () => {
   it('skips a disk copy of a bundled plugin but publishes a visible inventory row', async () => {
     // The bundled twin is already registered (build-time glob).
-    publishPlugin({ id: 'hermes-bots', name: 'Bot Mode', kind: 'bundled', status: 'loaded' })
+    publishPlugin({ id: 'jimmy-bots', name: 'Bot Mode', kind: 'bundled', status: 'loaded' })
 
     // Same blob→data: URL reroute as the opt-in test above.
     const createObjectURL = vi
@@ -206,21 +206,21 @@ describe('bundled-shadowed disk copies', () => {
 
     try {
       const id = await loadRuntimePlugin(
-        'export default { id: "hermes-bots", name: "Bot Mode", register() {} }',
-        'hermes-bots',
-        { file: '/local/.hermes/desktop-plugins/hermes-bots/plugin.js' }
+        'export default { id: "jimmy-bots", name: "Bot Mode", register() {} }',
+        'jimmy-bots',
+        { file: '/local/.jimmy/desktop-plugins/jimmy-bots/plugin.js' }
       )
 
       // Skipped — the bundled copy stays the only live registration...
       expect(id).toBeNull()
-      expect($pluginRecords.get()['hermes-bots']).toMatchObject({ kind: 'bundled', status: 'loaded' })
+      expect($pluginRecords.get()['jimmy-bots']).toMatchObject({ kind: 'bundled', status: 'loaded' })
 
       // ...but the stale folder is DISCOVERABLE: an inventory row names it,
       // carries its path (reveal/delete affordance), and can never activate.
-      expect($pluginRecords.get()['hermes-bots:disk-shadowed']).toMatchObject({
+      expect($pluginRecords.get()['jimmy-bots:disk-shadowed']).toMatchObject({
         kind: 'disk',
         status: 'disabled',
-        file: '/local/.hermes/desktop-plugins/hermes-bots/plugin.js'
+        file: '/local/.jimmy/desktop-plugins/jimmy-bots/plugin.js'
       })
     } finally {
       createObjectURL.mockRestore()

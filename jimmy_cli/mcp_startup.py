@@ -14,13 +14,13 @@ _mcp_discovery_thread: Optional[threading.Thread] = None
 def _has_configured_mcp_servers() -> bool:
     """Cheap config probe so non-MCP users avoid importing the MCP stack."""
     try:
-        from hermes_cli.config import read_raw_config
+        from jimmy_cli.config import read_raw_config
 
         raw_config = read_raw_config() or {}
         mcp_servers = raw_config.get("mcp_servers")
         if isinstance(mcp_servers, dict) and len(mcp_servers) > 0:
             return True
-        from hermes_cli.agent_plugins import has_enabled_agent_plugin_mcp
+        from jimmy_cli.agent_plugins import has_enabled_agent_plugin_mcp
 
         return has_enabled_agent_plugin_mcp(raw_config)
     except Exception:
@@ -63,7 +63,7 @@ def start_background_mcp_discovery(*, logger, thread_name: str) -> None:
         if not _has_configured_mcp_servers():
             return
 
-        # Capture the caller's context-local HERMES_HOME override (profile
+        # Capture the caller's context-local JIMMY_HOME override (profile
         # scoping in multi-profile processes like the dashboard/desktop
         # backend) and re-install it inside the discovery thread. ContextVars
         # do not propagate into bare threads, so without this a session
@@ -71,18 +71,18 @@ def start_background_mcp_discovery(*, logger, thread_name: str) -> None:
         # mcp_servers instead (#67605). The config gate above already runs on
         # the caller's thread, so it sees the same override.
         try:
-            from hermes_constants import get_hermes_home_override
+            from jimmy_constants import get_jimmy_home_override
 
-            home_override = get_hermes_home_override()
+            home_override = get_jimmy_home_override()
         except Exception:
             home_override = None
 
         def _discover() -> None:
             token = None
             try:
-                from hermes_constants import set_hermes_home_override
+                from jimmy_constants import set_jimmy_home_override
 
-                token = set_hermes_home_override(home_override)
+                token = set_jimmy_home_override(home_override)
             except Exception:
                 token = None
             try:
@@ -101,9 +101,9 @@ def start_background_mcp_discovery(*, logger, thread_name: str) -> None:
             finally:
                 if token is not None:
                     try:
-                        from hermes_constants import reset_hermes_home_override
+                        from jimmy_constants import reset_jimmy_home_override
 
-                        reset_hermes_home_override(token)
+                        reset_jimmy_home_override(token)
                     except Exception:
                         pass
                 with _mcp_discovery_lock:
@@ -129,7 +129,7 @@ def _resolve_discovery_timeout(
     and fail-safe — a missing/invalid value or a broken config falls back to a
     short safe bound so startup can never hang or crash.
 
-    When ``single_query`` is True (``hermes -z "..."`` / ``-q``), the larger
+    When ``single_query`` is True (``jimmy -z "..."`` / ``-q``), the larger
     ``mcp_single_query_discovery_timeout`` bound is used instead. In single-query
     mode there is only ONE turn, so the between-turns late-binding refresh never
     runs — a server that misses the small interactive bound would be invisible to
@@ -146,7 +146,7 @@ def _resolve_discovery_timeout(
     )
     fallback = 15.0 if single_query else 1.5
     try:
-        from hermes_cli.config import load_config, DEFAULT_CONFIG
+        from jimmy_cli.config import load_config, DEFAULT_CONFIG
 
         default = float(DEFAULT_CONFIG.get(key, fallback))
         try:
@@ -200,7 +200,7 @@ def mcp_discovery_in_flight() -> bool:
     Mirrors ``tui_gateway.entry.mcp_discovery_in_flight`` for the surfaces that
     start discovery through ``start_background_mcp_discovery`` here (the desktop
     app + dashboard WebSocket sidecar via ``tui_gateway/ws.py``, and
-    ``hermes dashboard``).  Those processes populate THIS module's
+    ``jimmy dashboard``).  Those processes populate THIS module's
     ``_mcp_discovery_thread``, not ``tui_gateway.entry``'s, so the late-refresh
     scheduler must consult both to decide whether a slow server's tools are
     still pending (see #51587).
@@ -233,7 +233,7 @@ def ensure_mcp_discovery_before_agent_build(
 ) -> None:
     """Give configured MCP tools a bounded chance to register before AIAgent.
 
-    Non-interactive first turns (``chat -q``, ``hermes -z``) can construct
+    Non-interactive first turns (``chat -q``, ``jimmy -z``) can construct
     ``AIAgent`` before the normal banner or tool-list paths touch
     ``get_tool_definitions()``.  Because the agent snapshots its tool
     registry at construction time, the first and only model turn can miss

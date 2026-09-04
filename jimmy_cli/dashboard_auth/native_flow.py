@@ -78,7 +78,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from hermes_cli.dashboard_auth.base import Session
+from jimmy_cli.dashboard_auth.base import Session
 
 # TTL for a pending authorization (step 2→3): the whole interactive login,
 # including the user typing Portal credentials / approving in the browser.
@@ -187,7 +187,7 @@ def register_pending(
     cap below.
 
     The returned ``broker_state`` is what the gateway threads through its OWN
-    upstream PKCE round trip (inside the ``hermes_session_pkce`` cookie), so the
+    upstream PKCE round trip (inside the ``jimmy_session_pkce`` cookie), so the
     callback can find this entry again via :func:`complete_pending`.
 
     Raises ``NativeFlowError`` if the store is at capacity or the caller's IP

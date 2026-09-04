@@ -13,12 +13,12 @@
  * authored.
  */
 
-import type { HermesPlugin, PaletteContribution } from '@hermes/plugin-sdk'
-import { $accentOverride, PALETTE_AREA, setAccentOverride, STATUSBAR_AREAS } from '@hermes/plugin-sdk'
+import type { JimmyPlugin, PaletteContribution } from '@jimmy/plugin-sdk'
+import { $accentOverride, PALETTE_AREA, setAccentOverride, STATUSBAR_AREAS } from '@jimmy/plugin-sdk'
 
 import { AccentPickerTrigger } from './picker'
 
-const plugin: HermesPlugin = {
+const plugin: JimmyPlugin = {
   id: 'accent',
   name: 'Accent Picker',
   description:

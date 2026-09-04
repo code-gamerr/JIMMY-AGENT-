@@ -1,6 +1,6 @@
-"""Tests for hermes_cli/tips.py — random tip display at session start."""
+"""Tests for jimmy_cli/tips.py — random tip display at session start."""
 
-from hermes_cli.tips import TIPS, get_random_tip
+from jimmy_cli.tips import TIPS, get_random_tip
 
 
 class TestTipsCorpus:

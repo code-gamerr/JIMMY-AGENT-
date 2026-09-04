@@ -59,7 +59,7 @@ describe('actOnActivePreview (drive_preview tool)', () => {
     expect(result).toMatchObject({ acted: 'clicked button "Save"', success: true })
     // Self-contained payload: the engine source and the action travel together,
     // and the holder keeps refs alive across calls on the same page.
-    expect(injected).toContain('__hermesActHolder')
+    expect(injected).toContain('__jimmyActHolder')
     expect(injected).toContain('"ref":"@e1"')
   })
 

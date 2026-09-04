@@ -1,6 +1,6 @@
 """Tests for the load_env() process-level cache.
 
-The cache exists to keep `hermes tools` → "All Platforms" fast: every
+The cache exists to keep `jimmy tools` → "All Platforms" fast: every
 `get_env_value()` lookup used to re-read and re-sanitise the entire
 .env file, racking up hundreds of ms across one menu render. The
 cache is keyed on (path, mtime, size); writers (save_env_value /
@@ -21,7 +21,7 @@ def _write_env(path: Path, contents: str) -> None:
 
 def test_load_env_caches_on_repeat_calls():
     """Repeated load_env() calls on the same file return the cached dict."""
-    from hermes_cli.config import invalidate_env_cache, load_env
+    from jimmy_cli.config import invalidate_env_cache, load_env
 
     invalidate_env_cache()
 
@@ -32,7 +32,7 @@ def test_load_env_caches_on_repeat_calls():
         env_path = Path(f.name)
 
     try:
-        with patch("hermes_cli.config.get_env_path", return_value=env_path):
+        with patch("jimmy_cli.config.get_env_path", return_value=env_path):
             first = load_env()
             # Even if a writer outside our cache mutates the file, an
             # mtime/size match means the cache still wins. We simulate that
@@ -51,8 +51,8 @@ def test_load_env_caches_on_repeat_calls():
 
 def test_remove_env_value_invalidates_cache(tmp_path, monkeypatch):
     """remove_env_value() invalidates the cache so the removed key disappears."""
-    from hermes_cli import config as config_mod
-    from hermes_cli.config import (
+    from jimmy_cli import config as config_mod
+    from jimmy_cli.config import (
         invalidate_env_cache,
         load_env,
         remove_env_value,
@@ -63,7 +63,7 @@ def test_remove_env_value_invalidates_cache(tmp_path, monkeypatch):
 
     env_path = tmp_path / ".env"
     monkeypatch.setattr(config_mod, "get_env_path", lambda: env_path)
-    monkeypatch.setattr(config_mod, "ensure_hermes_home", lambda: None)
+    monkeypatch.setattr(config_mod, "ensure_jimmy_home", lambda: None)
     monkeypatch.setattr(config_mod, "_secure_file", lambda _p: None)
     monkeypatch.setattr(config_mod, "is_managed", lambda: False)
 

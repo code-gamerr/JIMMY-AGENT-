@@ -1,7 +1,7 @@
 """
-Doctor command for hermes CLI.
+Doctor command for jimmy CLI.
 
-Diagnoses issues with Hermes Agent setup.
+Diagnoses issues with Jimmy setup.
 """
 
 import os
@@ -11,30 +11,30 @@ import shutil
 import importlib.util
 from pathlib import Path
 
-from hermes_cli.config import (
+from jimmy_cli.config import (
     detect_install_method,
     get_env_path,
-    get_hermes_home,
+    get_jimmy_home,
     get_project_root,
     is_nix_install_method,
     recommended_update_command_for_method,
 )
-from hermes_cli.env_loader import load_hermes_dotenv
-from hermes_constants import display_hermes_home
-from hermes_constants import agent_browser_runnable
+from jimmy_cli.env_loader import load_jimmy_dotenv
+from jimmy_constants import display_jimmy_home
+from jimmy_constants import agent_browser_runnable
 
 PROJECT_ROOT = get_project_root()
-HERMES_HOME = get_hermes_home()
-_DHH = display_hermes_home()  # user-facing display path (e.g. ~/.hermes or ~/.hermes/profiles/coder)
+JIMMY_HOME = get_jimmy_home()
+_DHH = display_jimmy_home()  # user-facing display path (e.g. ~/.jimmy or ~/.jimmy/profiles/coder)
 
-# Load environment variables from ~/.hermes/.env so API key checks work
+# Load environment variables from ~/.jimmy/.env so API key checks work
 _env_path = get_env_path()
-load_hermes_dotenv(hermes_home=_env_path.parent, project_env=PROJECT_ROOT / ".env")
+load_jimmy_dotenv(jimmy_home=_env_path.parent, project_env=PROJECT_ROOT / ".env")
 
-from hermes_cli.colors import Colors, color
-from hermes_cli.models import _HERMES_USER_AGENT
-from hermes_cli.vercel_auth import describe_vercel_auth
-from hermes_constants import OPENROUTER_MODELS_URL
+from jimmy_cli.colors import Colors, color
+from jimmy_cli.models import _JIMMY_USER_AGENT
+from jimmy_cli.vercel_auth import describe_vercel_auth
+from jimmy_constants import OPENROUTER_MODELS_URL
 from utils import base_url_host_matches
 
 
@@ -70,7 +70,7 @@ _PROVIDER_ENV_HINTS = (
 )
 
 
-from hermes_constants import is_termux as _is_termux
+from jimmy_constants import is_termux as _is_termux
 
 
 def _python_install_cmd() -> str:
@@ -90,33 +90,33 @@ def _sqlite_upgrade_hint(install_method: str | None = None) -> str:
     method = install_method or detect_install_method(PROJECT_ROOT)
     if method == "docker":
         command = recommended_update_command_for_method(method)
-        action = f"run `{command}`, then recreate all Hermes containers"
+        action = f"run `{command}`, then recreate all Jimmy containers"
     elif is_nix_install_method(method):
         # The Nix helper is prose guidance, not a literal shell command.
         action = recommended_update_command_for_method(method)
     elif method == "apt":
         action = f"run `{recommended_update_command_for_method(method)}`"
     else:
-        action = "run `hermes update`"
+        action = "run `jimmy update`"
     return (
         f"({action}; fixed versions: 3.51.3+ / 3.50.7 / 3.44.6 — "
         "see https://sqlite.org/wal.html#walresetbug)"
     )
 
 
-def _hermes_database_paths(hermes_home: Path) -> list[tuple[str, Path]]:
-    """Return (display name, path) pairs for Hermes-managed SQLite databases."""
+def _jimmy_database_paths(jimmy_home: Path) -> list[tuple[str, Path]]:
+    """Return (display name, path) pairs for Jimmy-managed SQLite databases."""
     # backup.py owns the canonical list of per-profile stores; reuse it.
-    from hermes_cli.backup import _QUICK_STATE_FILES
+    from jimmy_cli.backup import _QUICK_STATE_FILES
 
     entries = [
-        (name, hermes_home / name)
+        (name, jimmy_home / name)
         for name in _QUICK_STATE_FILES
         if name.endswith(".db")
     ]
     # Non-default kanban boards each keep their own kanban.db.
-    for board_db in sorted((hermes_home / "kanban" / "boards").glob("*/kanban.db")):
-        entries.append((str(board_db.relative_to(hermes_home)), board_db))
+    for board_db in sorted((jimmy_home / "kanban" / "boards").glob("*/kanban.db")):
+        entries.append((str(board_db.relative_to(jimmy_home)), board_db))
     return entries
 
 
@@ -150,12 +150,12 @@ def _read_journal_mode(db_path: Path) -> tuple[str | None, str | None]:
     The byte read is routed through ``read_header_bytes_preopen`` rather than
     a bare ``open()``: closing *any* descriptor for a database file cancels
     this process's POSIX advisory locks on it, so a raw read would drop the
-    locks a live connection is holding (see ``hermes_cli.sqlite_safe_read``).
+    locks a live connection is holding (see ``jimmy_cli.sqlite_safe_read``).
     ``run_doctor`` is also called in-process by the dashboard console, which
     holds live ``SessionDB`` connections. The helper refuses in that case and
     the mode is reported as unreadable instead.
     """
-    from hermes_cli.sqlite_safe_read import (
+    from jimmy_cli.sqlite_safe_read import (
         has_live_connection,
         read_header_bytes_preopen,
     )
@@ -179,7 +179,7 @@ def _read_journal_mode(db_path: Path) -> tuple[str | None, str | None]:
 def _format_db_size(db_path: Path) -> str:
     # backup.py owns human-readable size formatting; reuse it (as with
     # _QUICK_STATE_FILES above) and keep only the stat-failure wrap here.
-    from hermes_cli.backup import _format_size
+    from jimmy_cli.backup import _format_size
 
     try:
         nbytes = db_path.stat().st_size
@@ -189,18 +189,18 @@ def _format_db_size(db_path: Path) -> str:
 
 
 def _report_database_journal_modes(
-    hermes_home: Path | None = None,
+    jimmy_home: Path | None = None,
     version_info: tuple[int, ...] | None = None,
 ) -> None:
     """List each database's journal mode; warn on WAL under a vulnerable SQLite."""
-    from hermes_state import _wal_reset_repair_hint, is_sqlite_wal_reset_vulnerable
+    from jimmy_state import _wal_reset_repair_hint, is_sqlite_wal_reset_vulnerable
 
     vulnerable = is_sqlite_wal_reset_vulnerable(version_info)
-    home = hermes_home if hermes_home is not None else HERMES_HOME
+    home = jimmy_home if jimmy_home is not None else JIMMY_HOME
     try:
-        databases = _hermes_database_paths(home)
+        databases = _jimmy_database_paths(home)
     except Exception as exc:
-        check_warn(f"Could not list Hermes databases: {exc}")
+        check_warn(f"Could not list Jimmy databases: {exc}")
         return
     exposed = []
     for name, path in databases:
@@ -262,7 +262,7 @@ def _termux_install_all_fallback_notes() -> list[str]:
 
 
 def _has_provider_env_config(content: str) -> bool:
-    """Return True when ~/.hermes/.env contains provider auth/base URL settings."""
+    """Return True when ~/.jimmy/.env contains provider auth/base URL settings."""
     return any(key in content for key in _PROVIDER_ENV_HINTS)
 
 
@@ -281,7 +281,7 @@ def _is_kanban_worker_env_gate(item: dict) -> bool:
     """Return True when Kanban is unavailable only because this is not a worker process."""
     if item.get("name") != "kanban":
         return False
-    if os.environ.get("HERMES_KANBAN_TASK"):
+    if os.environ.get("JIMMY_KANBAN_TASK"):
         return False
 
     tools = item.get("tools") or []
@@ -290,7 +290,7 @@ def _is_kanban_worker_env_gate(item: dict) -> bool:
 
 def _doctor_tool_availability_detail(toolset: str) -> str:
     """Optional explanatory suffix for toolsets whose doctor status needs context."""
-    if toolset == "kanban" and not os.environ.get("HERMES_KANBAN_TASK"):
+    if toolset == "kanban" and not os.environ.get("JIMMY_KANBAN_TASK"):
         return "(runtime-gated; loaded only for dispatcher-spawned workers)"
     return ""
 
@@ -378,13 +378,13 @@ def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool
     normalized = (provider_label or "").strip().lower()
     if normalized == "minimax":
         try:
-            from hermes_cli.auth import get_minimax_oauth_auth_status
+            from jimmy_cli.auth import get_minimax_oauth_auth_status
             return bool((get_minimax_oauth_auth_status() or {}).get("logged_in"))
         except Exception:
             return False
     if normalized == "xai":
         try:
-            from hermes_cli.auth import get_xai_oauth_auth_status
+            from jimmy_cli.auth import get_xai_oauth_auth_status
             return bool((get_xai_oauth_auth_status() or {}).get("logged_in"))
         except Exception:
             return False
@@ -411,7 +411,7 @@ STATE_DB_SIZE_WARN_BYTES = 1 * 1024 * 1024 * 1024   # 1 GiB logical size
 
 # Shared byte formatter, aliased to the name this module's three rendering
 # call sites already use.
-from hermes_cli.sizefmt import format_bytes as _human_bytes
+from jimmy_cli.sizefmt import format_bytes as _human_bytes
 
 
 def _render_state_db_stats(stats: dict, holders=None) -> list:
@@ -477,7 +477,7 @@ def _render_state_db_stats(stats: dict, holders=None) -> list:
         )
         if stats.get("fts_rebuild_pending") or legacy_trigram:
             detail += (
-                "; run 'hermes sessions optimize-storage' offline "
+                "; run 'jimmy sessions optimize-storage' offline "
                 "(with the gateway stopped) to compact FTS storage"
             )
         lines.append((
@@ -525,12 +525,12 @@ _DEPRECATED_COMPRESSION_SUMMARY_KEYS: tuple[str, ...] = (
 # Deprecated env vars (checked in the .env file, not process env, so config→env
 # bridges like terminal.cwd → TERMINAL_CWD do not false-positive).
 _DEPRECATED_ENV_VARS: tuple[tuple[str, str], ...] = (
-    # HERMES_TOOL_PROGRESS is fully unsupported since the v12 config support
+    # JIMMY_TOOL_PROGRESS is fully unsupported since the v12 config support
     # floor removed its only consumer (the v3→4 migration) — it is silently
-    # ignored. HERMES_TOOL_PROGRESS_MODE is still read by the gateway as a
+    # ignored. JIMMY_TOOL_PROGRESS_MODE is still read by the gateway as a
     # back-compat fallback but remains deprecated.
-    ("HERMES_TOOL_PROGRESS", "display.tool_progress in config.yaml — ignored/unsupported since config floor v12"),
-    ("HERMES_TOOL_PROGRESS_MODE", "display.tool_progress in config.yaml"),
+    ("JIMMY_TOOL_PROGRESS", "display.tool_progress in config.yaml — ignored/unsupported since config floor v12"),
+    ("JIMMY_TOOL_PROGRESS_MODE", "display.tool_progress in config.yaml"),
     ("TERMINAL_CWD", "terminal.cwd in config.yaml"),
     ("MESSAGING_CWD", "terminal.cwd in config.yaml"),
     ("QQ_HOME_CHANNEL", "QQBOT_HOME_CHANNEL"),
@@ -583,8 +583,8 @@ def collect_relay_plugin_cutover_findings(
     raw_config: dict | None,
     env_map: dict | None,
 ) -> list[tuple[str, str]]:
-    """Return actionable findings for the removed Hermes Relay plugin."""
-    from hermes_cli.relay_plugin_cutover import (
+    """Return actionable findings for the removed Jimmy Relay plugin."""
+    from jimmy_cli.relay_plugin_cutover import (
         LEGACY_RELAY_EXPORT_ENV_VARS,
         RELAY_PLUGINS_CONFIG_ENV,
         configured_legacy_relay_env_vars,
@@ -655,8 +655,8 @@ def report_deprecated_config_and_env(
 def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
     """Return toolsets enabled for the CLI, or None if config resolution fails."""
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.tools_config import _get_platform_tools
+        from jimmy_cli.config import load_config
+        from jimmy_cli.tools_config import _get_platform_tools
 
         return {str(toolset) for toolset in _get_platform_tools(load_config() or {}, "cli")}
     except Exception:
@@ -705,15 +705,15 @@ def _read_pyproject_version() -> str | None:
 
 
 def _check_version_consistency(issues: list[str]) -> None:
-    """Verify pyproject.toml version matches hermes_cli.__version__.
+    """Verify pyproject.toml version matches jimmy_cli.__version__.
 
     A git conflict resolution (reset/merge) can revert one file without the
-    other, leaving ``hermes --version`` reporting a stale version while
+    other, leaving ``jimmy --version`` reporting a stale version while
     ``pyproject.toml`` is current. Detect that drift so users can re-sync.
     Silent no-op for installed wheels where pyproject.toml isn't present.
     """
     try:
-        from hermes_cli import __version__ as init_version
+        from jimmy_cli import __version__ as init_version
     except Exception:
         return
     pyproject_version = _read_pyproject_version()
@@ -725,9 +725,9 @@ def _check_version_consistency(issues: list[str]) -> None:
     else:
         _fail_and_issue(
             "Version mismatch between source files",
-            f"(pyproject.toml {pyproject_version} != hermes_cli/__init__.py {init_version})",
-            "Re-sync version files (e.g. run 'hermes update', or set "
-            "hermes_cli/__init__.py __version__ to match pyproject.toml)",
+            f"(pyproject.toml {pyproject_version} != jimmy_cli/__init__.py {init_version})",
+            "Re-sync version files (e.g. run 'jimmy update', or set "
+            "jimmy_cli/__init__.py __version__ to match pyproject.toml)",
             issues,
         )
 
@@ -740,13 +740,13 @@ def _check_s6_supervision(issues: list[str]) -> None:
     container so host runs aren't cluttered with irrelevant output.
 
     Reports:
-      - Whether the main-hermes and dashboard static services are up
+      - Whether the main-jimmy and dashboard static services are up
       - How many per-profile gateway slots are registered (via
         ``S6ServiceManager.list_profile_gateways()``) and how many are
         currently supervised as ``up``
     """
     try:
-        from hermes_cli.service_manager import (
+        from jimmy_cli.service_manager import (
             S6ServiceManager,
             detect_service_manager,
         )
@@ -762,7 +762,7 @@ def _check_s6_supervision(issues: list[str]) -> None:
 
     # Static services. They live under /run/service/ via s6-rc symlinks,
     # so the same s6-svstat probe works.
-    for static in ("main-hermes", "dashboard"):
+    for static in ("main-jimmy", "dashboard"):
         if mgr.is_running(static):
             check_ok(f"{static}: up")
         else:
@@ -770,7 +770,7 @@ def _check_s6_supervision(issues: list[str]) -> None:
 
     profiles = mgr.list_profile_gateways()
     if not profiles:
-        check_info("No per-profile gateways registered yet — create one with `hermes profile create <name>`")
+        check_info("No per-profile gateways registered yet — create one with `jimmy profile create <name>`")
         return
 
     up_count = sum(1 for p in profiles if mgr.is_running(f"gateway-{p}"))
@@ -812,7 +812,7 @@ def check_certificates(should_fix: bool = False, issues: "list | None" = None) -
         check_fail("SSL CA certificate bundle is broken", first_error)
         if issues is not None:
             issues.append(
-                "Repair the CA bundle: run `hermes doctor --fix`, or "
+                "Repair the CA bundle: run `jimmy doctor --fix`, or "
                 f"`{sys.executable} -m pip install --force-reinstall certifi`"
             )
         return
@@ -875,12 +875,12 @@ def _check_gateway_service_linger(issues: list[str]) -> None:
     ``_check_s6_supervision``.
     """
     try:
-        from hermes_cli.gateway import (
+        from jimmy_cli.gateway import (
             get_systemd_linger_status,
             get_systemd_unit_path,
             is_linux,
         )
-        from hermes_cli.service_manager import detect_service_manager
+        from jimmy_cli.service_manager import detect_service_manager
     except Exception as e:
         check_warn("Gateway service linger", f"(could not import gateway helpers: {e})")
         return
@@ -967,7 +967,7 @@ def _build_apikey_providers_list() -> list:
         from providers import list_providers
         from providers.base import ProviderProfile as _PP
         try:
-            from hermes_cli.providers import normalize_provider as _normalize_provider
+            from jimmy_cli.providers import normalize_provider as _normalize_provider
         except Exception:  # pragma: no cover - normalization is best-effort
             def _normalize_provider(_name: str) -> str:
                 return (_name or "").strip().lower()
@@ -1010,12 +1010,12 @@ def managed_scope_check() -> None:
     """Report the active managed scope (resolved dir + pinned key counts).
 
     Silent when no managed scope is present. When the managed directory was
-    resolved from the HERMES_MANAGED_DIR override (rather than the system
+    resolved from the JIMMY_MANAGED_DIR override (rather than the system
     default), that is surfaced too — a redirected scope is the documented
     foot-gun (see docs/design/managed-scope.md §7) and an operator should see it.
     """
     try:
-        from hermes_cli import managed_scope
+        from jimmy_cli import managed_scope
         managed_dir = managed_scope.get_managed_dir()
     except Exception:  # noqa: BLE001 — diagnostics must never crash
         return
@@ -1027,8 +1027,8 @@ def managed_scope_check() -> None:
         f"Managed scope active: {n_cfg} config key(s), {n_env} env key(s) "
         f"pinned by {managed_dir}"
     )
-    if os.environ.get("HERMES_MANAGED_DIR", "").strip():
-        check_info(f"managed dir set via HERMES_MANAGED_DIR={managed_dir}")
+    if os.environ.get("JIMMY_MANAGED_DIR", "").strip():
+        check_info(f"managed dir set via JIMMY_MANAGED_DIR={managed_dir}")
 
 
 def run_doctor(args):
@@ -1037,14 +1037,14 @@ def run_doctor(args):
     ack_target = getattr(args, 'ack', None)
 
     # Doctor runs from the interactive CLI, so CLI-gated tool availability
-    # checks (like cronjob management) should see the same context as `hermes`.
-    os.environ.setdefault("HERMES_INTERACTIVE", "1")
+    # checks (like cronjob management) should see the same context as `jimmy`.
+    os.environ.setdefault("JIMMY_INTERACTIVE", "1")
 
-    # Handle `hermes doctor --ack <id>` as a fast path. Persist the ack and
+    # Handle `jimmy doctor --ack <id>` as a fast path. Persist the ack and
     # return without running the rest of the diagnostics — the user has
     # already seen the advisory and just wants to silence it.
     if ack_target:
-        from hermes_cli.security_advisories import (
+        from jimmy_cli.security_advisories import (
             ADVISORIES,
             ack_advisory,
         )
@@ -1065,7 +1065,7 @@ def run_doctor(args):
         else:
             print(color(
                 f"  ✗ Failed to persist ack for {ack_target}. "
-                f"Check ~/.hermes/config.yaml is writable.",
+                f"Check ~/.jimmy/config.yaml is writable.",
                 Colors.RED,
             ))
             sys.exit(1)
@@ -1077,12 +1077,12 @@ def run_doctor(args):
 
     print()
     print(color("┌─────────────────────────────────────────────────────────┐", Colors.CYAN))
-    print(color("│                 🩺 Hermes Doctor                        │", Colors.CYAN))
+    print(color("│                 🩺 Jimmy Doctor                        │", Colors.CYAN))
     print(color("└─────────────────────────────────────────────────────────┘", Colors.CYAN))
 
     _section("Security Advisories")
     try:
-        from hermes_cli.security_advisories import (
+        from jimmy_cli.security_advisories import (
             detect_compromised,
             filter_unacked,
             full_remediation_text,
@@ -1109,7 +1109,7 @@ def run_doctor(args):
                     f"Resolve security advisory {hit.advisory.id}: "
                     f"uninstall {hit.package}=={hit.installed_version} and "
                     f"rotate credentials, then run "
-                    f"`hermes doctor --ack {hit.advisory.id}`."
+                    f"`jimmy doctor --ack {hit.advisory.id}`."
                 )
             # Acked-but-still-installed: show as informational so the user
             # knows the package is still on disk after the ack.
@@ -1128,8 +1128,8 @@ def run_doctor(args):
 
     _section("MCP Server Security")
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.mcp_security import validate_mcp_server_entry
+        from jimmy_cli.config import load_config
+        from jimmy_cli.mcp_security import validate_mcp_server_entry
 
         servers = load_config().get("mcp_servers") or {}
         suspicious = 0
@@ -1172,7 +1172,7 @@ def run_doctor(args):
     # SQLite across Python upgrades.
     try:
         import sqlite3
-        from hermes_state import is_sqlite_wal_reset_vulnerable, sqlite_source_id
+        from jimmy_state import is_sqlite_wal_reset_vulnerable, sqlite_source_id
 
         _sqlite_ver = sqlite3.sqlite_version
         _sqlite_src = sqlite_source_id()
@@ -1180,7 +1180,7 @@ def run_doctor(args):
             (_sqlite_src[:48] + "…") if len(_sqlite_src) > 48 else _sqlite_src
         )
         if is_sqlite_wal_reset_vulnerable():
-            # Warn-only: Hermes already refuses to enable WAL on fresh DBs.
+            # Warn-only: Jimmy already refuses to enable WAL on fresh DBs.
             # Do not append to ``issues`` because runtime repair remains
             # best-effort and unsupported installs may need manual action.
             check_warn(
@@ -1201,7 +1201,7 @@ def run_doctor(args):
     else:
         check_warn("Not in virtual environment", "(recommended)")
 
-    # Detect drift between pyproject.toml and hermes_cli/__init__.py versions
+    # Detect drift between pyproject.toml and jimmy_cli/__init__.py versions
     # (a git conflict resolution can silently revert one but not the other).
     _check_version_consistency(issues)
 
@@ -1240,14 +1240,14 @@ def run_doctor(args):
     _section("Configuration Files")
     # Managed scope (administrator-pinned config/env), when present.
     managed_scope_check()
-    # Check ~/.hermes/.env (primary location for user config)
-    env_path = HERMES_HOME / '.env'
+    # Check ~/.jimmy/.env (primary location for user config)
+    env_path = JIMMY_HOME / '.env'
     if env_path.exists():
         check_ok(f"{_DHH}/.env file exists")
         
         # Prefer UTF-8 (.env is written as UTF-8 elsewhere). Fall back to
         # latin-1 for Windows Notepad/cp1252 files that are not valid UTF-8 —
-        # matches hermes_cli.env_loader._load_dotenv_with_fallback.
+        # matches jimmy_cli.env_loader._load_dotenv_with_fallback.
         try:
             content = env_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -1256,7 +1256,7 @@ def run_doctor(args):
             check_ok("API key or custom endpoint configured")
         else:
             check_warn(f"No API key found in {_DHH}/.env")
-            issues.append("Run 'hermes setup' to configure API keys")
+            issues.append("Run 'jimmy setup' to configure API keys")
     else:
         # Also check project root as fallback
         fallback_env = PROJECT_ROOT / '.env'
@@ -1275,21 +1275,21 @@ def run_doctor(args):
                 except OSError:
                     pass
                 check_ok(f"Created empty {_DHH}/.env")
-                check_info("Run 'hermes setup' to configure API keys")
+                check_info("Run 'jimmy setup' to configure API keys")
                 fixed_count += 1
             else:
-                check_info("Run 'hermes setup' to create one")
-                issues.append("Run 'hermes setup' to create .env")
+                check_info("Run 'jimmy setup' to create one")
+                issues.append("Run 'jimmy setup' to create .env")
     
-    # Check ~/.hermes/config.yaml (primary) or project cli-config.yaml (fallback)
-    config_path = HERMES_HOME / 'config.yaml'
+    # Check ~/.jimmy/config.yaml (primary) or project cli-config.yaml (fallback)
+    config_path = JIMMY_HOME / 'config.yaml'
     if config_path.exists():
         check_ok(f"{_DHH}/config.yaml exists")
 
         # Validate model.provider and model.default values
         try:
             # Raw-file diagnostic: inspects what the user actually wrote.
-            from hermes_cli.config import read_user_config_raw
+            from jimmy_cli.config import read_user_config_raw
             cfg = read_user_config_raw(config_path)
             model_section = cfg.get("model") or {}
             provider_raw = (model_section.get("provider") or "").strip()
@@ -1298,7 +1298,7 @@ def run_doctor(args):
 
             known_providers: set = set()
             try:
-                from hermes_cli.auth import (
+                from jimmy_cli.auth import (
                     PROVIDER_REGISTRY,
                     resolve_provider as _resolve_auth_provider,
                 )
@@ -1307,8 +1307,8 @@ def run_doctor(args):
                 _resolve_auth_provider = None
                 pass
             try:
-                from hermes_cli.config import get_compatible_custom_providers as _compatible_custom_providers
-                from hermes_cli.providers import (
+                from jimmy_cli.config import get_compatible_custom_providers as _compatible_custom_providers
+                from jimmy_cli.providers import (
                     custom_provider_aliases as _custom_provider_aliases,
                     normalize_provider as _normalize_catalog_provider,
                     resolve_provider_full as _resolve_provider_full,
@@ -1328,7 +1328,7 @@ def run_doctor(args):
 
             user_providers = cfg.get("providers")
             if isinstance(user_providers, dict):
-                from hermes_cli.config import is_provider_enabled
+                from jimmy_cli.config import is_provider_enabled
                 known_providers.update(
                     str(name).strip().lower()
                     for name, prov_cfg in user_providers.items()
@@ -1388,7 +1388,7 @@ def run_doctor(args):
                         (
                             f"model.provider '{provider_raw}' is unknown. "
                             f"Valid providers: {known_list}. "
-                            f"Fix: run 'hermes config set model.provider <valid_provider>'"
+                            f"Fix: run 'jimmy config set model.provider <valid_provider>'"
                         ),
                         issues,
                     )
@@ -1447,14 +1447,14 @@ def run_doctor(args):
             if runtime_provider and runtime_provider not in ("auto", "custom"):
                 try:
                     if runtime_provider == "openrouter":
-                        from hermes_cli.config import get_env_value
+                        from jimmy_cli.config import get_env_value
 
                         configured = bool(
                             str(get_env_value("OPENROUTER_API_KEY") or "").strip()
                             or str(get_env_value("OPENAI_API_KEY") or "").strip()
                         )
                     else:
-                        from hermes_cli.auth import PROVIDER_REGISTRY, get_auth_status
+                        from jimmy_cli.auth import PROVIDER_REGISTRY, get_auth_status
 
                         pconfig = PROVIDER_REGISTRY.get(runtime_provider)
                         configured = True
@@ -1468,11 +1468,11 @@ def run_doctor(args):
                     if not configured:
                         _fail_and_issue(
                             f"model.provider '{runtime_provider}' is set but no API key is configured",
-                            "(check ~/.hermes/.env or run 'hermes setup')",
+                            "(check ~/.jimmy/.env or run 'jimmy setup')",
                             (
                                 f"No credentials found for provider '{runtime_provider}'. "
-                                f"Run 'hermes setup' or set the provider's API key in {_DHH}/.env, "
-                                f"or switch providers with 'hermes config set model.provider <name>'"
+                                f"Run 'jimmy setup' or set the provider's API key in {_DHH}/.env, "
+                                f"or switch providers with 'jimmy config set model.provider <name>'"
                             ),
                             issues,
                         )
@@ -1493,7 +1493,7 @@ def run_doctor(args):
                     shutil.copy2(str(example_config), str(config_path))
                     check_ok(f"Created {_DHH}/config.yaml from cli-config.yaml.example")
                 else:
-                    from hermes_cli.config import DEFAULT_CONFIG, save_config
+                    from jimmy_cli.config import DEFAULT_CONFIG, save_config
                     save_config(DEFAULT_CONFIG)
                     check_ok(f"Created {_DHH}/config.yaml from defaults")
                 fixed_count += 1
@@ -1501,10 +1501,10 @@ def run_doctor(args):
                 check_warn("config.yaml not found", "(using defaults)")
 
     # Check config version and stale keys
-    config_path = HERMES_HOME / 'config.yaml'
+    config_path = JIMMY_HOME / 'config.yaml'
     if config_path.exists():
         try:
-            from hermes_cli.config import check_config_version, migrate_config
+            from jimmy_cli.config import check_config_version, migrate_config
             current_ver, latest_ver = check_config_version()
             if current_ver < latest_ver:
                 check_warn(
@@ -1518,9 +1518,9 @@ def run_doctor(args):
                         fixed_count += 1
                     except Exception as mig_err:
                         check_warn(f"Auto-migration failed: {mig_err}")
-                        issues.append("Run 'hermes setup' to migrate config")
+                        issues.append("Run 'jimmy setup' to migrate config")
                 else:
-                    issues.append("Run 'hermes doctor --fix' or 'hermes setup' to migrate config")
+                    issues.append("Run 'jimmy doctor --fix' or 'jimmy setup' to migrate config")
             else:
                 check_ok(f"Config version up to date (v{current_ver})")
         except Exception:
@@ -1529,7 +1529,7 @@ def run_doctor(args):
         # Detect stale root-level model keys (known bug source — PR #4329)
         try:
             # Raw-file diagnostic: stale-key detection must see the raw file.
-            from hermes_cli.config import read_user_config_raw
+            from jimmy_cli.config import read_user_config_raw
             raw_config = read_user_config_raw(config_path)
             stale_root_keys = [k for k in ("provider", "base_url") if k in raw_config and isinstance(raw_config[k], str)]
             if stale_root_keys:
@@ -1555,27 +1555,27 @@ def run_doctor(args):
                             model_section[k] = raw_config.pop(k)
                         else:
                             raw_config.pop(k)
-                    from hermes_cli.config import atomic_config_write
+                    from jimmy_cli.config import atomic_config_write
                     atomic_config_write(config_path, raw_config)
                     check_ok("Migrated stale root-level keys into model section")
                     fixed_count += 1
                 else:
-                    issues.append("Stale root-level provider/base_url in config.yaml — run 'hermes doctor --fix'")
+                    issues.append("Stale root-level provider/base_url in config.yaml — run 'jimmy doctor --fix'")
         except Exception:
             pass
 
-        # Detect stale HERMES_MAX_ITERATIONS ghost in .env shadowing
+        # Detect stale JIMMY_MAX_ITERATIONS ghost in .env shadowing
         # agent.max_turns in config.yaml (issue #17534). The setup wizard
         # used to dual-write the iteration budget to both stores; users who
         # later edit only config.yaml are left with a .env ghost. The gateway
-        # bridge normally derives HERMES_MAX_ITERATIONS from agent.max_turns
+        # bridge normally derives JIMMY_MAX_ITERATIONS from agent.max_turns
         # at startup, but if that bridge bails (any earlier config-parse
         # error), the stale .env value silently wins and the agent runs at the
         # wrong budget — e.g. config says 400 but the activity line reads N/90.
         # Read the .env FILE directly (load_env), not get_env_value/os.environ,
         # which the startup bridge may already have overridden.
         try:
-            from hermes_cli.config import load_env, read_user_config_raw, remove_env_value
+            from jimmy_cli.config import load_env, read_user_config_raw, remove_env_value
             # Raw-file diagnostic: drift check against the raw file.
             raw_config = read_user_config_raw(config_path)
             agent_cfg = raw_config.get("agent")
@@ -1587,7 +1587,7 @@ def run_doctor(args):
             # Legacy root-level key counts too.
             if cfg_max_turns is None:
                 cfg_max_turns = raw_config.get("max_turns")
-            env_ghost = load_env().get("HERMES_MAX_ITERATIONS")
+            env_ghost = load_env().get("JIMMY_MAX_ITERATIONS")
             drift = (
                 cfg_max_turns is not None
                 and env_ghost is not None
@@ -1595,27 +1595,27 @@ def run_doctor(args):
             )
             if drift:
                 check_warn(
-                    f"HERMES_MAX_ITERATIONS={env_ghost} in .env shadows "
+                    f"JIMMY_MAX_ITERATIONS={env_ghost} in .env shadows "
                     f"agent.max_turns={cfg_max_turns} in config.yaml",
-                    "(stale ghost from an earlier `hermes setup` run)",
+                    "(stale ghost from an earlier `jimmy setup` run)",
                 )
                 if should_fix:
-                    if remove_env_value("HERMES_MAX_ITERATIONS"):
+                    if remove_env_value("JIMMY_MAX_ITERATIONS"):
                         check_ok(
-                            "Removed stale HERMES_MAX_ITERATIONS from .env "
+                            "Removed stale JIMMY_MAX_ITERATIONS from .env "
                             f"(config.yaml agent.max_turns={cfg_max_turns} is now authoritative)"
                         )
                         fixed_count += 1
                     else:
-                        check_warn("Could not remove HERMES_MAX_ITERATIONS from .env")
+                        check_warn("Could not remove JIMMY_MAX_ITERATIONS from .env")
                         manual_issues.append(
-                            "Manually delete the HERMES_MAX_ITERATIONS line from "
+                            "Manually delete the JIMMY_MAX_ITERATIONS line from "
                             f"{_DHH}/.env — config.yaml agent.max_turns is authoritative."
                         )
                 else:
                     issues.append(
-                        "Stale HERMES_MAX_ITERATIONS in .env shadows config.yaml — "
-                        "run 'hermes doctor --fix'"
+                        "Stale JIMMY_MAX_ITERATIONS in .env shadows config.yaml — "
+                        "run 'jimmy doctor --fix'"
                     )
         except Exception:
             pass
@@ -1624,8 +1624,8 @@ def run_doctor(args):
         # Migrations may still live in config.py version steps; doctor does
         # not auto-delete here — only tells the user the modern replacement.
         try:
-            from hermes_cli.config import load_env as _load_env_depr
-            from hermes_cli.config import read_user_config_raw as _read_raw_depr
+            from jimmy_cli.config import load_env as _load_env_depr
+            from jimmy_cli.config import read_user_config_raw as _read_raw_depr
 
             # Raw-file diagnostic: deprecation sweep inspects the raw file.
             _raw_for_depr = _read_raw_depr(config_path)
@@ -1641,7 +1641,7 @@ def run_doctor(args):
 
         # Validate config structure (catches malformed custom_providers, etc.)
         try:
-            from hermes_cli.config import validate_config_structure
+            from jimmy_cli.config import validate_config_structure
             config_issues = validate_config_structure()
             if config_issues:
                 _section("Config Structure")
@@ -1660,7 +1660,7 @@ def run_doctor(args):
     if not config_path.exists():
         # No config.yaml — still surface deprecated env vars from .env.
         try:
-            from hermes_cli.config import load_env as _load_env_depr
+            from jimmy_cli.config import load_env as _load_env_depr
 
             try:
                 _env_for_depr = _load_env_depr()
@@ -1673,8 +1673,8 @@ def run_doctor(args):
     _section("xAI Model Retirement (May 15, 2026)")
 
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.xai_retirement import (
+        from jimmy_cli.config import load_config
+        from jimmy_cli.xai_retirement import (
             MIGRATION_GUIDE_URL,
             find_retired_xai_refs,
             format_issue,
@@ -1698,7 +1698,7 @@ def run_doctor(args):
     _section("Auth Providers")
 
     try:
-        from hermes_cli.auth import (
+        from jimmy_cli.auth import (
             get_nous_auth_status_local,
             get_codex_auth_status,
             get_minimax_oauth_auth_status,
@@ -1719,7 +1719,7 @@ def run_doctor(args):
             check_warn("OpenAI Codex auth", "(not logged in)")
             if codex_status.get("error"):
                 check_info(codex_status["error"])
-            # Native OAuth uses Hermes' own device-code flow — the Codex CLI is
+            # Native OAuth uses Jimmy' own device-code flow — the Codex CLI is
             # only needed to import existing tokens from ~/.codex/auth.json.
             # Attach the hint to the Codex auth row so it doesn't read as
             # remediation for whichever provider happens to print next (#27975).
@@ -1742,7 +1742,7 @@ def run_doctor(args):
     # xAI OAuth — separate try/except so an import failure here cannot
     # disrupt the already-printed Nous/Codex/Gemini/MiniMax rows above.
     try:
-        from hermes_cli.auth import get_xai_oauth_auth_status
+        from jimmy_cli.auth import get_xai_oauth_auth_status
         xai_oauth_status = get_xai_oauth_auth_status() or {}
         if xai_oauth_status.get("logged_in"):
             check_ok("xAI OAuth", "(logged in)")
@@ -1754,11 +1754,11 @@ def run_doctor(args):
         pass
 
     _section("Directory Structure")
-    hermes_home = HERMES_HOME
-    if hermes_home.exists():
+    jimmy_home = JIMMY_HOME
+    if jimmy_home.exists():
         check_ok(f"{_DHH} directory exists")
     elif should_fix:
-        hermes_home.mkdir(parents=True, exist_ok=True)
+        jimmy_home.mkdir(parents=True, exist_ok=True)
         check_ok(f"Created {_DHH} directory")
         fixed_count += 1
     else:
@@ -1767,7 +1767,7 @@ def run_doctor(args):
     # Check expected subdirectories
     expected_subdirs = ["cron", "sessions", "logs", "skills", "memories"]
     for subdir_name in expected_subdirs:
-        subdir_path = hermes_home / subdir_name
+        subdir_path = jimmy_home / subdir_name
         if subdir_path.exists():
             check_ok(f"{_DHH}/{subdir_name}/ exists")
         elif should_fix:
@@ -1778,7 +1778,7 @@ def run_doctor(args):
             check_warn(f"{_DHH}/{subdir_name}/ not found", "(will be created on first use)")
     
     # Check for SOUL.md persona file
-    soul_path = hermes_home / "SOUL.md"
+    soul_path = jimmy_home / "SOUL.md"
     if soul_path.exists():
         content = soul_path.read_text(encoding="utf-8").strip()
         # Check if it's just the template comments (no real content)
@@ -1788,20 +1788,20 @@ def run_doctor(args):
         else:
             check_info(f"{_DHH}/SOUL.md exists but is empty — edit it to customize personality")
     else:
-        check_warn(f"{_DHH}/SOUL.md not found", "(create it to give Hermes a custom personality)")
+        check_warn(f"{_DHH}/SOUL.md not found", "(create it to give Jimmy a custom personality)")
         if should_fix:
             soul_path.parent.mkdir(parents=True, exist_ok=True)
             soul_path.write_text(
                 "# Jimmy Persona\n\n"
-                "<!-- Edit this file to customize how Hermes communicates. -->\n\n"
-                "You are Hermes, a helpful AI assistant.\n",
+                "<!-- Edit this file to customize how Jimmy communicates. -->\n\n"
+                "You are Jimmy, a helpful AI assistant.\n",
                 encoding="utf-8",
             )
             check_ok(f"Created {_DHH}/SOUL.md with basic template")
             fixed_count += 1
     
     # Check memory directory
-    memories_dir = hermes_home / "memories"
+    memories_dir = jimmy_home / "memories"
     if memories_dir.exists():
         check_ok(f"{_DHH}/memories/ directory exists")
         memory_file = memories_dir / "MEMORY.md"
@@ -1824,7 +1824,7 @@ def run_doctor(args):
             fixed_count += 1
     
     # Check SQLite session store
-    state_db_path = hermes_home / "state.db"
+    state_db_path = jimmy_home / "state.db"
     if state_db_path.exists():
         try:
             import sqlite3
@@ -1839,7 +1839,7 @@ def run_doctor(args):
             # through the triggers. `_db_opens_cleanly` now drives a rolled-back
             # write so this otherwise-silent corruption class is surfaced (and
             # repaired in place with --fix).
-            from hermes_state import _db_opens_cleanly, repair_state_db_schema
+            from jimmy_state import _db_opens_cleanly, repair_state_db_schema
 
             _write_reason = _db_opens_cleanly(state_db_path)
             if _write_reason is not None:
@@ -1870,11 +1870,11 @@ def run_doctor(args):
                         )
                 else:
                     issues.append(
-                        "state.db FTS write corruption — run 'hermes doctor --fix' "
-                        "(or 'hermes sessions repair') to rebuild the FTS index"
+                        "state.db FTS write corruption — run 'jimmy doctor --fix' "
+                        "(or 'jimmy sessions repair') to rebuild the FTS index"
                     )
         except Exception as e:
-            from hermes_state import is_malformed_db_error, repair_state_db_schema
+            from jimmy_state import is_malformed_db_error, repair_state_db_schema
 
             if is_malformed_db_error(e):
                 # sqlite_master itself is malformed (e.g. duplicate
@@ -1916,19 +1916,19 @@ def run_doctor(args):
                         )
                 else:
                     issues.append(
-                        "state.db schema malformed — run 'hermes doctor --fix' "
-                        "(or 'hermes sessions repair') to recover hidden sessions"
+                        "state.db schema malformed — run 'jimmy doctor --fix' "
+                        "(or 'jimmy sessions repair') to recover hidden sessions"
                     )
             else:
                 check_warn(f"{_DHH}/state.db exists but has issues: {e}")
 
         # Health/stats snapshot (#statedb-visibility): a multi-GB state.db
-        # with a runaway WAL was previously invisible to every Hermes
+        # with a runaway WAL was previously invisible to every Jimmy
         # surface. Strictly read-only (mode=ro) so it is safe against a
         # live DB held by the gateway; any failure degrades to one info
         # line rather than failing doctor.
         try:
-            from hermes_state import collect_state_db_stats, count_db_holders
+            from jimmy_state import collect_state_db_stats, count_db_holders
 
             _db_stats = collect_state_db_stats(state_db_path)
             _db_holders = count_db_holders(state_db_path)
@@ -1942,7 +1942,7 @@ def run_doctor(args):
                             "state.db is large — enable sessions.auto_prune "
                             "in config.yaml"
                             + (
-                                " and run 'hermes sessions optimize-storage' "
+                                " and run 'jimmy sessions optimize-storage' "
                                 "offline (gateway stopped)"
                                 if "optimize-storage" in _detail else ""
                             )
@@ -1955,7 +1955,7 @@ def run_doctor(args):
         check_info(f"{_DHH}/state.db not created yet (will be created on first session)")
 
     # Check WAL file size (unbounded growth indicates missed checkpoints)
-    wal_path = hermes_home / "state.db-wal"
+    wal_path = jimmy_home / "state.db-wal"
     if wal_path.exists():
         try:
             wal_size = wal_path.stat().st_size
@@ -1973,7 +1973,7 @@ def run_doctor(args):
                     check_ok(f"WAL checkpoint performed ({wal_size // 1024}K → {new_size // 1024}K)")
                     fixed_count += 1
                 else:
-                    issues.append("Large WAL file — run 'hermes doctor --fix' to checkpoint")
+                    issues.append("Large WAL file — run 'jimmy doctor --fix' to checkpoint")
             elif wal_size > 10 * 1024 * 1024:  # 10 MB
                 check_info(f"WAL file is {wal_size // (1024*1024)} MB (normal for active sessions)")
         except Exception:
@@ -1987,7 +1987,7 @@ def run_doctor(args):
         # Determine the venv entry point location
         _venv_bin = None
         for _venv_name in ("venv", ".venv"):
-            _candidate = PROJECT_ROOT / _venv_name / "bin" / "hermes"
+            _candidate = PROJECT_ROOT / _venv_name / "bin" / "jimmy"
             if _candidate.exists():
                 _venv_bin = _candidate
                 break
@@ -2001,12 +2001,12 @@ def run_doctor(args):
         else:
             _cmd_link_dir = Path.home() / ".local" / "bin"
             _cmd_link_display = "~/.local/bin"
-        _cmd_link = _cmd_link_dir / "hermes"
+        _cmd_link = _cmd_link_dir / "jimmy"
 
         if _venv_bin is None:
             check_warn(
                 "Venv entry point not found",
-                "(hermes not in venv/bin/ or .venv/bin/ — reinstall with pip install -e '.[all]')"
+                "(jimmy not in venv/bin/ or .venv/bin/ — reinstall with pip install -e '.[all]')"
             )
             manual_issues.append(
                 f"Reinstall entry point: cd {PROJECT_ROOT} && source venv/bin/activate && pip install -e '.[all]'"
@@ -2019,31 +2019,31 @@ def run_doctor(args):
                 _target = _cmd_link.resolve()
                 _expected = _venv_bin.resolve()
                 if _target == _expected:
-                    check_ok(f"{_cmd_link_display}/hermes → correct target")
+                    check_ok(f"{_cmd_link_display}/jimmy → correct target")
                 else:
                     check_warn(
-                        f"{_cmd_link_display}/hermes points to wrong target",
+                        f"{_cmd_link_display}/jimmy points to wrong target",
                         f"(→ {_target}, expected → {_expected})"
                     )
                     if should_fix:
                         _cmd_link.unlink()
                         _cmd_link.symlink_to(_venv_bin)
-                        check_ok(f"Fixed symlink: {_cmd_link_display}/hermes → {_venv_bin}")
+                        check_ok(f"Fixed symlink: {_cmd_link_display}/jimmy → {_venv_bin}")
                         fixed_count += 1
                     else:
-                        issues.append(f"Broken symlink at {_cmd_link_display}/hermes — run 'hermes doctor --fix'")
+                        issues.append(f"Broken symlink at {_cmd_link_display}/jimmy — run 'jimmy doctor --fix'")
             elif _cmd_link.exists():
                 # It's a regular file, not a symlink — possibly a wrapper script
-                check_ok(f"{_cmd_link_display}/hermes exists (non-symlink)")
+                check_ok(f"{_cmd_link_display}/jimmy exists (non-symlink)")
             else:
                 check_fail(
-                    f"{_cmd_link_display}/hermes not found",
-                    "(hermes command may not work outside the venv)"
+                    f"{_cmd_link_display}/jimmy not found",
+                    "(jimmy command may not work outside the venv)"
                 )
                 if should_fix:
                     _cmd_link_dir.mkdir(parents=True, exist_ok=True)
                     _cmd_link.symlink_to(_venv_bin)
-                    check_ok(f"Created symlink: {_cmd_link_display}/hermes → {_venv_bin}")
+                    check_ok(f"Created symlink: {_cmd_link_display}/jimmy → {_venv_bin}")
                     fixed_count += 1
 
                     # Check if the link dir is on PATH
@@ -2055,7 +2055,7 @@ def run_doctor(args):
                         )
                         manual_issues.append(f"Add {_cmd_link_display} to your PATH")
                 else:
-                    issues.append(f"Missing {_cmd_link_display}/hermes symlink — run 'hermes doctor --fix'")
+                    issues.append(f"Missing {_cmd_link_display}/jimmy symlink — run 'jimmy doctor --fix'")
 
     _section("External Tools")
     # Git
@@ -2074,7 +2074,7 @@ def run_doctor(args):
     # Docker (optional)
     terminal_env = os.getenv("TERMINAL_ENV", "local")
     try:
-        from hermes_constants import is_container as _is_container
+        from jimmy_constants import is_container as _is_container
         running_in_container = _is_container()
     except Exception:
         running_in_container = False
@@ -2210,8 +2210,8 @@ def run_doctor(args):
         else:
             _fail_and_issue(
                 "vercel SDK not installed",
-                "(pip install 'hermes-agent[vercel]')",
-                "Install the Vercel optional dependency: pip install 'hermes-agent[vercel]'",
+                "(pip install 'jimmy-agent[vercel]')",
+                "Install the Vercel optional dependency: pip install 'jimmy-agent[vercel]'",
                 issues,
             )
 
@@ -2245,7 +2245,7 @@ def run_doctor(args):
     if _safe_which("node"):
         check_ok("Node.js")
         # agent-browser is no longer a root package.json dependency (#43564)
-        # — it resolves lazily via npx (or a global/Hermes-managed install)
+        # — it resolves lazily via npx (or a global/Jimmy-managed install)
         # at first use. Mirror tools.browser_tool._find_agent_browser's own
         # resolution cascade here so doctor can't diverge from what browser
         # tools will actually find; validate=False keeps this a cheap
@@ -2263,7 +2263,7 @@ def run_doctor(args):
             if should_fix:
                 # Doctor can't tell from here whether npx's cache already
                 # has agent-browser warm — just fire the same warm-up
-                # `hermes update` does, so a session's first browser call
+                # `jimmy update` does, so a session's first browser call
                 # doesn't pay the registry fetch either way.
                 from tools.browser_tool import warm_agent_browser_npx_cache
                 if warm_agent_browser_npx_cache():
@@ -2276,7 +2276,7 @@ def run_doctor(args):
         elif _resolved_ab:
             # Found on PATH but won't run — almost always a dangling global
             # symlink left behind by agent-browser's npm postinstall after a
-            # `hermes update` wiped node_modules (issue #48521).
+            # `jimmy update` wiped node_modules (issue #48521).
             check_warn(
                 "agent-browser found but not runnable",
                 f"(broken symlink at {_resolved_ab}? run: npx agent-browser --version)",
@@ -2299,7 +2299,7 @@ def run_doctor(args):
         if agent_browser_ok and not _is_termux():
             try:
                 # Lazy import: browser_tool is a ~150KB module we don't want
-                # to eagerly load in every `hermes doctor` invocation.
+                # to eagerly load in every `jimmy doctor` invocation.
                 from tools.browser_tool import (
                     _chromium_installed,
                     _is_camofox_mode,
@@ -2356,7 +2356,7 @@ def run_doctor(args):
         # glob (which pulls in Electron, node-pty, etc.) is never resolved
         # for a routine security check. The web and ui-tui workspaces are
         # audited separately via --workspace flags. See #38772.
-        # The WhatsApp bridge may live under a writable HERMES_HOME mirror
+        # The WhatsApp bridge may live under a writable JIMMY_HOME mirror
         # instead of the (possibly read-only) install tree in Docker — resolve
         # it through the shared helper so we audit the dir that actually holds
         # node_modules. See #49561.
@@ -2428,7 +2428,7 @@ def run_doctor(args):
                         # tooling (esbuild/vite, etc.), not runtime code that ships
                         # to users. Manual npm remediation may error with a known
                         # arborist crash (edgesOut / isDescendantOf) on this monorepo
-                        # tree — in that case it is an npm bug, not a Hermes one.
+                        # tree — in that case it is an npm bug, not a Jimmy one.
                         check_info(
                             "  ^ build-time tooling (not runtime); if manual npm remediation "
                             "errors with an arborist crash it's a known npm bug — clears "
@@ -2507,7 +2507,7 @@ def run_doctor(args):
                     [(color("✗", Colors.RED), "OpenRouter API",
                       color("(out of credits — payment required)", Colors.DIM))],
                     ["OpenRouter account has insufficient credits. "
-                     "Fix: run 'hermes config set model.provider <provider>' "
+                     "Fix: run 'jimmy config set model.provider <provider>' "
                      "to switch providers, or fund your OpenRouter account "
                      "at https://openrouter.ai/settings/credits"],
                 )
@@ -2534,7 +2534,7 @@ def run_doctor(args):
             )
 
     def _probe_anthropic() -> _ConnectivityResult:
-        from hermes_cli.auth import get_anthropic_key
+        from jimmy_cli.auth import get_anthropic_key
         key = get_anthropic_key()
         if not key:
             return _ConnectivityResult("Anthropic API", [], [])
@@ -2637,7 +2637,7 @@ def run_doctor(args):
             url = (base.rstrip("/") + "/models") if base else default_url
             headers = {
                 "Authorization": f"Bearer {key}",
-                "User-Agent": _HERMES_USER_AGENT,
+                "User-Agent": _JIMMY_USER_AGENT,
             }
             if base_url_host_matches(base, "api.kimi.com"):
                 headers["User-Agent"] = "claude-code/0.1.0"
@@ -2646,7 +2646,7 @@ def run_doctor(args):
             # ``ACCESS_TOKEN_TYPE_UNSUPPORTED`` — that header is reserved for
             # OAuth 2 access tokens, not plain API keys. Plain keys use
             # ``x-goog-api-key`` (or ``?key=``). Without this, a perfectly valid
-            # GOOGLE_API_KEY/GEMINI_API_KEY always shows red in ``hermes doctor``.
+            # GOOGLE_API_KEY/GEMINI_API_KEY always shows red in ``jimmy doctor``.
             if url and base_url_host_matches(url, "generativelanguage.googleapis.com"):
                 headers.pop("Authorization", None)
                 headers["x-goog-api-key"] = key
@@ -2751,7 +2751,7 @@ def run_doctor(args):
         """
         label = "Azure Foundry (Entra ID)".ljust(28)
         try:
-            from hermes_cli.config import load_config
+            from jimmy_cli.config import load_config
             cfg = load_config()
             model_cfg = cfg.get("model") if isinstance(cfg, dict) else {}
             if not isinstance(model_cfg, dict):
@@ -2850,7 +2850,7 @@ def run_doctor(args):
     # Set on the parent thread before submitting work so the env-var
     # mutation never races with another worker. has_aws_credentials() in
     # the bedrock probe already gates on real env-var creds, so IMDS is
-    # never the legitimate source for `hermes doctor`.
+    # never the legitimate source for `jimmy doctor`.
     _imds_prev = os.environ.get("AWS_EC2_METADATA_DISABLED")
     os.environ["AWS_EC2_METADATA_DISABLED"] = "true"
     try:
@@ -2923,12 +2923,12 @@ def run_doctor(args):
         api_disabled = _missing_api_key_toolsets_for_summary(unavailable)
         web_not_ready = any(status != "ok" for status, _, _ in web_rows)
         if api_disabled or web_not_ready:
-            issues.append("Run 'hermes setup' to configure missing API keys for full tool access")
+            issues.append("Run 'jimmy setup' to configure missing API keys for full tool access")
     except Exception as e:
         check_warn("Could not check tool availability", f"({e})")
     
     _section("Skills Hub")
-    hub_dir = HERMES_HOME / "skills" / ".hub"
+    hub_dir = JIMMY_HOME / "skills" / ".hub"
     if hub_dir.exists():
         check_ok("Skills Hub directory exists")
         lock_file = hub_dir / "lock.json"
@@ -2945,9 +2945,9 @@ def run_doctor(args):
         if q_count > 0:
             check_warn(f"{q_count} skill(s) in quarantine", "(pending review)")
     else:
-        check_warn("Skills Hub directory not initialized", "(run: hermes skills list)")
+        check_warn("Skills Hub directory not initialized", "(run: jimmy skills list)")
 
-    from hermes_cli.config import get_env_value
+    from jimmy_cli.config import get_env_value
 
     def _gh_authenticated() -> bool:
         """Check if gh CLI is authenticated via token file or device flow."""
@@ -2971,13 +2971,13 @@ def run_doctor(args):
     _section("Memory Provider")
     _active_memory_provider = ""
     try:
-        from hermes_cli.config import read_user_config_raw as _read_raw_mem
-        _mem_cfg_path = HERMES_HOME / "config.yaml"
+        from jimmy_cli.config import read_user_config_raw as _read_raw_mem
+        _mem_cfg_path = JIMMY_HOME / "config.yaml"
         if _mem_cfg_path.exists():
             # Raw-file diagnostic (+ managed overlay below, unchanged).
             _raw_cfg = _read_raw_mem(_mem_cfg_path)
             try:
-                from hermes_cli import managed_scope
+                from jimmy_cli import managed_scope
                 _raw_cfg = managed_scope.apply_managed_overlay(_raw_cfg)
             except Exception:
                 pass
@@ -3002,14 +3002,14 @@ def run_doctor(args):
                         f"config file {_honcho_cfg_path} not found, using HONCHO_API_KEY env var",
                     )
                 else:
-                    check_warn("Honcho config not found", "run: hermes memory setup")
+                    check_warn("Honcho config not found", "run: jimmy memory setup")
             elif not hcfg.enabled:
                 check_info(f"Honcho disabled (set enabled: true in {_honcho_cfg_path} to activate)")
             elif not (hcfg.api_key or hcfg.base_url):
                 _fail_and_issue(
                     "Honcho API key or base URL not set",
-                    "run: hermes memory setup",
-                    "No Honcho API key — run 'hermes memory setup'",
+                    "run: jimmy memory setup",
+                    "No Honcho API key — run 'jimmy memory setup'",
                     issues,
                 )
             else:
@@ -3043,7 +3043,7 @@ def run_doctor(args):
             else:
                 _fail_and_issue(
                     "Mem0 API key not set",
-                    "(set MEM0_API_KEY in .env or run hermes memory setup)",
+                    "(set MEM0_API_KEY in .env or run jimmy memory setup)",
                     "Mem0 is set as memory provider but API key is missing",
                     issues,
                 )
@@ -3064,14 +3064,14 @@ def run_doctor(args):
             if _provider and _provider.is_available():
                 check_ok(f"{_active_memory_provider} provider active")
             elif _provider:
-                check_warn(f"{_active_memory_provider} configured but not available", "run: hermes memory status")
+                check_warn(f"{_active_memory_provider} configured but not available", "run: jimmy memory status")
             else:
-                check_warn(f"{_active_memory_provider} plugin not found", "run: hermes memory setup")
+                check_warn(f"{_active_memory_provider} plugin not found", "run: jimmy memory setup")
         except Exception as _e:
             check_warn(f"{_active_memory_provider} check failed", str(_e))
 
     try:
-        from hermes_cli.profiles import list_profiles, _get_wrapper_dir, profile_exists
+        from jimmy_cli.profiles import list_profiles, _get_wrapper_dir, profile_exists
         import re as _re
 
         named_profiles = [p for p in list_profiles() if not p.is_default]
@@ -3102,8 +3102,8 @@ def run_doctor(args):
                         continue
                     try:
                         content = wrapper.read_text(encoding="utf-8")
-                        if "hermes -p" in content:
-                            _m = _re.search(r"hermes -p (\S+)", content)
+                        if "jimmy -p" in content:
+                            _m = _re.search(r"jimmy -p (\S+)", content)
                             if _m and not profile_exists(_m.group(1)):
                                 check_warn(f"Orphan alias: {wrapper.name} → profile '{_m.group(1)}' no longer exists")
                     except Exception:
@@ -3114,9 +3114,9 @@ def run_doctor(args):
         pass
 
     # Opt-in live backend probes run AFTER all static checks, only with
-    # `hermes doctor --live` (real network calls; bounded + read-only).
+    # `jimmy doctor --live` (real network calls; bounded + read-only).
     try:
-        from hermes_cli.doctor_live import maybe_run_live_checks
+        from jimmy_cli.doctor_live import maybe_run_live_checks
         maybe_run_live_checks(args, manual_issues)
     except Exception:
         pass
@@ -3143,7 +3143,7 @@ def run_doctor(args):
             print(f"  {i}. {issue}")
         print()
         if not should_fix:
-            print(color("  Tip: run 'hermes doctor --fix' to auto-fix what's possible.", Colors.DIM))
+            print(color("  Tip: run 'jimmy doctor --fix' to auto-fix what's possible.", Colors.DIM))
     else:
         print(color("─" * 60, Colors.GREEN))
         print(color("  All checks passed! 🎉", Colors.GREEN, Colors.BOLD))

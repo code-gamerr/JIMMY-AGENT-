@@ -32,11 +32,11 @@ mirroring the Nous provider's precedence convention:
 
   Environment overrides::
 
-      HERMES_DASHBOARD_BASIC_AUTH_USERNAME
-      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH   # preferred
-      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD        # plaintext fallback
-      HERMES_DASHBOARD_BASIC_AUTH_SECRET
-      HERMES_DASHBOARD_BASIC_AUTH_TTL_SECONDS
+      JIMMY_DASHBOARD_BASIC_AUTH_USERNAME
+      JIMMY_DASHBOARD_BASIC_AUTH_PASSWORD_HASH   # preferred
+      JIMMY_DASHBOARD_BASIC_AUTH_PASSWORD        # plaintext fallback
+      JIMMY_DASHBOARD_BASIC_AUTH_SECRET
+      JIMMY_DASHBOARD_BASIC_AUTH_TTL_SECONDS
 
 If ``secret`` is not configured, a random per-process secret is generated
 at startup. That's fine for a single-process dashboard, but means all
@@ -67,7 +67,7 @@ import secrets
 import time
 from typing import Any, Optional
 
-from hermes_cli.dashboard_auth import (
+from jimmy_cli.dashboard_auth import (
     DashboardAuthProvider,
     InvalidCredentialsError,
     LoginStart,
@@ -201,7 +201,7 @@ def _unsign(token: str, secret: bytes) -> Optional[dict]:
 class BasicAuthProvider(DashboardAuthProvider):
     """Username/password provider with stateless HMAC-signed sessions.
 
-    Supports one or many users. Each user may bind to a Hermes ``profile``
+    Supports one or many users. Each user may bind to a Jimmy ``profile``
     so dashboard requests are locked to that profile's data (no chat overlap).
     """
 
@@ -387,7 +387,7 @@ def _load_config_basic_auth_section() -> dict:
     not being a dict — every shape falls through to ``{}``.
     """
     try:
-        from hermes_cli.config import cfg_get, load_config
+        from jimmy_cli.config import cfg_get, load_config
 
         cfg = load_config()
     except Exception as exc:  # noqa: BLE001 — broad catch is intentional
@@ -417,14 +417,14 @@ def _resolve_secret(cfg_section: dict) -> bytes:
     restart or span multiple workers — logged at INFO).
     """
     raw = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_SECRET", cfg_section, "secret"
+        "JIMMY_DASHBOARD_BASIC_AUTH_SECRET", cfg_section, "secret"
     )
     if not raw:
         logger.info(
             "dashboard-auth-basic: no 'secret' configured; generating a "
             "random per-process signing key. Sessions will not survive a "
             "restart or span multiple workers. Set dashboard.basic_auth."
-            "secret (or HERMES_DASHBOARD_BASIC_AUTH_SECRET) for stable "
+            "secret (or JIMMY_DASHBOARD_BASIC_AUTH_SECRET) for stable "
             "sessions."
         )
         return secrets.token_bytes(32)
@@ -443,21 +443,21 @@ def _normalize_user_entries(raw_users: Any, section: dict) -> list[dict[str, str
     """Build [{username, password_hash, profile}, ...] from config/env.
 
     Sources (first match wins):
-      1. HERMES_DASHBOARD_BASIC_AUTH_USERS JSON env
+      1. JIMMY_DASHBOARD_BASIC_AUTH_USERS JSON env
       2. dashboard.basic_auth.users list
       3. Legacy single username + password(_hash)
       4. JIMMY1_PASSWORD … JIMMY4_PASSWORD (+ optional JIMMYN_USERNAME)
     """
     import json
 
-    env_users = os.environ.get("HERMES_DASHBOARD_BASIC_AUTH_USERS", "").strip()
+    env_users = os.environ.get("JIMMY_DASHBOARD_BASIC_AUTH_USERS", "").strip()
     if env_users:
         try:
             parsed = json.loads(env_users)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"HERMES_DASHBOARD_BASIC_AUTH_USERS is not valid JSON: {exc}") from exc
+            raise ValueError(f"JIMMY_DASHBOARD_BASIC_AUTH_USERS is not valid JSON: {exc}") from exc
         if not isinstance(parsed, list):
-            raise ValueError("HERMES_DASHBOARD_BASIC_AUTH_USERS must be a JSON list")
+            raise ValueError("JIMMY_DASHBOARD_BASIC_AUTH_USERS must be a JSON list")
         raw_users = parsed
 
     if not raw_users and isinstance(section.get("users"), list):
@@ -489,19 +489,19 @@ def _normalize_user_entries(raw_users: Any, section: dict) -> list[dict[str, str
 
     # Legacy single-user
     username = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_USERNAME", section, "username"
+        "JIMMY_DASHBOARD_BASIC_AUTH_USERNAME", section, "username"
     )
     password_hash = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH", section, "password_hash"
+        "JIMMY_DASHBOARD_BASIC_AUTH_PASSWORD_HASH", section, "password_hash"
     )
     plaintext = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD", section, "password"
+        "JIMMY_DASHBOARD_BASIC_AUTH_PASSWORD", section, "password"
     )
     profile = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_PROFILE", section, "profile"
+        "JIMMY_DASHBOARD_BASIC_AUTH_PROFILE", section, "profile"
     )
     plaintext_from_env = os.environ.get(
-        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD", ""
+        "JIMMY_DASHBOARD_BASIC_AUTH_PASSWORD", ""
     ).strip()
     if plaintext_from_env:
         password_hash = hash_password(plaintext_from_env)
@@ -547,7 +547,7 @@ def register(ctx) -> None:
 
     section = _load_config_basic_auth_section()
     ttl_raw = _resolve(
-        "HERMES_DASHBOARD_BASIC_AUTH_TTL_SECONDS", section, "session_ttl_seconds"
+        "JIMMY_DASHBOARD_BASIC_AUTH_TTL_SECONDS", section, "session_ttl_seconds"
     )
 
     try:

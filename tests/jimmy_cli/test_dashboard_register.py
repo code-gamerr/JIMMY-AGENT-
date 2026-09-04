@@ -1,4 +1,4 @@
-"""Tests for ``hermes dashboard register``.
+"""Tests for ``jimmy dashboard register``.
 
 Covers the CLI half of self-hosted dashboard registration:
   - Docker-style auto-name generation
@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import hermes_cli.dashboard_register as dr
+import jimmy_cli.dashboard_register as dr
 
 
 def _ns(**kw):
@@ -44,22 +44,22 @@ class TestNameGenerator:
 
 class TestFastFails:
     def test_not_logged_in_exits_1_with_setup_hint(self, capsys):
-        from hermes_cli.auth import AuthError
+        from jimmy_cli.auth import AuthError
 
         err = AuthError("not logged in", provider="nous", relogin_required=True)
         with patch.object(dr, "cmd_dashboard_register", dr.cmd_dashboard_register):
             with patch(
-                "hermes_cli.auth.resolve_nous_access_token", side_effect=err
-            ), patch("hermes_cli.config.is_managed", return_value=False):
+                "jimmy_cli.auth.resolve_nous_access_token", side_effect=err
+            ), patch("jimmy_cli.config.is_managed", return_value=False):
                 with pytest.raises(SystemExit) as exc:
                     dr.cmd_dashboard_register(_ns())
         assert exc.value.code == 1
         out = capsys.readouterr().out
         assert "not logged into Nous Portal" in out
-        assert "hermes setup" in out
+        assert "jimmy setup" in out
 
     def test_managed_install_refuses(self, capsys):
-        with patch("hermes_cli.config.is_managed", return_value=True):
+        with patch("jimmy_cli.config.is_managed", return_value=True):
             with pytest.raises(SystemExit) as exc:
                 dr.cmd_dashboard_register(_ns())
         assert exc.value.code == 1
@@ -75,7 +75,7 @@ def _fake_http_ok(payload: dict):
 
 
 class TestHappyPath:
-    def _run(self, *, args, account_token="tok_abc", portal="https://portal.nousresearch.com",
+    def _run(self, *, args, account_token="tok_abc", portal="https://portal.jimmy-agent.com",
              response=None, captured=None, existing_client_id=None):
         response = response or {
             "client_id": "agent:selfhost-1",
@@ -99,22 +99,22 @@ class TestHappyPath:
             saved[key] = value
 
         # get_env_value is consulted twice: once for the stored client_id
-        # (idempotency key) and once for HERMES_DASHBOARD_PORTAL_URL. Route by
+        # (idempotency key) and once for JIMMY_DASHBOARD_PORTAL_URL. Route by
         # key so a test can seed a prior client_id while keeping the portal
         # unset (the default-portal-not-persisted path).
         def fake_get_env(key):
-            if key == "HERMES_DASHBOARD_OAUTH_CLIENT_ID":
+            if key == "JIMMY_DASHBOARD_OAUTH_CLIENT_ID":
                 return existing_client_id
             return None
 
         with patch(
-            "hermes_cli.auth.resolve_nous_access_token", return_value=account_token
-        ), patch("hermes_cli.config.is_managed", return_value=False), patch.object(
+            "jimmy_cli.auth.resolve_nous_access_token", return_value=account_token
+        ), patch("jimmy_cli.config.is_managed", return_value=False), patch.object(
             dr, "_resolve_portal_base_url", return_value=portal
         ), patch(
-            "hermes_cli.config.get_env_value", side_effect=fake_get_env
+            "jimmy_cli.config.get_env_value", side_effect=fake_get_env
         ), patch(
-            "hermes_cli.config.save_env_value", side_effect=fake_save
+            "jimmy_cli.config.save_env_value", side_effect=fake_save
         ), patch.object(
             dr.urllib.request, "urlopen", side_effect=fake_urlopen
         ):
@@ -132,8 +132,8 @@ class TestHappyPath:
         assert "custom_redirect_uri" not in captured["body"]
 
         # env write: client_id present, portal URL NOT written (default portal)
-        assert saved["HERMES_DASHBOARD_OAUTH_CLIENT_ID"] == "agent:selfhost-1"
-        assert "HERMES_DASHBOARD_PORTAL_URL" not in saved
+        assert saved["JIMMY_DASHBOARD_OAUTH_CLIENT_ID"] == "agent:selfhost-1"
+        assert "JIMMY_DASHBOARD_PORTAL_URL" not in saved
 
         out = capsys.readouterr().out
         assert "Registered dashboard" in out
@@ -149,7 +149,7 @@ class TestIdempotentRerun(TestHappyPath):
     """Re-running with a stored client_id updates instead of creating.
 
     Inherits ``_run`` from TestHappyPath; the only new lever is
-    ``existing_client_id`` (the HERMES_DASHBOARD_OAUTH_CLIENT_ID a prior run
+    ``existing_client_id`` (the JIMMY_DASHBOARD_OAUTH_CLIENT_ID a prior run
     persisted), which the CLI re-sends so the portal updates that row.
     """
 
@@ -181,7 +181,7 @@ class TestIdempotentRerun(TestHappyPath):
         out = capsys.readouterr().out
         assert "Registered dashboard" in out
         assert "Updated dashboard" not in out
-        assert saved["HERMES_DASHBOARD_OAUTH_CLIENT_ID"] == "agent:selfhost-new"
+        assert saved["JIMMY_DASHBOARD_OAUTH_CLIENT_ID"] == "agent:selfhost-new"
 
     def test_blank_stored_client_id_treated_as_first_run(self, capsys):
         # A blank/whitespace stored value is not a usable key: treat as a
@@ -197,7 +197,7 @@ class TestIdempotentRerun(TestHappyPath):
 
 
 class TestCustomPortalPersistence:
-    """`--portal-url` / HERMES_DASHBOARD_PORTAL_URL is persisted to .env.
+    """`--portal-url` / JIMMY_DASHBOARD_PORTAL_URL is persisted to .env.
 
     An *explicitly supplied* custom portal URL is an intentional choice the
     user wants to survive across sessions, so it's always written (updating an
@@ -211,7 +211,7 @@ class TestCustomPortalPersistence:
         """Drive cmd_dashboard_register, capturing save_env_value calls.
 
         `existing_portal` is what get_env_value returns for
-        HERMES_DASHBOARD_PORTAL_URL (None = not present in .env).
+        JIMMY_DASHBOARD_PORTAL_URL (None = not present in .env).
         """
         response = {
             "client_id": "agent:selfhost-1",
@@ -228,27 +228,27 @@ class TestCustomPortalPersistence:
             saved[key] = value
 
         def fake_get_env_value(key, *a, **kw):
-            if key == "HERMES_DASHBOARD_PORTAL_URL":
+            if key == "JIMMY_DASHBOARD_PORTAL_URL":
                 return existing_portal
             return None
 
         with patch(
-            "hermes_cli.auth.resolve_nous_access_token", return_value="tok"
-        ), patch("hermes_cli.config.is_managed", return_value=False), patch.dict(
+            "jimmy_cli.auth.resolve_nous_access_token", return_value="tok"
+        ), patch("jimmy_cli.config.is_managed", return_value=False), patch.dict(
             dr.os.environ, {}, clear=False
         ), patch.object(
             dr, "_resolve_portal_base_url", return_value=portal
         ), patch(
-            "hermes_cli.config.get_env_value", side_effect=fake_get_env_value
+            "jimmy_cli.config.get_env_value", side_effect=fake_get_env_value
         ), patch(
-            "hermes_cli.config.save_env_value", side_effect=fake_save
+            "jimmy_cli.config.save_env_value", side_effect=fake_save
         ), patch.object(
             dr.urllib.request, "urlopen", return_value=_fake_http_ok(response)
         ):
-            # The ambient process env may carry HERMES_DASHBOARD_PORTAL_URL
+            # The ambient process env may carry JIMMY_DASHBOARD_PORTAL_URL
             # (e.g. staging dev shells); drop it so `custom_portal_supplied`
             # is driven solely by the args.portal_url under test.
-            dr.os.environ.pop("HERMES_DASHBOARD_PORTAL_URL", None)
+            dr.os.environ.pop("JIMMY_DASHBOARD_PORTAL_URL", None)
             dr.cmd_dashboard_register(args)
         return saved
 
@@ -257,21 +257,21 @@ class TestCustomPortalPersistence:
         # No custom URL supplied, resolves to default → not written.
         saved = self._run(
             args=_ns(),
-            portal="https://portal.nousresearch.com",
+            portal="https://portal.jimmy-agent.com",
             existing_portal=None,
         )
-        assert "HERMES_DASHBOARD_PORTAL_URL" not in saved
+        assert "JIMMY_DASHBOARD_PORTAL_URL" not in saved
 
 
 class TestPublicUrlPersistence:
-    """`--redirect-uri` derives & persists HERMES_DASHBOARD_PUBLIC_URL in .env.
+    """`--redirect-uri` derives & persists JIMMY_DASHBOARD_PUBLIC_URL in .env.
 
     --redirect-uri is the full public callback (e.g.
-    https://hermes.example.com/auth/callback). At serve time the dashboard auth
+    https://jimmy.example.com/auth/callback). At serve time the dashboard auth
     layer reconstructs that callback by appending "/auth/callback" to
-    HERMES_DASHBOARD_PUBLIC_URL, so the value that's actually consumed is the
+    JIMMY_DASHBOARD_PUBLIC_URL, so the value that's actually consumed is the
     ORIGIN (scheme://host). We derive the origin from the supplied redirect URI
-    and persist THAT as HERMES_DASHBOARD_PUBLIC_URL — the var the runtime reads
+    and persist THAT as JIMMY_DASHBOARD_PUBLIC_URL — the var the runtime reads
     — so the public-URL override is genuinely wired, not just stored.
 
     An explicitly supplied value is always written (updating an existing entry
@@ -283,7 +283,7 @@ class TestPublicUrlPersistence:
         """Drive cmd_dashboard_register, capturing save_env_value calls.
 
         `existing_public` is what get_env_value returns for
-        HERMES_DASHBOARD_PUBLIC_URL (None = not present in .env).
+        JIMMY_DASHBOARD_PUBLIC_URL (None = not present in .env).
         """
         response = {
             "client_id": "agent:selfhost-1",
@@ -300,24 +300,24 @@ class TestPublicUrlPersistence:
             saved[key] = value
 
         def fake_get_env_value(key, *a, **kw):
-            if key == "HERMES_DASHBOARD_PUBLIC_URL":
+            if key == "JIMMY_DASHBOARD_PUBLIC_URL":
                 return existing_public
             return None
 
         with patch(
-            "hermes_cli.auth.resolve_nous_access_token", return_value="tok"
-        ), patch("hermes_cli.config.is_managed", return_value=False), patch.dict(
+            "jimmy_cli.auth.resolve_nous_access_token", return_value="tok"
+        ), patch("jimmy_cli.config.is_managed", return_value=False), patch.dict(
             dr.os.environ, {}, clear=False
         ), patch.object(
-            dr, "_resolve_portal_base_url", return_value="https://portal.nousresearch.com"
+            dr, "_resolve_portal_base_url", return_value="https://portal.jimmy-agent.com"
         ), patch(
-            "hermes_cli.config.get_env_value", side_effect=fake_get_env_value
+            "jimmy_cli.config.get_env_value", side_effect=fake_get_env_value
         ), patch(
-            "hermes_cli.config.save_env_value", side_effect=fake_save
+            "jimmy_cli.config.save_env_value", side_effect=fake_save
         ), patch.object(
             dr.urllib.request, "urlopen", return_value=_fake_http_ok(response)
         ):
-            dr.os.environ.pop("HERMES_DASHBOARD_PORTAL_URL", None)
+            dr.os.environ.pop("JIMMY_DASHBOARD_PORTAL_URL", None)
             dr.cmd_dashboard_register(args)
         return saved
 
@@ -329,7 +329,7 @@ class TestPublicUrlPersistence:
             args=_ns(),
             existing_public="https://already-set.example.com",
         )
-        assert "HERMES_DASHBOARD_PUBLIC_URL" not in saved
+        assert "JIMMY_DASHBOARD_PUBLIC_URL" not in saved
 
     def test_non_http_redirect_not_persisted(self, capsys):
         # A malformed / non-http(s) redirect yields no derivable origin → skip.
@@ -337,7 +337,7 @@ class TestPublicUrlPersistence:
             args=_ns(redirect_uri="not-a-url"),
             existing_public=None,
         )
-        assert "HERMES_DASHBOARD_PUBLIC_URL" not in saved
+        assert "JIMMY_DASHBOARD_PUBLIC_URL" not in saved
 
     def test_public_url_persisted_alongside_portal_url(self, capsys):
         # Both --portal-url and --redirect-uri supplied → portal_url AND the
@@ -348,7 +348,7 @@ class TestPublicUrlPersistence:
             "id": "selfhost-1",
             "name": "dreamy_tesla",
             "kind": "SELF_HOSTED",
-            "custom_redirect_uri": "https://hermes.example.com/auth/callback",
+            "custom_redirect_uri": "https://jimmy.example.com/auth/callback",
             "created_at": "2026-06-04T12:00:00.000Z",
         }
         saved: dict = {}
@@ -357,27 +357,27 @@ class TestPublicUrlPersistence:
             saved[key] = value
 
         with patch(
-            "hermes_cli.auth.resolve_nous_access_token", return_value="tok"
-        ), patch("hermes_cli.config.is_managed", return_value=False), patch.dict(
+            "jimmy_cli.auth.resolve_nous_access_token", return_value="tok"
+        ), patch("jimmy_cli.config.is_managed", return_value=False), patch.dict(
             dr.os.environ, {}, clear=False
         ), patch.object(
             dr, "_resolve_portal_base_url", return_value="https://preview.example.com"
         ), patch(
-            "hermes_cli.config.get_env_value", return_value=None
+            "jimmy_cli.config.get_env_value", return_value=None
         ), patch(
-            "hermes_cli.config.save_env_value", side_effect=fake_save
+            "jimmy_cli.config.save_env_value", side_effect=fake_save
         ), patch.object(
             dr.urllib.request, "urlopen", return_value=_fake_http_ok(response)
         ):
-            dr.os.environ.pop("HERMES_DASHBOARD_PORTAL_URL", None)
+            dr.os.environ.pop("JIMMY_DASHBOARD_PORTAL_URL", None)
             dr.cmd_dashboard_register(
                 _ns(
                     portal_url="https://preview.example.com",
-                    redirect_uri="https://hermes.example.com/auth/callback",
+                    redirect_uri="https://jimmy.example.com/auth/callback",
                 )
             )
-        assert saved["HERMES_DASHBOARD_PORTAL_URL"] == "https://preview.example.com"
-        assert saved["HERMES_DASHBOARD_PUBLIC_URL"] == "https://hermes.example.com"
+        assert saved["JIMMY_DASHBOARD_PORTAL_URL"] == "https://preview.example.com"
+        assert saved["JIMMY_DASHBOARD_PUBLIC_URL"] == "https://jimmy.example.com"
 
 
 class TestPortalResolution:
@@ -389,19 +389,19 @@ class TestPortalResolution:
 
     def test_falls_back_to_stored_login_portal(self):
         with patch(
-            "hermes_cli.auth.get_provider_auth_state",
-            return_value={"portal_base_url": "https://portal.staging-nousresearch.com"},
+            "jimmy_cli.auth.get_provider_auth_state",
+            return_value={"portal_base_url": "https://portal.staging-jimmy-agent.com"},
         ):
             assert (
                 dr._resolve_portal_base_url(None)
-                == "https://portal.staging-nousresearch.com"
+                == "https://portal.staging-jimmy-agent.com"
             )
 
 
 class TestPortalErrors:
     def _run_http_error(self, code, body):
         err = urllib.error.HTTPError(
-            url="https://portal.nousresearch.com/api/oauth/self-hosted-client",
+            url="https://portal.jimmy-agent.com/api/oauth/self-hosted-client",
             code=code,
             msg="err",
             hdrs=None,
@@ -409,9 +409,9 @@ class TestPortalErrors:
         )
 
         with patch(
-            "hermes_cli.auth.resolve_nous_access_token", return_value="tok"
-        ), patch("hermes_cli.config.is_managed", return_value=False), patch.object(
-            dr, "_resolve_portal_base_url", return_value="https://portal.nousresearch.com"
+            "jimmy_cli.auth.resolve_nous_access_token", return_value="tok"
+        ), patch("jimmy_cli.config.is_managed", return_value=False), patch.object(
+            dr, "_resolve_portal_base_url", return_value="https://portal.jimmy-agent.com"
         ), patch.object(dr.urllib.request, "urlopen", side_effect=err):
             with pytest.raises(SystemExit) as exc:
                 dr.cmd_dashboard_register(_ns())

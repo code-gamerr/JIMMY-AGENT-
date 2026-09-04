@@ -1,4 +1,4 @@
-"""Comprehensive tests for hermes_cli.profiles module.
+"""Comprehensive tests for jimmy_cli.profiles module.
 
 Tests cover: validation, directory resolution, CRUD operations, active profile
 management, export/import, renaming, alias collision checks, profile isolation,
@@ -18,8 +18,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 import yaml
 
-from hermes_cli import profiles
-from hermes_cli.profiles import (
+from jimmy_cli import profiles
+from jimmy_cli.profiles import (
     normalize_profile_name,
     validate_profile_name,
     get_profile_dir,
@@ -38,32 +38,32 @@ from hermes_cli.profiles import (
     export_profile,
     import_profile,
     _get_profiles_root,
-    _get_default_hermes_home,
+    _get_default_jimmy_home,
     seed_profile_skills,
     has_bundled_skills_opt_out,
     NO_BUNDLED_SKILLS_MARKER,
     backfill_profile_envs,
     profiles_to_serve,
 )
-from hermes_cli.config import DEFAULT_CONFIG
+from jimmy_cli.config import DEFAULT_CONFIG
 
 
 # ---------------------------------------------------------------------------
-# Shared fixture: redirect Path.home() and HERMES_HOME for profile tests
+# Shared fixture: redirect Path.home() and JIMMY_HOME for profile tests
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
 def profile_env(tmp_path, monkeypatch):
     """Set up an isolated environment for profile tests.
 
-    * Path.home() -> tmp_path  (so _get_profiles_root() = tmp_path/.hermes/profiles)
-    * HERMES_HOME  -> tmp_path/.hermes  (so get_hermes_home() agrees)
-    * Creates the bare-minimum ~/.hermes directory.
+    * Path.home() -> tmp_path  (so _get_profiles_root() = tmp_path/.jimmy/profiles)
+    * JIMMY_HOME  -> tmp_path/.jimmy  (so get_jimmy_home() agrees)
+    * Creates the bare-minimum ~/.jimmy directory.
     """
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    default_home = tmp_path / ".hermes"
+    default_home = tmp_path / ".jimmy"
     default_home.mkdir(exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(default_home))
+    monkeypatch.setenv("JIMMY_HOME", str(default_home))
     return tmp_path
 
 
@@ -101,10 +101,10 @@ class TestValidateProfileName:
 class TestGetProfileDir:
     """Tests for get_profile_dir()."""
 
-    def test_default_returns_hermes_home(self, profile_env):
+    def test_default_returns_jimmy_home(self, profile_env):
         tmp_path = profile_env
         result = get_profile_dir("default")
-        assert result == tmp_path / ".hermes"
+        assert result == tmp_path / ".jimmy"
 
 
 # ===================================================================
@@ -137,7 +137,7 @@ class TestCreateProfile:
 
     def test_clone_config_copies_files(self, profile_env):
         tmp_path = profile_env
-        default_home = tmp_path / ".hermes"
+        default_home = tmp_path / ".jimmy"
         # Create source config files in default profile
         (default_home / "config.yaml").write_text("model: test")
         (default_home / ".env").write_text("KEY=val")
@@ -160,7 +160,7 @@ class TestCreateProfile:
 # ===================================================================
 
 class TestNoSkillsOptOut:
-    """Tests for `hermes profile create --no-skills` and the opt-out marker."""
+    """Tests for `jimmy profile create --no-skills` and the opt-out marker."""
 
     def test_no_skills_writes_marker_and_skips_seeding(self, profile_env):
         profile_dir = create_profile("orchestrator", no_alias=True, no_skills=True)
@@ -213,14 +213,14 @@ class TestNoSkillsOptOut:
 # ===================================================================
 
 class TestBackfillProfileEnvs:
-    """Tests for backfill_profile_envs() — the `hermes update` pass that
+    """Tests for backfill_profile_envs() — the `jimmy update` pass that
     gives pre-#44792 profiles (created before .env seeding) their own
     .env, copied from the default install so credentials don't break."""
 
     def test_copies_default_env_into_envless_profiles(self, profile_env):
         import stat
         tmp_path = profile_env
-        (tmp_path / ".hermes" / ".env").write_text("OPENROUTER_API_KEY=root-key\n")
+        (tmp_path / ".jimmy" / ".env").write_text("OPENROUTER_API_KEY=root-key\n")
         p1 = create_profile("old1", no_alias=True)
         p2 = create_profile("old2", no_alias=True)
         # Simulate pre-#44792 profiles: no .env
@@ -264,9 +264,9 @@ class TestDeleteProfile:
         profile_dir = create_profile("coder", no_alias=True)
         set_active_profile("coder")
 
-        with patch("hermes_cli.profiles._cleanup_gateway_service"), \
-             patch("hermes_cli.profiles.time.sleep"), \
-             patch("hermes_cli.profiles.shutil.rmtree", side_effect=PermissionError("locked")):
+        with patch("jimmy_cli.profiles._cleanup_gateway_service"), \
+             patch("jimmy_cli.profiles.time.sleep"), \
+             patch("jimmy_cli.profiles.shutil.rmtree", side_effect=PermissionError("locked")):
             with pytest.raises(RuntimeError, match="Could not remove profile directory"):
                 delete_profile("coder", yes=True)
 
@@ -297,13 +297,13 @@ class TestDeleteProfile:
         self_pid = os.getpid()
         procs = [
             # Backend bound to coder → matched.
-            FakeProc(101, ["python", "-m", "hermes_cli.main", "--profile", "coder", "serve"]),
+            FakeProc(101, ["python", "-m", "jimmy_cli.main", "--profile", "coder", "serve"]),
             # Interactive chat for coder → NOT a backend subcommand, skipped.
-            FakeProc(102, ["python", "-m", "hermes_cli.main", "--profile", "coder", "chat"]),
+            FakeProc(102, ["python", "-m", "jimmy_cli.main", "--profile", "coder", "chat"]),
             # Backend for a different profile → skipped.
-            FakeProc(103, ["python", "-m", "hermes_cli.main", "--profile", "other", "serve"]),
+            FakeProc(103, ["python", "-m", "jimmy_cli.main", "--profile", "other", "serve"]),
             # This very process → skipped even if it matched.
-            FakeProc(self_pid, ["python", "-m", "hermes_cli.main", "--profile", "coder", "serve"]),
+            FakeProc(self_pid, ["python", "-m", "jimmy_cli.main", "--profile", "coder", "serve"]),
         ]
 
         fake_psutil = types.SimpleNamespace(
@@ -318,10 +318,10 @@ class TestDeleteProfile:
         pids = profiles._profile_bound_backend_pids("coder", profile_dir)
         assert pids == [101]
 
-    def test_backend_scan_matches_shebang_exec_of_hermes_shim(self, profile_env, monkeypatch):
-        """A `hermes` console-script shim spawned directly (e.g. Electron's
-        findOnPath('hermes') resolution) reports argv[0] as the interpreter
-        (python3) and argv[1] as the shim's path -- not "hermes" -- because
+    def test_backend_scan_matches_shebang_exec_of_jimmy_shim(self, profile_env, monkeypatch):
+        """A `jimmy` console-script shim spawned directly (e.g. Electron's
+        findOnPath('jimmy') resolution) reports argv[0] as the interpreter
+        (python3) and argv[1] as the shim's path -- not "jimmy" -- because
         the OS execs the shebang. The scanner must still recognize it so
         profile delete doesn't leave a zombie Desktop-spawned backend behind
         (issue: deleting a Desktop profile kept reappearing after relaunch).
@@ -346,12 +346,12 @@ class TestDeleteProfile:
         self_pid = os.getpid()
         procs = [
             # Shebang-exec'd shim bound to coder → matched despite argv[0]
-            # being the python interpreter, not "hermes".
-            FakeProc(201, ["/usr/bin/python3", "/Users/x/.local/bin/hermes", "--profile", "coder", "serve",
+            # being the python interpreter, not "jimmy".
+            FakeProc(201, ["/usr/bin/python3", "/Users/x/.local/bin/jimmy", "--profile", "coder", "serve",
                             "--host", "127.0.0.1", "--port", "0"]),
             # Same shape but a different profile → skipped.
-            FakeProc(202, ["/usr/bin/python3", "/Users/x/.local/bin/hermes", "--profile", "other", "serve"]),
-            # Non-hermes script run by python3 → skipped.
+            FakeProc(202, ["/usr/bin/python3", "/Users/x/.local/bin/jimmy", "--profile", "other", "serve"]),
+            # Non-jimmy script run by python3 → skipped.
             FakeProc(203, ["/usr/bin/python3", "/Users/x/some_script.py", "--profile", "coder", "serve"]),
         ]
 
@@ -367,12 +367,12 @@ class TestDeleteProfile:
         pids = profiles._profile_bound_backend_pids("coder", profile_dir)
         assert pids == [201]
 
-    def test_backend_scan_rejects_unrelated_hermes_prefixed_script(self, profile_env, monkeypatch):
-        """A user's own script that happens to start with "hermes" (e.g.
-        hermes-notes.py, hermes-unrelated-tool) must NOT be misidentified as
+    def test_backend_scan_rejects_unrelated_jimmy_prefixed_script(self, profile_env, monkeypatch):
+        """A user's own script that happens to start with "jimmy" (e.g.
+        jimmy-notes.py, jimmy-unrelated-tool) must NOT be misidentified as
         the console-script shim just because argv[0] is a python interpreter
-        and argv[1]'s basename starts with "hermes" -- only the actual known
-        console-script entry points (hermes, hermes-agent, hermes-acp) count.
+        and argv[1]'s basename starts with "jimmy" -- only the actual known
+        console-script entry points (jimmy, jimmy-agent, jimmy-acp) count.
         """
         create_profile("coder", no_alias=True)
         profile_dir = get_profile_dir("coder")
@@ -395,9 +395,9 @@ class TestDeleteProfile:
         procs = [
             # Looks like the shim by prefix alone, but is the user's own
             # unrelated tool -- must be rejected, not killed by profile delete.
-            FakeProc(301, ["/usr/bin/python3", "/Users/x/scripts/hermes-notes.py",
+            FakeProc(301, ["/usr/bin/python3", "/Users/x/scripts/jimmy-notes.py",
                             "--profile", "coder", "serve"]),
-            FakeProc(302, ["/usr/bin/python3", "/Users/x/scripts/hermes-unrelated-tool",
+            FakeProc(302, ["/usr/bin/python3", "/Users/x/scripts/jimmy-unrelated-tool",
                             "--profile", "coder", "serve"]),
         ]
 
@@ -414,9 +414,9 @@ class TestDeleteProfile:
         assert pids == []
 
     def test_backend_scan_matches_all_known_console_script_shims(self, profile_env, monkeypatch):
-        """The other two real console-script entry points (hermes-agent,
-        hermes-acp -- see pyproject.toml [project.scripts]) must also be
-        recognized via the shebang-exec path, not just the primary "hermes"
+        """The other two real console-script entry points (jimmy-agent,
+        jimmy-acp -- see pyproject.toml [project.scripts]) must also be
+        recognized via the shebang-exec path, not just the primary "jimmy"
         shim.
         """
         create_profile("coder", no_alias=True)
@@ -438,9 +438,9 @@ class TestDeleteProfile:
 
         self_pid = os.getpid()
         procs = [
-            FakeProc(401, ["/usr/bin/python3", "/Users/x/.local/bin/hermes-agent",
+            FakeProc(401, ["/usr/bin/python3", "/Users/x/.local/bin/jimmy-agent",
                             "--profile", "coder", "serve"]),
-            FakeProc(402, ["/usr/bin/python3", "/Users/x/.local/bin/hermes-acp",
+            FakeProc(402, ["/usr/bin/python3", "/Users/x/.local/bin/jimmy-acp",
                             "--profile", "coder", "serve"]),
         ]
 
@@ -490,7 +490,7 @@ class TestActiveProfile:
         tmp_path = profile_env
         create_profile("coder", no_alias=True)
         set_active_profile("coder")
-        active_path = tmp_path / ".hermes" / "active_profile"
+        active_path = tmp_path / ".jimmy" / "active_profile"
         assert active_path.exists()
 
         set_active_profile("default")
@@ -508,17 +508,17 @@ class TestGetActiveProfileName:
     def test_profile_path_returns_profile_name(self, profile_env, monkeypatch):
         tmp_path = profile_env
         create_profile("coder", no_alias=True)
-        profile_dir = tmp_path / ".hermes" / "profiles" / "coder"
-        monkeypatch.setenv("HERMES_HOME", str(profile_dir))
+        profile_dir = tmp_path / ".jimmy" / "profiles" / "coder"
+        monkeypatch.setenv("JIMMY_HOME", str(profile_dir))
         assert get_active_profile_name() == "coder"
 
     def test_custom_path_returns_default(self, profile_env, monkeypatch):
-        """A custom HERMES_HOME (Docker, etc.) IS the default root."""
+        """A custom JIMMY_HOME (Docker, etc.) IS the default root."""
         tmp_path = profile_env
         custom = tmp_path / "some" / "other" / "path"
         custom.mkdir(parents=True)
-        monkeypatch.setenv("HERMES_HOME", str(custom))
-        # With Docker-aware roots, a custom HERMES_HOME is the default —
+        monkeypatch.setenv("JIMMY_HOME", str(custom))
+        # With Docker-aware roots, a custom JIMMY_HOME is the default —
         # not "custom".  The user is on the default profile of their
         # custom deployment.
         assert get_active_profile_name() == "default"
@@ -546,7 +546,7 @@ class TestAliasCollision:
         wrapper_dir = profile_env / ".local" / "bin"
         wrapper_dir.mkdir(parents=True, exist_ok=True)
         bat_path = wrapper_dir / "mybot.bat"
-        bat_path.write_text("@echo off\r\nhermes -p mybot %*\r\n")
+        bat_path.write_text("@echo off\r\njimmy -p mybot %*\r\n")
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout=str(bat_path),
@@ -571,19 +571,19 @@ class TestWrapperScript:
     """Tests for create_wrapper_script() and remove_wrapper_script()."""
 
     def test_creates_sh_on_posix(self, profile_env, monkeypatch):
-        monkeypatch.setattr("hermes_cli.profiles.shutil.which", lambda name: "/opt/hermes/bin/hermes")
-        from hermes_cli.profiles import create_wrapper_script
+        monkeypatch.setattr("jimmy_cli.profiles.shutil.which", lambda name: "/opt/jimmy/bin/jimmy")
+        from jimmy_cli.profiles import create_wrapper_script
         wrapper = create_wrapper_script("mybot")
         assert wrapper is not None
         assert wrapper.name == "mybot"
         content = wrapper.read_text()
         assert content.startswith("#!/bin/sh")
-        assert "exec /opt/hermes/bin/hermes -p mybot" in content
+        assert "exec /opt/jimmy/bin/jimmy -p mybot" in content
 
 
     @pytest.mark.windows_only
     def test_remove_finds_bat_on_windows(self, profile_env):
-        from hermes_cli.profiles import create_wrapper_script, remove_wrapper_script
+        from jimmy_cli.profiles import create_wrapper_script, remove_wrapper_script
         wrapper = create_wrapper_script("mybot")
         assert wrapper is not None
         assert wrapper.exists()
@@ -630,14 +630,14 @@ class TestFindAliasForProfile:
     """Tests for find_alias_for_profile() and alias display in list/show."""
 
     def test_profile_named_alias(self, profile_env):
-        from hermes_cli.profiles import create_wrapper_script, find_alias_for_profile
+        from jimmy_cli.profiles import create_wrapper_script, find_alias_for_profile
         create_wrapper_script("steve")
         assert find_alias_for_profile("steve") == "steve"
 
 
     def test_ignores_unrelated_files(self, profile_env):
         # ~/.local/bin commonly holds unrelated binaries; they must not match.
-        from hermes_cli.profiles import _get_wrapper_dir, find_alias_for_profile
+        from jimmy_cli.profiles import _get_wrapper_dir, find_alias_for_profile
         wrapper_dir = _get_wrapper_dir()
         wrapper_dir.mkdir(parents=True, exist_ok=True)
         (wrapper_dir / "pip").write_text("#!/bin/sh\nexec python -m pip \"$@\"\n")
@@ -645,7 +645,7 @@ class TestFindAliasForProfile:
 
 
     def test_list_profiles_surfaces_custom_alias(self, profile_env):
-        from hermes_cli.profiles import (
+        from jimmy_cli.profiles import (
             create_profile,
             create_wrapper_script,
             list_profiles,
@@ -668,43 +668,43 @@ class TestRenameProfile:
     def test_renames_directory(self, profile_env):
         tmp_path = profile_env
         create_profile("oldname", no_alias=True)
-        old_dir = tmp_path / ".hermes" / "profiles" / "oldname"
+        old_dir = tmp_path / ".jimmy" / "profiles" / "oldname"
         assert old_dir.is_dir()
 
         # Mock alias collision to avoid subprocess calls
-        with patch("hermes_cli.profiles.check_alias_collision", return_value="skip"):
+        with patch("jimmy_cli.profiles.check_alias_collision", return_value="skip"):
             new_dir = rename_profile("oldname", "newname")
 
         assert not old_dir.is_dir()
         assert new_dir.is_dir()
-        assert new_dir == tmp_path / ".hermes" / "profiles" / "newname"
+        assert new_dir == tmp_path / ".jimmy" / "profiles" / "newname"
 
     def test_renames_root_honcho_host_without_changing_ai_peer(self, profile_env):
         tmp_path = profile_env
         create_profile("ssi_health", no_alias=True)
-        honcho_path = tmp_path / ".hermes" / "honcho.json"
+        honcho_path = tmp_path / ".jimmy" / "honcho.json"
         honcho_path.write_text(json.dumps({
             "hosts": {
-                "hermes.ssi_health": {
+                "jimmy.ssi_health": {
                     "recallMode": "hybrid",
                     "writeFrequency": "async",
                     "sessionStrategy": "per-session",
                     "saveMessages": True,
                     "peerName": "user-peer",
                     "aiPeer": "ssi_health",
-                    "workspace": "hermes",
+                    "workspace": "jimmy",
                     "enabled": True,
                 }
             }
         }))
 
-        with patch("hermes_cli.profiles.check_alias_collision", return_value="skip"):
+        with patch("jimmy_cli.profiles.check_alias_collision", return_value="skip"):
             rename_profile("ssi_health", "heimdall")
 
         cfg = json.loads(honcho_path.read_text())
-        assert "hermes.ssi_health" not in cfg["hosts"]
-        assert cfg["hosts"]["hermes_heimdall"]["aiPeer"] == "ssi_health"
-        assert cfg["hosts"]["hermes_heimdall"]["peerName"] == "user-peer"
+        assert "jimmy.ssi_health" not in cfg["hosts"]
+        assert cfg["hosts"]["jimmy_heimdall"]["aiPeer"] == "ssi_health"
+        assert cfg["hosts"]["jimmy_heimdall"]["peerName"] == "user-peer"
 
 
 # ===================================================================
@@ -811,31 +811,31 @@ class TestProfileIsolation:
 
 
 # ===================================================================
-# TestGetProfilesRoot / TestGetDefaultHermesHome (internal helpers)
+# TestGetProfilesRoot / TestGetDefaultJimmyHome (internal helpers)
 # ===================================================================
 
 class TestInternalHelpers:
-    """Tests for _get_profiles_root() and _get_default_hermes_home()."""
+    """Tests for _get_profiles_root() and _get_default_jimmy_home()."""
 
 
 
-    def test_default_hermes_home_docker(self, tmp_path, monkeypatch):
-        """In Docker, _get_default_hermes_home() returns HERMES_HOME itself."""
+    def test_default_jimmy_home_docker(self, tmp_path, monkeypatch):
+        """In Docker, _get_default_jimmy_home() returns JIMMY_HOME itself."""
         docker_home = tmp_path / "opt" / "data"
         docker_home.mkdir(parents=True)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        monkeypatch.setenv("HERMES_HOME", str(docker_home))
-        home = _get_default_hermes_home()
+        monkeypatch.setenv("JIMMY_HOME", str(docker_home))
+        home = _get_default_jimmy_home()
         assert home == docker_home
 
 
 
     def test_create_profile_docker(self, tmp_path, monkeypatch):
-        """Profile created in Docker lands under HERMES_HOME/profiles/."""
+        """Profile created in Docker lands under JIMMY_HOME/profiles/."""
         docker_home = tmp_path / "opt" / "data"
         docker_home.mkdir(parents=True)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        monkeypatch.setenv("HERMES_HOME", str(docker_home))
+        monkeypatch.setenv("JIMMY_HOME", str(docker_home))
         result = create_profile("orchestrator", no_alias=True)
         expected = docker_home / "profiles" / "orchestrator"
         assert result == expected
@@ -971,10 +971,10 @@ class TestEdgeCases:
         """
         import os
         import gateway.status as gw_status
-        from hermes_cli.profiles import _check_gateway_running
+        from jimmy_cli.profiles import _check_gateway_running
 
         tmp_path = profile_env
-        default_home = tmp_path / ".hermes"
+        default_home = tmp_path / ".jimmy"
         default_home.mkdir(parents=True, exist_ok=True)
 
         # Write a realistic gateway_state.json pointing at THIS live process with
@@ -984,8 +984,8 @@ class TestEdgeCases:
             json.dumps(
                 {
                     "pid": live_pid,
-                    "kind": "hermes-gateway",
-                    "argv": ["hermes", "gateway", "run"],
+                    "kind": "jimmy-gateway",
+                    "argv": ["jimmy", "gateway", "run"],
                     "start_time": gw_status._get_process_start_time(live_pid),
                     "gateway_state": "running",
                     "active_agents": 0,
@@ -1003,7 +1003,7 @@ class TestEdgeCases:
         # runs the gateway with no profile flag).
         with patch("gateway.status.get_running_pid", return_value=None), patch(
             "gateway.status._read_process_cmdline",
-            return_value="hermes gateway run --replace",
+            return_value="jimmy gateway run --replace",
         ):
             assert _check_gateway_running(default_home) is True
 
@@ -1036,10 +1036,10 @@ class TestProfilesToServe:
 
 
     def test_off_returns_only_active_named(self, profile_env, monkeypatch):
-        # A named profile's gateway runs with HERMES_HOME pointing at the
+        # A named profile's gateway runs with JIMMY_HOME pointing at the
         # profile dir; get_active_profile_name() infers the name from there.
         create_profile("coder", no_alias=True)
-        monkeypatch.setenv("HERMES_HOME", str(get_profile_dir("coder")))
+        monkeypatch.setenv("JIMMY_HOME", str(get_profile_dir("coder")))
         serve = profiles_to_serve(multiplex=False)
         assert len(serve) == 1
         assert serve[0][0] == "coder"
@@ -1050,7 +1050,7 @@ class TestProfilesToServe:
         create_profile("writer", no_alias=True)
         serve = dict(profiles_to_serve(multiplex=True))
         assert set(serve) == {"default", "coder", "writer"}
-        assert serve["default"] == _get_default_hermes_home()
+        assert serve["default"] == _get_default_jimmy_home()
         assert serve["coder"] == get_profile_dir("coder")
 
     def test_empty_allowlist_serves_only_default(self, profile_env):
@@ -1058,7 +1058,7 @@ class TestProfilesToServe:
 
         serve = dict(profiles_to_serve(multiplex=True, profile_allowlist=[]))
 
-        assert serve == {"default": _get_default_hermes_home()}
+        assert serve == {"default": _get_default_jimmy_home()}
 
     def test_allowlist_normalizes_deduplicates_and_keeps_default(self, profile_env):
         create_profile("worker", no_alias=True)
@@ -1086,7 +1086,7 @@ class TestProfilesToServe:
 
 
 class TestResolveProfileEnvSpelling:
-    """resolve_profile_env() keeps the configured HERMES_HOME spelling as
+    """resolve_profile_env() keeps the configured JIMMY_HOME spelling as
 
     the launch root (junction installs) while preserving the pre-existing
     profile-path handling and existence/validation semantics.
@@ -1101,7 +1101,7 @@ class TestResolveProfileEnvSpelling:
         root = tmp_path / "configured-root"
         (root / "profiles" / "beta").mkdir(parents=True)
         (root / "profiles" / "coder").mkdir(parents=True)
-        custom = tmp_path / "custom-hermes"
+        custom = tmp_path / "custom-jimmy"
         (custom / "profiles" / "beta").mkdir(parents=True)
         cases = [
             (root, "coder", root / "profiles" / "coder"),
@@ -1110,18 +1110,18 @@ class TestResolveProfileEnvSpelling:
             (custom, "beta", custom / "profiles" / "beta"),
         ]
         for env_home, profile, expected in cases:
-            monkeypatch.setenv("HERMES_HOME", str(env_home))
+            monkeypatch.setenv("JIMMY_HOME", str(env_home))
             assert Path(resolve_profile_env(profile)) == expected
 
     def test_missing_named_profile_still_raises(self, monkeypatch, tmp_path):
         root = tmp_path / "configured-root"
-        monkeypatch.setenv("HERMES_HOME", str(root))
+        monkeypatch.setenv("JIMMY_HOME", str(root))
         with pytest.raises(FileNotFoundError):
             resolve_profile_env("nope")
 
     def test_unset_env_falls_back_to_default_root(self, monkeypatch):
-        # No HERMES_HOME: the platform default root applies (existing contract).
-        monkeypatch.delenv("HERMES_HOME", raising=False)
-        assert Path(resolve_profile_env("default")) == _get_default_hermes_home()
+        # No JIMMY_HOME: the platform default root applies (existing contract).
+        monkeypatch.delenv("JIMMY_HOME", raising=False)
+        assert Path(resolve_profile_env("default")) == _get_default_jimmy_home()
 
 

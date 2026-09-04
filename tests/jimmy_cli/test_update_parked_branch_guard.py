@@ -1,8 +1,8 @@
-"""Regression tests for the parked-branch guard in ``hermes update``.
+"""Regression tests for the parked-branch guard in ``jimmy update``.
 
 Live incident (2026-08-17, Teknium's Linux box): the source checkout was
 parked on a stale feature branch (``claude-code-inspired/local-terminal-
-memory-limit``, days behind main) left there by earlier tooling. ``hermes
+memory-limit``, days behind main) left there by earlier tooling. ``jimmy
 update`` autostashed, refreshed lazy backends, synced skills and printed
 "✓ Code updated!" / "✓ Update complete!" — while the checkout stayed on the
 stale branch with none of main's new code. Two sessions burned time on
@@ -25,8 +25,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from hermes_cli import main as hermes_main
-from hermes_cli import update_cmd
+from jimmy_cli import main as jimmy_main
+from jimmy_cli import update_cmd
 
 
 GIT = ["git"]
@@ -80,9 +80,9 @@ def repo_pair(tmp_path):
 @pytest.fixture(autouse=True)
 def _no_config(monkeypatch):
     """Isolate the guard from the machine's real config.yaml."""
-    import hermes_cli.config as hermes_config
+    import jimmy_cli.config as jimmy_config
 
-    monkeypatch.setattr(hermes_config, "load_config", lambda: {})
+    monkeypatch.setattr(jimmy_config, "load_config", lambda: {})
 
 
 # ---------------------------------------------------------------------------
@@ -146,10 +146,10 @@ def test_equivalent_cherry_picked_commit_is_still_safe(repo_pair):
 def test_config_opt_out_blocks_auto_switch(repo_pair, monkeypatch):
     """updates.auto_switch_parked_branch: false disables auto-switch even
     when the branch is clean and merged."""
-    import hermes_cli.config as hermes_config
+    import jimmy_cli.config as jimmy_config
 
     monkeypatch.setattr(
-        hermes_config,
+        jimmy_config,
         "load_config",
         lambda: {"updates": {"auto_switch_parked_branch": False}},
     )
@@ -181,7 +181,7 @@ def test_skip_warning_names_branch_behind_count_and_commands(repo_pair, capsys):
     assert "CODE UPDATE SKIPPED" in out
     assert "old-feature" in out
     assert "2 commit(s) BEHIND" in out
-    assert f"git -C {repo_pair} checkout main && hermes update" in out
+    assert f"git -C {repo_pair} checkout main && jimmy update" in out
 
 
 def test_skip_warning_dirty_reason(repo_pair, capsys):
@@ -216,7 +216,7 @@ def test_branch_head_suffix_empty_on_non_repo(tmp_path):
 def test_print_update_completion_carries_branch_and_sha(
     repo_pair, monkeypatch, capsys
 ):
-    monkeypatch.setattr(hermes_main, "PROJECT_ROOT", repo_pair)
+    monkeypatch.setattr(jimmy_main, "PROJECT_ROOT", repo_pair)
     update_cmd._print_update_completion("✓ Update complete!")
     out = capsys.readouterr().out
     short = _git(repo_pair, "rev-parse", "--short", "HEAD").stdout.strip()
@@ -234,26 +234,26 @@ def _patch_update_flow(monkeypatch, repo, run_real_git=True):
     keeps REAL subprocess.run so the git plumbing runs against the fixture
     repo (the whole point of these regressions).
     """
-    monkeypatch.setattr(hermes_main, "PROJECT_ROOT", repo)
-    monkeypatch.setattr(hermes_main, "_resolve_update_branch", lambda args: "main")
-    monkeypatch.setattr(hermes_main, "_is_windows", lambda: False)
+    monkeypatch.setattr(jimmy_main, "PROJECT_ROOT", repo)
+    monkeypatch.setattr(jimmy_main, "_resolve_update_branch", lambda args: "main")
+    monkeypatch.setattr(jimmy_main, "_is_windows", lambda: False)
     monkeypatch.setattr(
-        hermes_main, "_get_origin_url",
-        lambda *a, **k: "https://github.com/NousResearch/hermes-agent.git",
+        jimmy_main, "_get_origin_url",
+        lambda *a, **k: "https://github.com/Jimmy/jimmy-agent.git",
     )
-    monkeypatch.setattr(hermes_main, "_is_fork", lambda *a, **k: False)
-    monkeypatch.setattr(hermes_main, "_discard_lockfile_churn", lambda *a, **k: None)
+    monkeypatch.setattr(jimmy_main, "_is_fork", lambda *a, **k: False)
+    monkeypatch.setattr(jimmy_main, "_discard_lockfile_churn", lambda *a, **k: None)
     monkeypatch.setattr(update_cmd, "_discard_lockfile_churn", lambda *a, **k: None)
     monkeypatch.setattr(update_cmd, "_normalize_managed_eol", lambda *a, **k: None)
-    monkeypatch.setattr(hermes_main, "_clear_bytecode_cache", lambda *a, **k: 0)
-    monkeypatch.setattr(hermes_main, "_record_bytecode_fingerprint", lambda *a, **k: None)
-    monkeypatch.setattr(hermes_main, "_run_pre_update_backup", lambda *a, **k: None)
-    monkeypatch.setattr(hermes_main, "_pause_windows_gateways_for_update", lambda: None)
+    monkeypatch.setattr(jimmy_main, "_clear_bytecode_cache", lambda *a, **k: 0)
+    monkeypatch.setattr(jimmy_main, "_record_bytecode_fingerprint", lambda *a, **k: None)
+    monkeypatch.setattr(jimmy_main, "_run_pre_update_backup", lambda *a, **k: None)
+    monkeypatch.setattr(jimmy_main, "_pause_windows_gateways_for_update", lambda: None)
     monkeypatch.setattr(
-        hermes_main, "_resume_windows_gateways_after_update", lambda *a, **k: None
+        jimmy_main, "_resume_windows_gateways_after_update", lambda *a, **k: None
     )
-    monkeypatch.setattr(hermes_main, "_capture_active_lazy_features", lambda: [])
-    monkeypatch.setattr(hermes_main, "_capture_active_tool_dependencies", lambda: [])
+    monkeypatch.setattr(jimmy_main, "_capture_active_lazy_features", lambda: [])
+    monkeypatch.setattr(jimmy_main, "_capture_active_tool_dependencies", lambda: [])
 
 
 def test_update_skips_and_warns_on_dirty_parked_branch(
@@ -267,7 +267,7 @@ def test_update_skips_and_warns_on_dirty_parked_branch(
     args = SimpleNamespace(branch=None, yes=False, force=False, force_venv=False)
 
     with pytest.raises(SystemExit) as exc_info:
-        hermes_main.cmd_update(args)
+        jimmy_main.cmd_update(args)
 
     assert exc_info.value.code == 1
     out = capsys.readouterr().out
@@ -292,7 +292,7 @@ def test_update_skips_on_unmerged_parked_branch(repo_pair, monkeypatch, capsys):
     args = SimpleNamespace(branch=None, yes=False, force=False, force_venv=False)
 
     with pytest.raises(SystemExit) as exc_info:
-        hermes_main.cmd_update(args)
+        jimmy_main.cmd_update(args)
 
     assert exc_info.value.code == 1
     out = capsys.readouterr().out
@@ -318,14 +318,14 @@ def test_update_auto_switches_clean_merged_parked_branch(
         pass
 
     monkeypatch.setattr(
-        hermes_main,
+        jimmy_main,
         "_abort_dependency_sync_if_self_locked",
         lambda *a, **k: (_ for _ in ()).throw(_StopFlow()),
     )
     args = SimpleNamespace(branch=None, yes=False, force=False, force_venv=False)
 
     with pytest.raises(_StopFlow):
-        hermes_main.cmd_update(args)
+        jimmy_main.cmd_update(args)
 
     out = capsys.readouterr().out
     assert "parked on 'old-feature'" in out
@@ -371,7 +371,7 @@ def test_update_up_to_date_path_does_not_repark_merged_branch(
     class _StopFlow(Exception):
         pass
 
-    import hermes_cli.managed_uv as managed_uv
+    import jimmy_cli.managed_uv as managed_uv
 
     monkeypatch.setattr(
         managed_uv,
@@ -381,7 +381,7 @@ def test_update_up_to_date_path_does_not_repark_merged_branch(
     args = SimpleNamespace(branch=None, yes=False, force=False, force_venv=False)
 
     with pytest.raises(_StopFlow):
-        hermes_main.cmd_update(args)
+        jimmy_main.cmd_update(args)
 
     out = capsys.readouterr().out
     assert "switched back to main" in out
@@ -401,14 +401,14 @@ def test_update_on_main_fast_path_unchanged(repo_pair, monkeypatch, capsys):
         pass
 
     monkeypatch.setattr(
-        hermes_main,
+        jimmy_main,
         "_abort_dependency_sync_if_self_locked",
         lambda *a, **k: (_ for _ in ()).throw(_StopFlow()),
     )
     args = SimpleNamespace(branch=None, yes=False, force=False, force_venv=False)
 
     with pytest.raises(_StopFlow):
-        hermes_main.cmd_update(args)
+        jimmy_main.cmd_update(args)
 
     out = capsys.readouterr().out
     assert "parked on" not in out

@@ -17,7 +17,7 @@ Different LLM providers expect model identifiers in different formats:
   ``deepseek-v<N>-*``).  The legacy aliases ``deepseek-chat`` and
   ``deepseek-reasoner`` were retired on 2026-07-24 and are remapped to
   ``deepseek-v4-flash`` (official non-thinking / thinking shims).  Older
-  Hermes revisions folded every non-reasoner input into
+  Jimmy revisions folded every non-reasoner input into
   ``deepseek-chat``, which on aggregators routes to V3 — so a user
   picking V4 Pro was silently downgraded.
 - **Custom** and remaining providers pass the name through as-is.
@@ -241,12 +241,12 @@ def _dots_to_hyphens(model_name: str) -> str:
 
 
 def _normalize_provider_alias(provider_name: str) -> str:
-    """Resolve provider aliases to Hermes' canonical ids."""
+    """Resolve provider aliases to Jimmy' canonical ids."""
     raw = (provider_name or "").strip().lower()
     if not raw:
         return raw
     try:
-        from hermes_cli.models import normalize_provider
+        from jimmy_cli.models import normalize_provider
 
         return normalize_provider(raw)
     except Exception:
@@ -382,7 +382,7 @@ def _repair_prefix_from_catalogue(model_name: str, provider: str) -> str:
     if "/" in model_name:
         return model_name
     try:
-        from hermes_cli.models import _PROVIDER_MODELS
+        from jimmy_cli.models import _PROVIDER_MODELS
     except Exception:
         return model_name
 
@@ -436,10 +436,10 @@ def normalize_model_for_provider(model_input: str, target_provider: str) -> str:
             Can be bare (``"claude-sonnet-4.6"``), vendor-prefixed
             (``"anthropic/claude-sonnet-4.6"``), or already in native
             format (``"claude-sonnet-4-6"``).
-        target_provider: The canonical Hermes provider id, e.g.
+        target_provider: The canonical Jimmy provider id, e.g.
             ``"openrouter"``, ``"anthropic"``, ``"copilot"``,
             ``"deepseek"``, ``"custom"``.  Should already be normalised
-            via ``hermes_cli.models.normalize_provider()``.
+            via ``jimmy_cli.models.normalize_provider()``.
 
     Returns:
         The model identifier string that the target provider's API
@@ -527,7 +527,7 @@ def normalize_model_for_provider(model_input: str, target_provider: str) -> str:
     #     HTTP 400 "model_not_supported".  See issue #6879.
     if provider in {"copilot", "copilot-acp"}:
         try:
-            from hermes_cli.models import normalize_copilot_model_id
+            from jimmy_cli.models import normalize_copilot_model_id
 
             normalized = normalize_copilot_model_id(name)
             if normalized:

@@ -1,12 +1,12 @@
-# Hermes CLI Reference
+# Jimmy CLI Reference
 
-Live sources when anything looks stale: `hermes --help`, `hermes <command> --help`,
-https://hermes-agent.nousresearch.com/docs/reference/cli-commands
+Live sources when anything looks stale: `jimmy --help`, `jimmy <command> --help`,
+https://jimmy-agent.jimmy-agent.com/docs/reference/cli-commands
 
 ### Global Flags
 
 ```
-hermes [flags] [command]        (no subcommand = interactive chat)
+jimmy [flags] [command]        (no subcommand = interactive chat)
 
   --version, -V             Show version
   -z, --oneshot PROMPT      One-shot: print ONLY the final response (for scripts/pipes)
@@ -27,7 +27,7 @@ hermes [flags] [command]        (no subcommand = interactive chat)
 ### Chat
 
 ```
-hermes chat [flags]
+jimmy chat [flags]
   -q, --query TEXT          Single query, non-interactive
   --image PATH              Attach a local image to a single query
   -Q, --quiet               Suppress banner, spinner, tool previews
@@ -40,111 +40,111 @@ hermes chat [flags]
 ### Configuration
 
 ```
-hermes setup [section]      Wizard (model|tts|terminal|gateway|tools|agent)
-hermes model                Interactive model/provider picker
-hermes fallback [add|remove|list]  Fallback provider chain
-hermes config [show|edit|get|set|unset|path|env-path|check|migrate]
-hermes login / logout       OAuth sign-in / clear stored auth
-hermes doctor [--fix]       Check dependencies and config
-hermes status [--all]       Component status
+jimmy setup [section]      Wizard (model|tts|terminal|gateway|tools|agent)
+jimmy model                Interactive model/provider picker
+jimmy fallback [add|remove|list]  Fallback provider chain
+jimmy config [show|edit|get|set|unset|path|env-path|check|migrate]
+jimmy login / logout       OAuth sign-in / clear stored auth
+jimmy doctor [--fix]       Check dependencies and config
+jimmy status [--all]       Component status
 ```
 
 ### Tools & Skills
 
 ```
-hermes tools [list|enable NAME|disable NAME]   Per-platform toolsets (curses UI with no args)
+jimmy tools [list|enable NAME|disable NAME]   Per-platform toolsets (curses UI with no args)
 
-hermes skills list|browse|search QUERY|inspect ID
-hermes skills install ID    Hub identifier OR a direct https://…/SKILL.md URL
-hermes skills config        Enable/disable skills per platform
-hermes skills check|update|uninstall|publish PATH
-hermes skills tap add REPO  Add a GitHub repo as a skill source
-hermes bundles              Skill bundles (one /<name> alias loads several skills)
+jimmy skills list|browse|search QUERY|inspect ID
+jimmy skills install ID    Hub identifier OR a direct https://…/SKILL.md URL
+jimmy skills config        Enable/disable skills per platform
+jimmy skills check|update|uninstall|publish PATH
+jimmy skills tap add REPO  Add a GitHub repo as a skill source
+jimmy bundles              Skill bundles (one /<name> alias loads several skills)
 ```
 
 ### MCP Servers
 
 ```
-hermes mcp add NAME (--url or --command) | remove | list | test NAME
-hermes mcp catalog | install NAME     Curated catalog install
-hermes mcp configure NAME             Toggle tool selection
-hermes mcp serve                      Run Hermes as an MCP server
+jimmy mcp add NAME (--url or --command) | remove | list | test NAME
+jimmy mcp catalog | install NAME     Curated catalog install
+jimmy mcp configure NAME             Toggle tool selection
+jimmy mcp serve                      Run Jimmy as an MCP server
 ```
 Details (transport, tool discovery, catalog): `references/native-mcp.md`.
 
 ### Gateway (Messaging Platforms)
 
 ```
-hermes gateway run|install|start|stop|restart|status|setup
+jimmy gateway run|install|start|stop|restart|status|setup
 ```
 
-20+ platforms: Telegram, Discord, Slack, WhatsApp (Baileys + Business Cloud API), iMessage (Photon — `hermes photon setup`), Signal, Email, SMS, Matrix, Mattermost, Teams, LINE, SimpleX, ntfy, Google Chat, Home Assistant, DingTalk, Feishu, WeCom, Weixin, API Server, Webhooks. Open WebUI connects via the API Server adapter. Most adapters ship under `plugins/platforms/`.
-Docs: https://hermes-agent.nousresearch.com/docs/user-guide/messaging/
+20+ platforms: Telegram, Discord, Slack, WhatsApp (Baileys + Business Cloud API), iMessage (Photon — `jimmy photon setup`), Signal, Email, SMS, Matrix, Mattermost, Teams, LINE, SimpleX, ntfy, Google Chat, Home Assistant, DingTalk, Feishu, WeCom, Weixin, API Server, Webhooks. Open WebUI connects via the API Server adapter. Most adapters ship under `plugins/platforms/`.
+Docs: https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/
 
 ### Sessions
 
 ```
-hermes sessions list|browse|rename ID TITLE|delete ID|export OUT|prune|stats
+jimmy sessions list|browse|rename ID TITLE|delete ID|export OUT|prune|stats
 ```
 
 ### Cron / Webhooks
 
 ```
-hermes cron list|create SCHED|edit ID|pause|resume|run ID|remove|status
+jimmy cron list|create SCHED|edit ID|pause|resume|run ID|remove|status
     Schedules: '30m', 'every 2h', '0 9 * * *', ISO timestamp
-hermes webhook subscribe NAME|list|remove NAME|test NAME
+jimmy webhook subscribe NAME|list|remove NAME|test NAME
 ```
 Webhook payloads/routes: `references/webhooks.md`.
 
 ### Profiles
 
 ```
-hermes profile list|create NAME (--clone|--clone-all|--clone-from)|use|show|delete
-hermes profile rename A B | alias NAME | export NAME | import FILE
+jimmy profile list|create NAME (--clone|--clone-all|--clone-from)|use|show|delete
+jimmy profile rename A B | alias NAME | export NAME | import FILE
 ```
 
 ### Credentials & Pools
 
 ```
-hermes auth                 Interactive credential manager
-hermes auth add [PROVIDER]  Add OAuth or API-key credential (nous, openai-codex, qwen-oauth, …)
-hermes auth list|remove P IDX|reset PROVIDER|status
+jimmy auth                 Interactive credential manager
+jimmy auth add [PROVIDER]  Add OAuth or API-key credential (nous, openai-codex, qwen-oauth, …)
+jimmy auth list|remove P IDX|reset PROVIDER|status
 ```
 Multiple credentials per provider form a pool that rotates automatically and skips exhausted keys.
 
 ### Other
 
 ```
-hermes desktop / gui        Native desktop app
-hermes dashboard            Web admin panel + embedded chat (--stop / --status)
-hermes proxy                OpenAI-compatible local proxy backed by an OAuth provider
-hermes portal               Quick setup / sign in via Nous Portal
-hermes kanban <verb>        Multi-agent work-queue board
-hermes project              Named multi-folder workspaces
-hermes skin list|use|set    Switch/tweak skins (see references/themes.md)
-hermes pets <verb>          Pet mascots (see references/petdex.md)
-hermes memory setup|status|off|reset   Memory provider
-hermes secrets bitwarden|onepassword   External secret stores
-hermes moa                  Mixture-of-Agents slots
-hermes hooks / security / backup / import / checkpoints / console
-hermes logs [-f] [errors]   View agent/error logs
-hermes send                 One-off message through a gateway platform
-hermes pairing / plugins / insights / journey / computer-use
-hermes acp                  ACP server (IDE integration)
-hermes completion bash|zsh|fish
-hermes update / uninstall / claw migrate
+jimmy desktop / gui        Native desktop app
+jimmy dashboard            Web admin panel + embedded chat (--stop / --status)
+jimmy proxy                OpenAI-compatible local proxy backed by an OAuth provider
+jimmy portal               Quick setup / sign in via Nous Portal
+jimmy kanban <verb>        Multi-agent work-queue board
+jimmy project              Named multi-folder workspaces
+jimmy skin list|use|set    Switch/tweak skins (see references/themes.md)
+jimmy pets <verb>          Pet mascots (see references/petdex.md)
+jimmy memory setup|status|off|reset   Memory provider
+jimmy secrets bitwarden|onepassword   External secret stores
+jimmy moa                  Mixture-of-Agents slots
+jimmy hooks / security / backup / import / checkpoints / console
+jimmy logs [-f] [errors]   View agent/error logs
+jimmy send                 One-off message through a gateway platform
+jimmy pairing / plugins / insights / journey / computer-use
+jimmy acp                  ACP server (IDE integration)
+jimmy completion bash|zsh|fish
+jimmy update / uninstall / claw migrate
 ```
 
-Plugin- and provider-supplied subcommands (e.g. `hermes photon setup`) only appear once their plugin is installed/active.
+Plugin- and provider-supplied subcommands (e.g. `jimmy photon setup`) only appear once their plugin is installed/active.
 
 ### Where to Find Things
 
 | Looking for... | Location |
 |---|---|
-| Config options | `hermes config edit` · [Configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) |
-| Tools / toolsets | `hermes tools list` · [Tools reference](https://hermes-agent.nousresearch.com/docs/reference/tools-reference) |
-| Skills catalog | `hermes skills browse` · [Skills catalog](https://hermes-agent.nousresearch.com/docs/reference/skills-catalog) |
-| Provider setup | `hermes model` · [Providers guide](https://hermes-agent.nousresearch.com/docs/integrations/providers) |
-| Env variables | `hermes config env-path` · [Env vars reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) |
-| Gateway logs | `~/.hermes/logs/gateway.log` (or `hermes logs`) |
-| Sessions | `hermes sessions browse` (reads state.db) |
+| Config options | `jimmy config edit` · [Configuration docs](https://jimmy-agent.jimmy-agent.com/docs/user-guide/configuration) |
+| Tools / toolsets | `jimmy tools list` · [Tools reference](https://jimmy-agent.jimmy-agent.com/docs/reference/tools-reference) |
+| Skills catalog | `jimmy skills browse` · [Skills catalog](https://jimmy-agent.jimmy-agent.com/docs/reference/skills-catalog) |
+| Provider setup | `jimmy model` · [Providers guide](https://jimmy-agent.jimmy-agent.com/docs/integrations/providers) |
+| Env variables | `jimmy config env-path` · [Env vars reference](https://jimmy-agent.jimmy-agent.com/docs/reference/environment-variables) |
+| Gateway logs | `~/.jimmy/logs/gateway.log` (or `jimmy logs`) |
+| Sessions | `jimmy sessions browse` (reads state.db) |

@@ -1,4 +1,4 @@
-"""``hermes skin`` — list, switch, and tweak skins from the CLI.
+"""``jimmy skin`` — list, switch, and tweak skins from the CLI.
 
 ``set`` is the load-bearing verb: it changes ONE color of the ACTIVE skin **in
 place**, so tweaking (say) the tool marker never disturbs the rest of the look —
@@ -15,17 +15,17 @@ import re
 import sys
 from pathlib import Path
 
-from hermes_constants import display_hermes_home, get_hermes_home
+from jimmy_constants import display_jimmy_home, get_jimmy_home
 
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 def _skins_dir() -> Path:
-    return get_hermes_home() / "skins"
+    return get_jimmy_home() / "skins"
 
 
 def _active_skin() -> str:
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     display = (load_config() or {}).get("display") or {}
     return str(display.get("skin") or "default")
@@ -33,7 +33,7 @@ def _active_skin() -> str:
 
 def _use(name: str) -> None:
     """Activate a skin (persists display.skin via the shared config writer)."""
-    from hermes_cli.config import config_command
+    from jimmy_cli.config import config_command
 
     config_command(argparse.Namespace(config_command="set", key="display.skin", value=name, force=True))
 
@@ -54,7 +54,7 @@ def _skin_set(key: str, value: str, skin: str | None) -> int:
     else:
         # Built-in (or missing): fork into an editable copy that keeps its full
         # palette, under a fresh name so the built-in stays intact for revert.
-        from hermes_cli.skin_engine import load_skin
+        from jimmy_cli.skin_engine import load_skin
 
         resolved = load_skin(name)
         target = f"{name}-custom"
@@ -81,12 +81,12 @@ def _skin_set(key: str, value: str, skin: str | None) -> int:
     if target != name:
         _use(target)
 
-    print(f"✓ {key} = {value} in {display_hermes_home()}/skins/{target}.yaml (live within ~1s)")
+    print(f"✓ {key} = {value} in {display_jimmy_home()}/skins/{target}.yaml (live within ~1s)")
     return 0
 
 
 def _skin_list() -> int:
-    from hermes_cli.skin_engine import list_skins
+    from jimmy_cli.skin_engine import list_skins
 
     active = _active_skin()
     for s in list_skins():
@@ -96,7 +96,7 @@ def _skin_list() -> int:
 
 
 def skin_command(args) -> None:
-    """Dispatch ``hermes skin <verb>``."""
+    """Dispatch ``jimmy skin <verb>``."""
     verb = getattr(args, "skin_command", None)
 
     if verb == "set":

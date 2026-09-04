@@ -1,20 +1,20 @@
-"""Tests for hermes_cli.stderr_timestamp."""
+"""Tests for jimmy_cli.stderr_timestamp."""
 
 import re
 import sys
 
 from gateway.restart import EXTERNAL_GATEWAY_SUPERVISOR_ENV
-from hermes_cli import stderr_timestamp
+from jimmy_cli import stderr_timestamp
 
 _STALE_GATEWAY_ARGV = [
     sys.executable,
     "-m",
-    "hermes_cli.main",
+    "jimmy_cli.main",
     "gateway",
     "run",
     "--replace",
 ]
-_LAUNCHD_ENV = {"PATH": "/usr/bin", "XPC_SERVICE_NAME": "ai.hermes.gateway-butler"}
+_LAUNCHD_ENV = {"PATH": "/usr/bin", "XPC_SERVICE_NAME": "ai.jimmy.gateway-butler"}
 
 
 def test_main_timestamps_each_stderr_line(tmp_path):
@@ -82,7 +82,7 @@ def test_prepare_skips_interactive_xpc_zero_even_for_gateway_argv():
 
 def test_main_injects_flag_into_stale_gateway_child(tmp_path, monkeypatch):
     """Stale plist inner argv must grow --external-supervisor in the grandchild."""
-    monkeypatch.setenv("XPC_SERVICE_NAME", "ai.hermes.gateway-butler")
+    monkeypatch.setenv("XPC_SERVICE_NAME", "ai.jimmy.gateway-butler")
     monkeypatch.delenv(EXTERNAL_GATEWAY_SUPERVISOR_ENV, raising=False)
     log_path = tmp_path / "gateway.error.log"
     marker_path = tmp_path / "argv.txt"
@@ -92,7 +92,7 @@ def test_main_injects_flag_into_stale_gateway_child(tmp_path, monkeypatch):
         f"Path({str(marker_path)!r}).write_text("
         "'\\n'.join(sys.argv[1:]), encoding='utf-8')\n"
     )
-    stale = [sys.executable, "-c", code, "-m", "hermes_cli.main", "gateway", "run", "--replace"]
+    stale = [sys.executable, "-c", code, "-m", "jimmy_cli.main", "gateway", "run", "--replace"]
 
     rc = stderr_timestamp.main(
         ["--error-log", str(log_path), "--", *stale]
@@ -105,7 +105,7 @@ def test_main_injects_flag_into_stale_gateway_child(tmp_path, monkeypatch):
 
 
 def test_main_does_not_mark_arbitrary_launchd_child(tmp_path, monkeypatch):
-    monkeypatch.setenv("XPC_SERVICE_NAME", "ai.hermes.gateway-butler")
+    monkeypatch.setenv("XPC_SERVICE_NAME", "ai.jimmy.gateway-butler")
     monkeypatch.delenv(EXTERNAL_GATEWAY_SUPERVISOR_ENV, raising=False)
     log_path = tmp_path / "gateway.error.log"
     marker_path = tmp_path / "marker.txt"

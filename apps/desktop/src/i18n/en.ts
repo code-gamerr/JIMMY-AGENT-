@@ -73,7 +73,7 @@ export const en: Translations = {
       loadingSessions: 'Loading recent sessions',
       retryingRemoteBackend: 'Reconnecting to the remote Jimmy backend…',
       startingDesktopConnection: 'Starting desktop connection',
-      startingHermesDesktop: 'Starting Jimmy Desktop…'
+      startingJimmyDesktop: 'Starting Jimmy Desktop…'
     },
     errors: {
       backgroundExited: 'Jimmy background process exited.',
@@ -129,7 +129,7 @@ export const en: Translations = {
     backendOutOfDateMessage:
       'Your Jimmy backend is older than this desktop build and may not work correctly. Update to align them.',
     installMethodUnsupportedTitle: 'Unsupported install method',
-    updateHermes: 'Update Jimmy',
+    updateJimmy: 'Update Jimmy',
     updateReadyTitle: 'Update ready',
     updateReadyMessage: count => `${count} new change${count === 1 ? '' : 's'} available.`,
     updateReadyMessageUnknown: 'A new update is available.',
@@ -404,7 +404,7 @@ export const en: Translations = {
         includesHeading: 'This package includes',
         agentLabel: 'Agent plugin',
         desktopLabel: 'Desktop UI',
-        agentTargetLocal: profile => `Installs into the ${profile} backend (~/.hermes/plugins/)`,
+        agentTargetLocal: profile => `Installs into the ${profile} backend (~/.jimmy/plugins/)`,
         agentTargetRemote: profile => `Installs into the connected ${profile} backend`,
         desktopTarget: "Installs into this app's local desktop-plugins folder",
         desktopOnlyNote: 'Desktop-only packages do not install a backend agent plugin.',
@@ -780,7 +780,7 @@ export const en: Translations = {
         'Local by default. Use remote when this app should drive a Jimmy backend elsewhere. Gateway connections are machine-level; profiles are discovered from the gateways you connect.',
       envOverrideTitle: 'Environment variables are controlling this desktop session.',
       envOverrideDesc:
-        'Unset HERMES_DESKTOP_REMOTE_URL and HERMES_DESKTOP_REMOTE_TOKEN to use the saved setting below.',
+        'Unset JIMMY_DESKTOP_REMOTE_URL and JIMMY_DESKTOP_REMOTE_TOKEN to use the saved setting below.',
       modeTitle: 'Connection mode',
       localTitle: 'Local gateway',
       localDesc: 'Start a private Jimmy backend on localhost. This is the default and works offline.',
@@ -819,7 +819,7 @@ export const en: Translations = {
       cloudAgentProvisioning: 'Provisioning…',
       cloudStatusLabel: status => `Status: ${status}`,
       remoteUrlTitle: 'Remote URL',
-      remoteUrlDesc: 'Base URL for the remote dashboard backend. Path prefixes are supported, for example /hermes.',
+      remoteUrlDesc: 'Base URL for the remote dashboard backend. Path prefixes are supported, for example /jimmy.',
       probing: 'Checking how this gateway authenticates…',
       probeError: 'Could not reach this gateway yet. Check the URL — the auth method will appear once it responds.',
       signedIn: 'Signed in',
@@ -887,9 +887,9 @@ export const en: Translations = {
       sshPortDesc: 'Blank = 22 or the ~/.ssh/config port.',
       sshKeyTitle: 'Identity file',
       sshKeyDesc: 'Private key path. Blank = ssh-agent or ~/.ssh/config.',
-      sshHermesPathTitle: 'Jimmy path (optional)',
-      sshHermesPathDesc: 'Full path to the remote hermes binary. Blank = auto-detect.',
-      sshHermesPathPlaceholder: 'auto-detect',
+      sshJimmyPathTitle: 'Jimmy path (optional)',
+      sshJimmyPathDesc: 'Full path to the remote jimmy binary. Blank = auto-detect.',
+      sshJimmyPathPlaceholder: 'auto-detect',
       sshTestConnection: 'Test SSH',
       sshConnect: 'Connect',
       sshButtonsHint: 'Save applies on the next launch. Connect reconnects now.',
@@ -901,7 +901,7 @@ export const en: Translations = {
       sshErrHostKey:
         'The host key has CHANGED since you last connected. Verify this is expected, then run ssh-keygen -R <host> and reconnect.',
       sshErrNotInstalled:
-        'Jimmy is not installed on the remote host. Install it there (curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sh) or set the Jimmy path.',
+        'Jimmy is not installed on the remote host. Install it there (curl -fsSL https://jimmy-agent.jimmy-agent.com/install.sh | sh) or set the Jimmy path.',
       sshErrPlatform:
         'Unsupported remote platform. Jimmy Desktop SSH mode supports Linux, macOS, and Windows remote hosts.',
       sshErrTimeout: 'SSH connection timed out. The host may be unreachable or asleep.',
@@ -1236,7 +1236,7 @@ export const en: Translations = {
     edit: 'Edit',
     archive: 'Archive',
     skillArchivedTitle: 'Skill archived',
-    skillArchivedMessage: 'Restorable via hermes curator restore.',
+    skillArchivedMessage: 'Restorable via jimmy curator restore.',
     hub: {
       searchPlaceholder: 'Search the skill hub',
       search: 'Search',
@@ -1461,11 +1461,11 @@ export const en: Translations = {
     noSessions: 'No sessions yet.',
     gatewayRunning: 'Messaging gateway running',
     gatewayStopped: 'Messaging gateway stopped',
-    hermesActiveSessions: (version, count) => `Jimmy ${version} · Active sessions ${count}`,
+    jimmyActiveSessions: (version, count) => `Jimmy ${version} · Active sessions ${count}`,
     restartGateway: 'Restart gateway',
     openBrowser: 'Open browser',
     gatewayRestartFailed: 'Gateway restart failed.',
-    updateHermes: 'Update Jimmy',
+    updateJimmy: 'Update Jimmy',
     reloadWindow: 'Reload window',
     actionRunning: 'running',
     actionDone: 'done',
@@ -1666,7 +1666,7 @@ export const en: Translations = {
       },
       MATRIX_HOMESERVER: { label: 'Homeserver URL', placeholder: 'https://matrix.org' },
       MATRIX_ACCESS_TOKEN: { label: 'Access token' },
-      MATRIX_USER_ID: { label: 'Bot user ID', placeholder: '@hermes:example.org' },
+      MATRIX_USER_ID: { label: 'Bot user ID', placeholder: '@jimmy:example.org' },
       MATRIX_ALLOWED_USERS: {
         label: 'Allowed Matrix user IDs',
         help: 'Recommended. Comma-separated user IDs in @user:server format.'
@@ -2275,7 +2275,7 @@ export const en: Translations = {
       '/resume': 'resume a prior session',
       '/details': 'control transcript detail level',
       '/copy': 'copy selection or last assistant message',
-      '/quit': 'exit hermes'
+      '/quit': 'exit jimmy'
     },
     hotkeyDescs: {
       'composer.mention': 'reference files, folders, urls, git',
@@ -2560,7 +2560,7 @@ export const en: Translations = {
     remoteSetupDesc: 'Enter your gateway URL. Jimmy Desktop will detect whether it needs a token or browser sign-in.',
     remoteUrlTitle: 'Gateway URL',
     remoteUrlDesc: 'Use the base URL of the Jimmy gateway, including https:// when remote.',
-    remoteUrlPlaceholder: 'https://gateway.example.com/hermes',
+    remoteUrlPlaceholder: 'https://gateway.example.com/jimmy',
     probing: 'Detecting gateway authentication...',
     probeError: 'Could not reach that Jimmy gateway.',
     identityProvider: 'your identity provider',
@@ -3107,7 +3107,7 @@ export const en: Translations = {
       reject: 'Reject',
       alwaysTitle: 'Always allow this command?',
       alwaysDescription: pattern =>
-        `This adds the “${pattern}” pattern to your permanent allowlist (~/.hermes/config.yaml). Jimmy won’t ask again for commands like this — in this session or any future one.`,
+        `This adds the “${pattern}” pattern to your permanent allowlist (~/.jimmy/config.yaml). Jimmy won’t ask again for commands like this — in this session or any future one.`,
       alwaysAllow: 'Always allow'
     },
     clarify: {
@@ -3318,7 +3318,7 @@ export const en: Translations = {
       success: platform => `Handed off to ${platform}. Resume here anytime.`,
       systemNote: platform => `↻ Handed off to ${platform} — resume here anytime.`,
       failed: error => `Handoff failed: ${error}`,
-      timedOut: 'Timed out waiting for the gateway. Is `hermes gateway` running?'
+      timedOut: 'Timed out waiting for the gateway. Is `jimmy gateway` running?'
     }
   },
 

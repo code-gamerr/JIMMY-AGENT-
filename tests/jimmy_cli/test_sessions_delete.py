@@ -4,8 +4,8 @@ import pytest
 
 
 def test_sessions_delete_accepts_unique_id_prefix(monkeypatch, capsys):
-    import hermes_cli.main as main_mod
-    import hermes_state
+    import jimmy_cli.main as main_mod
+    import jimmy_state
 
     captured = {}
 
@@ -21,11 +21,11 @@ def test_sessions_delete_accepts_unique_id_prefix(monkeypatch, capsys):
         def close(self):
             captured["closed"] = True
 
-    monkeypatch.setattr(hermes_state, "SessionDB", lambda: FakeDB())
+    monkeypatch.setattr(jimmy_state, "SessionDB", lambda: FakeDB())
     monkeypatch.setattr(
         sys,
         "argv",
-        ["hermes", "sessions", "delete", "20260315_092437_c9a6", "--yes"],
+        ["jimmy", "sessions", "delete", "20260315_092437_c9a6", "--yes"],
     )
 
     main_mod.main()
@@ -40,10 +40,10 @@ def test_sessions_delete_accepts_unique_id_prefix(monkeypatch, capsys):
 
 
 def _run_prune(monkeypatch, capsys, argv_tail, candidates=None, skipped_open=0):
-    """Run `hermes sessions prune <argv_tail>` against a FakeDB, capturing
+    """Run `jimmy sessions prune <argv_tail>` against a FakeDB, capturing
     the filter kwargs passed to list_prune_candidates. Auto-confirms."""
-    import hermes_cli.main as main_mod
-    import hermes_state
+    import jimmy_cli.main as main_mod
+    import jimmy_state
 
     seen = {}
     rows = candidates if candidates is not None else [
@@ -84,9 +84,9 @@ def _run_prune(monkeypatch, capsys, argv_tail, candidates=None, skipped_open=0):
         def close(self):
             pass
 
-    monkeypatch.setattr(hermes_state, "SessionDB", lambda: FakeDB())
+    monkeypatch.setattr(jimmy_state, "SessionDB", lambda: FakeDB())
     monkeypatch.setattr(
-        sys, "argv", ["hermes", "sessions", "prune", *argv_tail]
+        sys, "argv", ["jimmy", "sessions", "prune", *argv_tail]
     )
     monkeypatch.setattr("builtins.input", lambda _prompt="": "y")
     main_mod.main()
@@ -94,7 +94,7 @@ def _run_prune(monkeypatch, capsys, argv_tail, candidates=None, skipped_open=0):
 
 
 def test_sessions_prune_bare_keeps_90_day_default(monkeypatch, capsys):
-    """A truly bare `hermes sessions prune` keeps the implicit 90-day cutoff."""
+    """A truly bare `jimmy sessions prune` keeps the implicit 90-day cutoff."""
     import time as _time
 
     filters, _out = _run_prune(monkeypatch, capsys, [])
@@ -106,7 +106,7 @@ def test_sessions_prune_bare_keeps_90_day_default(monkeypatch, capsys):
 
 def test_sessions_prune_preview_shows_oldest_newest(monkeypatch, capsys):
     """Confirmation preview surfaces count + oldest/newest session times."""
-    from hermes_cli.session_filters import format_epoch
+    from jimmy_cli.session_filters import format_epoch
 
     _filters, out = _run_prune(monkeypatch, capsys, ["--source", "cron"])
     assert "2 session(s) match" in out
@@ -125,5 +125,5 @@ def test_sessions_prune_surfaces_matching_open_sessions(monkeypatch, capsys):
 
     assert "2 open sessions also match these filters" in out
     assert "prune only deletes ended sessions" in out
-    assert "hermes sessions delete <id>" in out
+    assert "jimmy sessions delete <id>" in out
     assert "No sessions match" in out

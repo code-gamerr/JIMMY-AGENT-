@@ -10,28 +10,28 @@ def env_homes(tmp_path, monkeypatch):
     home.mkdir()
     managed = tmp_path / "managed"
     managed.mkdir()
-    monkeypatch.setenv("HERMES_MANAGED_DIR", str(managed))
-    from hermes_cli import managed_scope
+    monkeypatch.setenv("JIMMY_MANAGED_DIR", str(managed))
+    from jimmy_cli import managed_scope
 
     managed_scope.invalidate_managed_cache()
     return home, managed
 
 
 def test_managed_env_beats_user_env(env_homes, monkeypatch):
-    from hermes_cli.env_loader import load_hermes_dotenv
+    from jimmy_cli.env_loader import load_jimmy_dotenv
 
     home, managed = env_homes
     (home / ".env").write_text("OPENAI_API_BASE=https://user.example/v1\n", encoding="utf-8")
     (managed / ".env").write_text("OPENAI_API_BASE=https://org.example/v1\n", encoding="utf-8")
-    load_hermes_dotenv(hermes_home=str(home))
+    load_jimmy_dotenv(jimmy_home=str(home))
     assert os.environ["OPENAI_API_BASE"] == "https://org.example/v1"
 
 
 def test_no_managed_env_is_noop(env_homes, monkeypatch):
-    from hermes_cli.env_loader import load_hermes_dotenv
+    from jimmy_cli.env_loader import load_jimmy_dotenv
 
     home, managed = env_homes  # managed dir exists but has no .env
     monkeypatch.setenv("SOME_VALUE", "from_shell")
     (home / ".env").write_text("SOME_VALUE=from_user\n", encoding="utf-8")
-    load_hermes_dotenv(hermes_home=str(home))
+    load_jimmy_dotenv(jimmy_home=str(home))
     assert os.environ["SOME_VALUE"] == "from_user"

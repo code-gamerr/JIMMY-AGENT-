@@ -10,15 +10,15 @@ import os
 
 import pytest
 
-from hermes_cli import config as config_mod
+from jimmy_cli import config as config_mod
 
 
 @pytest.fixture
-def hermes_home(tmp_path, monkeypatch):
-    home = tmp_path / ".hermes"
+def jimmy_home(tmp_path, monkeypatch):
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.delenv("HERMES_MANAGED", raising=False)
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.delenv("JIMMY_MANAGED", raising=False)
     return home
 
 
@@ -39,11 +39,11 @@ def hermes_home(tmp_path, monkeypatch):
         (None, None),
     ],
 )
-def test_env_var_names_the_managing_system(hermes_home, monkeypatch, env_value, expected):
+def test_env_var_names_the_managing_system(jimmy_home, monkeypatch, env_value, expected):
     if env_value is None:
-        monkeypatch.delenv("HERMES_MANAGED", raising=False)
+        monkeypatch.delenv("JIMMY_MANAGED", raising=False)
     else:
-        monkeypatch.setenv("HERMES_MANAGED", env_value)
+        monkeypatch.setenv("JIMMY_MANAGED", env_value)
 
     assert config_mod.get_managed_system() == expected
     assert config_mod.is_managed() is (expected is not None)
@@ -60,29 +60,29 @@ def test_env_var_names_the_managing_system(hermes_home, monkeypatch, env_value, 
     ],
 )
 def test_marker_file_names_the_managing_system(
-    hermes_home, monkeypatch, marker_text, expected
+    jimmy_home, monkeypatch, marker_text, expected
 ):
-    """An interactive shell reads .managed, not the HERMES_MANAGED of the service."""
-    (hermes_home / ".managed").write_text(marker_text, encoding="utf-8")
-    monkeypatch.delenv("HERMES_MANAGED", raising=False)
+    """An interactive shell reads .managed, not the JIMMY_MANAGED of the service."""
+    (jimmy_home / ".managed").write_text(marker_text, encoding="utf-8")
+    monkeypatch.delenv("JIMMY_MANAGED", raising=False)
 
     assert config_mod.get_managed_system() == expected
     assert config_mod.is_managed() is True
 
 
-def test_env_var_wins_over_the_marker(hermes_home, monkeypatch):
-    (hermes_home / ".managed").write_text("nixos", encoding="utf-8")
-    monkeypatch.setenv("HERMES_MANAGED", "home-manager")
+def test_env_var_wins_over_the_marker(jimmy_home, monkeypatch):
+    (jimmy_home / ".managed").write_text("nixos", encoding="utf-8")
+    monkeypatch.setenv("JIMMY_MANAGED", "home-manager")
 
     assert config_mod.get_managed_system() == "home-manager"
 
 
 @pytest.mark.parametrize("managed_value", ["nixos", "home-manager"])
 def test_managed_install_names_its_system_and_offers_an_update(
-    hermes_home, monkeypatch, tmp_path, managed_value
+    jimmy_home, monkeypatch, tmp_path, managed_value
 ):
     """The message names the system, so the user knows what owns the install."""
-    monkeypatch.setenv("HERMES_MANAGED", managed_value)
+    monkeypatch.setenv("JIMMY_MANAGED", managed_value)
 
     # This test uses an install tree of its own. The real checkout can carry
     # a stamp from the install shape of the contributor. A stamp answers
@@ -94,14 +94,14 @@ def test_managed_install_names_its_system_and_offers_an_update(
     assert "set model" in config_mod.format_managed_message("set model")
     assert config_mod.get_managed_update_command()
     assert config_mod.detect_install_method(install_tree) == managed_value
-    # `hermes update` cannot run on a managed install, so the advice must not
+    # `jimmy update` cannot run on a managed install, so the advice must not
     # name it.
-    assert config_mod.recommended_update_command() != "hermes update"
+    assert config_mod.recommended_update_command() != "jimmy update"
 
 
 @pytest.mark.parametrize("managed_value", ["nixos", "home-manager"])
 def test_a_stamp_can_name_every_managed_system(
-    hermes_home, monkeypatch, tmp_path, managed_value
+    jimmy_home, monkeypatch, tmp_path, managed_value
 ):
     """A stamp must give back every value that detection can return.
 
@@ -109,7 +109,7 @@ def test_a_stamp_can_name_every_managed_system(
     absent from that allowlist gives "unknown". The update guidance then
     names a command that the managed guard refuses.
     """
-    monkeypatch.delenv("HERMES_MANAGED", raising=False)
+    monkeypatch.delenv("JIMMY_MANAGED", raising=False)
     install_tree = tmp_path / "install"
     install_tree.mkdir()
 
@@ -118,17 +118,17 @@ def test_a_stamp_can_name_every_managed_system(
     assert config_mod.detect_install_method(install_tree) == managed_value
 
 
-def test_unmanaged_install_offers_no_update_command(hermes_home, monkeypatch):
-    monkeypatch.delenv("HERMES_MANAGED", raising=False)
+def test_unmanaged_install_offers_no_update_command(jimmy_home, monkeypatch):
+    monkeypatch.delenv("JIMMY_MANAGED", raising=False)
     assert config_mod.get_managed_update_command() is None
 
 
-def test_unreadable_marker_still_reports_managed(hermes_home, monkeypatch):
+def test_unreadable_marker_still_reports_managed(jimmy_home, monkeypatch):
     """A marker we cannot read is still a marker. Fail closed, not open."""
-    marker = hermes_home / ".managed"
+    marker = jimmy_home / ".managed"
     marker.write_text("home-manager", encoding="utf-8")
     marker.chmod(0o000)
-    monkeypatch.delenv("HERMES_MANAGED", raising=False)
+    monkeypatch.delenv("JIMMY_MANAGED", raising=False)
     try:
         if os.access(marker, os.R_OK):
             pytest.skip("running as a user that ignores file modes (for example root)")

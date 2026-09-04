@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-from hermes_cli import auth as auth_mod
+from jimmy_cli import auth as auth_mod
 from agent.credential_pool import (
     CredentialPool,
     PooledCredential,
@@ -19,7 +19,7 @@ from agent.credential_pool import (
     load_pool,
 )
 from agent.secret_scope import get_secret as _get_secret
-from hermes_cli.auth import (
+from jimmy_cli.auth import (
     ACTUAL_LOCAL_NOAUTH_PLACEHOLDER,
     AuthError,
     DEFAULT_CODEX_BASE_URL,
@@ -40,14 +40,14 @@ from hermes_cli.auth import (
     is_actual_local_base_url,
     normalize_actual_base_url,
 )
-from hermes_cli.config import (
+from jimmy_cli.config import (
     get_compatible_custom_providers,
     load_config,
     normalize_extra_headers,
 )
-from hermes_cli.providers import custom_provider_aliases, custom_provider_slug
-from hermes_constants import OPENROUTER_BASE_URL
-from hermes_cli.providers import is_official_openai_host
+from jimmy_cli.providers import custom_provider_aliases, custom_provider_slug
+from jimmy_constants import OPENROUTER_BASE_URL
+from jimmy_cli.providers import is_official_openai_host
 from utils import base_url_host_matches, base_url_hostname, env_int
 
 
@@ -92,7 +92,7 @@ def _config_base_url_trustworthy_for_bare_custom(cfg_base_url: str, cfg_provider
     # is, otherwise a legit LAN/WireGuard ollama endpoint silently falls
     # through to OpenRouter.
     try:
-        from hermes_cli.auth import resolve_provider as _resolve_provider
+        from jimmy_cli.auth import resolve_provider as _resolve_provider
 
         if _resolve_provider(cfg_provider_norm) == "custom":
             return True
@@ -175,7 +175,7 @@ def _fallback_api_mode(provider: str, base_url: str, model: str = "") -> str:
     detected = _detect_api_mode_for_url(base_url)
     if detected:
         return detected
-    from hermes_cli.providers import determine_api_mode
+    from jimmy_cli.providers import determine_api_mode
 
     return determine_api_mode(provider, base_url, model) or "chat_completions"
 
@@ -331,7 +331,7 @@ def _get_model_config() -> Dict[str, Any]:
         # Handle model.default being a dict {provider: ..., model: ...} rather than a string
         _default = cfg.get("default")
         if isinstance(_default, dict):
-            from hermes_cli.config import split_model_config_default
+            from jimmy_cli.config import split_model_config_default
             cfg_model, cfg_provider = split_model_config_default(_default)
             cfg_provider = cfg_provider or str(model_cfg.get("provider") or "")
             cfg["default"] = cfg_model
@@ -391,7 +391,7 @@ def _copilot_runtime_api_mode(
         return "chat_completions"
 
     try:
-        from hermes_cli.models import copilot_model_api_mode
+        from jimmy_cli.models import copilot_model_api_mode
 
         return copilot_model_api_mode(model_name, api_key=api_key)
     except Exception:
@@ -405,7 +405,7 @@ _VALID_API_MODES = {
     "bedrock_converse",
     # Optional opt-in: hand the entire turn to a `codex app-server` subprocess
     # so terminal/file-ops/patching/sandboxing run inside Codex's own runtime
-    # instead of Hermes' tool dispatch. Gated behind config key
+    # instead of Jimmy' tool dispatch. Gated behind config key
     # `model.openai_runtime == "codex_app_server"` AND provider in
     # {"openai", "openai-codex"}. Default is unchanged.
     "codex_app_server",
@@ -421,7 +421,7 @@ def _parse_api_mode(raw: Any) -> Optional[str]:
     instead of silently falling through to hostname-based detection.
     """
     if isinstance(raw, str):
-        from hermes_cli.config import _canonical_api_mode
+        from jimmy_cli.config import _canonical_api_mode
 
         normalized = _canonical_api_mode(raw).lower()
         if normalized in _VALID_API_MODES:
@@ -517,7 +517,7 @@ def _resolve_runtime_from_pool_entry(
     elif provider == "xai":
         api_mode = "codex_responses"
     elif provider == "nous":
-        from hermes_cli.providers import nous_api_mode
+        from jimmy_cli.providers import nous_api_mode
 
         api_mode = nous_api_mode(effective_model)
         base_url = _nous_inference_base_url_override() or base_url
@@ -544,7 +544,7 @@ def _resolve_runtime_from_pool_entry(
         # explicitly picked anthropic_messages (Anthropic-style endpoint).
         if effective_model and api_mode != "anthropic_messages":
             try:
-                from hermes_cli.models import azure_foundry_model_api_mode
+                from jimmy_cli.models import azure_foundry_model_api_mode
 
                 inferred = azure_foundry_model_api_mode(effective_model)
             except Exception:
@@ -573,7 +573,7 @@ def _resolve_runtime_from_pool_entry(
             # anthropic_messages and chat_completions models, so the previous
             # session's mode must not leak across /model switches.
             # Refs #16878.
-            from hermes_cli.models import opencode_model_api_mode
+            from jimmy_cli.models import opencode_model_api_mode
             api_mode = opencode_model_api_mode(provider, effective_model)
         elif configured_mode and _provider_supports_explicit_api_mode(provider, configured_provider):
             api_mode = configured_mode
@@ -589,7 +589,7 @@ def _resolve_runtime_from_pool_entry(
     # chat_completions / codex_responses (heals a stripped URL persisted to
     # model.base_url by an earlier switch into an anthropic-routed model).
     if provider in {"opencode-zen", "opencode-go"}:
-        from hermes_cli.models import normalize_opencode_base_url
+        from jimmy_cli.models import normalize_opencode_base_url
 
         base_url = normalize_opencode_base_url(provider, api_mode, base_url)
 
@@ -625,7 +625,7 @@ def resolve_requested_provider(requested: Optional[str] = None) -> str:
 
     # Prefer the persisted config selection over any stale shell/.env
     # provider override so chat uses the endpoint the user last saved.
-    env_provider = _getenv("HERMES_INFERENCE_PROVIDER", "").strip().lower()
+    env_provider = _getenv("JIMMY_INFERENCE_PROVIDER", "").strip().lower()
     if env_provider:
         return env_provider
 
@@ -736,7 +736,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
             # the request.  We only defer to the built-in when the raw name is
             # the canonical provider itself (``nous``, ``openrouter``, …) so
             # accidentally shadowing a canonical provider still resolves to
-            # the built-in. See tests/hermes_cli/test_runtime_provider_resolution.py
+            # the built-in. See tests/jimmy_cli/test_runtime_provider_resolution.py
             # ``test_named_custom_provider_does_not_shadow_builtin_provider``.
             if (canonical or "").strip().lower() == requested_norm:
                 return None
@@ -746,7 +746,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
     # First check providers: dict (new-style user-defined providers)
     providers = config.get("providers")
     if isinstance(providers, dict):
-        from hermes_cli.config import is_provider_enabled
+        from jimmy_cli.config import is_provider_enabled
         for ep_name, entry in providers.items():
             if not isinstance(entry, dict):
                 continue
@@ -809,7 +809,7 @@ def _get_named_custom_provider(requested_provider: str) -> Optional[Dict[str, An
         logger.warning(
             "custom_providers in config.yaml is a dict, not a list. "
             "Each entry must be prefixed with '-' in YAML. "
-            "Run 'hermes doctor' for details."
+            "Run 'jimmy doctor' for details."
         )
         return None
 
@@ -1021,7 +1021,7 @@ def canonical_custom_identity(
        config fallback below it stays correct after the user points their
        global default at a different provider.
     3. ``config_provider`` — the active ``config.model.provider`` (or its
-       ``provider``/``HERMES_INFERENCE_PROVIDER`` equivalent). When neither
+       ``provider``/``JIMMY_INFERENCE_PROVIDER`` equivalent). When neither
        a base_url nor a model recovered the entry, the configured provider
        is the only durable identity left, so fall back to it when it names
        a real entry.
@@ -1050,7 +1050,7 @@ def canonical_custom_identity(
         except Exception:
             candidate = ""
     if not candidate:
-        candidate = os.environ.get("HERMES_INFERENCE_PROVIDER", "").strip()
+        candidate = os.environ.get("JIMMY_INFERENCE_PROVIDER", "").strip()
 
     candidate_norm = _normalize_custom_provider_name(candidate)
     # A bare/non-routable candidate cannot heal a bare custom override.
@@ -1108,7 +1108,7 @@ def _resolve_named_custom_runtime(
     requested_norm = (requested_provider or "").strip().lower()
     if requested_norm and requested_norm != "custom":
         try:
-            from hermes_cli.auth import resolve_provider as _resolve_provider
+            from jimmy_cli.auth import resolve_provider as _resolve_provider
 
             if _resolve_provider(requested_norm) == "custom":
                 requested_norm = "custom"
@@ -1263,7 +1263,7 @@ def _resolve_openrouter_runtime(
     # gate up the stack — alias-aware without duplicating the alias map.
     if requested_norm and requested_norm != "custom":
         try:
-            from hermes_cli.auth import resolve_provider as _resolve_provider
+            from jimmy_cli.auth import resolve_provider as _resolve_provider
 
             if _resolve_provider(requested_norm) == "custom":
                 requested_norm = "custom"
@@ -1450,7 +1450,7 @@ def _resolve_azure_foundry_runtime(
         and not explicit_api_mode
     ):
         try:
-            from hermes_cli.models import azure_foundry_model_api_mode
+            from jimmy_cli.models import azure_foundry_model_api_mode
 
             inferred = azure_foundry_model_api_mode(effective_model)
         except Exception:
@@ -1466,7 +1466,7 @@ def _resolve_azure_foundry_runtime(
     base_url = explicit_base_url_clean or cfg_base_url or env_base_url
     if not base_url:
         raise AuthError(
-            "Azure Foundry requires a base URL. Set it via 'hermes model' or "
+            "Azure Foundry requires a base URL. Set it via 'jimmy model' or "
             "the AZURE_FOUNDRY_BASE_URL (or AZURE_OPENAI_ENDPOINT) environment variable."
         )
 
@@ -1577,7 +1577,7 @@ def _resolve_azure_foundry_runtime(
     api_key = explicit_api_key
     if not api_key:
         try:
-            from hermes_cli.config import get_env_value
+            from jimmy_cli.config import get_env_value
             api_key = (
                 get_env_value("AZURE_FOUNDRY_API_KEY")
                 or get_env_value("AZURE_OPENAI_API_KEY")
@@ -1593,10 +1593,10 @@ def _resolve_azure_foundry_runtime(
     if not api_key:
         raise AuthError(
             "Azure Foundry requires an API key. Set AZURE_FOUNDRY_API_KEY "
-            "(or AZURE_OPENAI_API_KEY) in ~/.hermes/.env or run 'hermes model' "
+            "(or AZURE_OPENAI_API_KEY) in ~/.jimmy/.env or run 'jimmy model' "
             "to configure. To use keyless Microsoft Entra ID auth instead, set "
             "model.auth_mode: entra_id in config.yaml (or pick "
-            "'Microsoft Entra ID' in 'hermes model')."
+            "'Microsoft Entra ID' in 'jimmy model')."
         )
 
     source = "explicit" if (explicit_api_key or explicit_base_url) else "config"
@@ -1681,7 +1681,7 @@ def _resolve_explicit_runtime(
             provider="nous",
             code="provider_removed",
         )
-        from hermes_cli.providers import nous_api_mode
+        from jimmy_cli.providers import nous_api_mode
 
         state = auth_mod.get_provider_auth_state("nous") or {}
         base_url = (
@@ -1696,14 +1696,14 @@ def _resolve_explicit_runtime(
             str(state.get("agent_key") or "").strip()
             if _agent_key_is_usable(
                 state,
-                max(60, env_int("HERMES_NOUS_MIN_KEY_TTL_SECONDS", 1800)),
+                max(60, env_int("JIMMY_NOUS_MIN_KEY_TTL_SECONDS", 1800)),
             )
             else ""
         )
         expires_at = state.get("agent_key_expires_at") or state.get("expires_at")
         if not api_key:
             creds = resolve_nous_runtime_credentials(
-                timeout_seconds=float(_getenv("HERMES_NOUS_TIMEOUT_SECONDS", "15")),
+                timeout_seconds=float(_getenv("JIMMY_NOUS_TIMEOUT_SECONDS", "15")),
             )
             api_key = creds.get("api_key", "")
             expires_at = creds.get("expires_at")
@@ -1822,7 +1822,7 @@ def resolve_runtime_provider(
     #
     # Fail fast with a typed error so the fallback chain can advance to
     # the next provider instead of using a disabled one.
-    from hermes_cli.config import is_provider_enabled, load_config
+    from jimmy_cli.config import is_provider_enabled, load_config
     _full_cfg = load_config()
     _provs_cfg = _full_cfg.get("providers") if isinstance(_full_cfg, dict) else None
     if isinstance(_provs_cfg, dict):
@@ -1897,10 +1897,10 @@ def resolve_runtime_provider(
                 "Vertex AI credentials could not be resolved. Vertex uses "
                 "OAuth2 (not a static API key): provide a service-account JSON "
                 "via GOOGLE_APPLICATION_CREDENTIALS (or VERTEX_CREDENTIALS_PATH) "
-                "in ~/.hermes/.env, or run 'gcloud auth application-default "
+                "in ~/.jimmy/.env, or run 'gcloud auth application-default "
                 "login' for ADC. Set the GCP project/region under vertex: in "
                 "config.yaml if they aren't embedded in the credentials. "
-                "Run `hermes setup` to install Vertex support."
+                "Run `jimmy setup` to install Vertex support."
             )
         return {
             "provider": "vertex",
@@ -2009,11 +2009,11 @@ def resolve_runtime_provider(
         # For Nous, the pool entry's runtime_api_key is the agent_key
         # compatibility field. It must be an invoke JWT. The pool doesn't
         # refresh it during selection (that would trigger network calls in
-        # non-runtime contexts like `hermes auth list`). If the key is
+        # non-runtime contexts like `jimmy auth list`). If the key is
         # expired/missing, refresh the selected pool entry before falling back
         # to singleton auth resolution.
         if provider == "nous" and entry is not None:
-            min_ttl = max(60, env_int("HERMES_NOUS_MIN_KEY_TTL_SECONDS", 1800))
+            min_ttl = max(60, env_int("JIMMY_NOUS_MIN_KEY_TTL_SECONDS", 1800))
             nous_state = {
                 "agent_key": getattr(entry, "agent_key", None),
                 "agent_key_expires_at": getattr(entry, "agent_key_expires_at", None),
@@ -2069,10 +2069,10 @@ def resolve_runtime_provider(
             code="provider_removed",
         )
         try:
-            from hermes_cli.providers import nous_api_mode
+            from jimmy_cli.providers import nous_api_mode
 
             creds = resolve_nous_runtime_credentials(
-                timeout_seconds=float(_getenv("HERMES_NOUS_TIMEOUT_SECONDS", "15")),
+                timeout_seconds=float(_getenv("JIMMY_NOUS_TIMEOUT_SECONDS", "15")),
             )
             return {
                 "provider": "nous",
@@ -2099,7 +2099,7 @@ def resolve_runtime_provider(
                 "api_mode": "codex_responses",
                 "base_url": creds.get("base_url", "").rstrip("/"),
                 "api_key": creds.get("api_key", ""),
-                "source": creds.get("source", "hermes-auth-store"),
+                "source": creds.get("source", "jimmy-auth-store"),
                 "last_refresh": creds.get("last_refresh"),
                 "requested_provider": requested_provider,
             }
@@ -2119,7 +2119,7 @@ def resolve_runtime_provider(
                 "api_mode": "codex_responses",
                 "base_url": (creds.get("base_url") or "").rstrip("/") or DEFAULT_XAI_OAUTH_BASE_URL,
                 "api_key": creds.get("api_key", ""),
-                "source": creds.get("source", "hermes-auth-store"),
+                "source": creds.get("source", "jimmy-auth-store"),
                 "last_refresh": creds.get("last_refresh"),
                 "requested_provider": requested_provider,
             }
@@ -2150,7 +2150,7 @@ def resolve_runtime_provider(
     if provider == "minimax-oauth":
         pconfig = PROVIDER_REGISTRY.get(provider)
         if pconfig and pconfig.auth_type == "oauth_minimax":
-            from hermes_cli.auth import resolve_minimax_oauth_runtime_credentials
+            from jimmy_cli.auth import resolve_minimax_oauth_runtime_credentials
             creds = resolve_minimax_oauth_runtime_credentials()
             return {
                 "provider": provider,
@@ -2199,9 +2199,9 @@ def resolve_runtime_provider(
         if _is_azure_endpoint:
             # Honor user-specified env var hints on the model config before
             # falling back to the built-in AZURE_ANTHROPIC_KEY / ANTHROPIC_API_KEY
-            # chain.  Accept both `key_env` (Hermes canonical — matches the
+            # chain.  Accept both `key_env` (Jimmy canonical — matches the
             # custom_providers field name) and `api_key_env` (documented in the
-            # Azure Foundry guide and read by most Hermes-compatible importers).
+            # Azure Foundry guide and read by most Jimmy-compatible importers).
             # Matches the config.yaml examples in website/docs/guides/azure-foundry.md.
             token = ""
             for hint_key in ("key_env", "api_key_env"):
@@ -2389,7 +2389,7 @@ def resolve_runtime_provider(
                 # otherwise carry the previous mode forward, stripping /v1
                 # from base_url for chat_completions models and 404'ing.
                 # Refs #16878.
-                from hermes_cli.models import opencode_model_api_mode
+                from jimmy_cli.models import opencode_model_api_mode
                 _effective = target_model or model_cfg.get("default", "")
                 api_mode = opencode_model_api_mode(provider, _effective)
             elif configured_mode and _provider_supports_explicit_api_mode(provider, configured_provider):
@@ -2403,7 +2403,7 @@ def resolve_runtime_provider(
                 )
         # Normalize the /v1 suffix for OpenCode by API mode (see comment above).
         if provider in {"opencode-zen", "opencode-go"}:
-            from hermes_cli.models import normalize_opencode_base_url
+            from jimmy_cli.models import normalize_opencode_base_url
             base_url = normalize_opencode_base_url(provider, api_mode, base_url)
         if provider == "lmstudio":
             base_url = auth_mod._normalize_lmstudio_runtime_base_url(base_url)

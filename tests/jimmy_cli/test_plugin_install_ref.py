@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from hermes_cli.subcommands.plugins import build_plugins_parser
+from jimmy_cli.subcommands.plugins import build_plugins_parser
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -57,7 +57,7 @@ def test_parser_accepts_only_explicit_install_ref_option():
 
 
 def test_canonical_source_never_persists_http_credentials():
-    from hermes_cli.plugins_cmd import _canonical_source
+    from jimmy_cli.plugins_cmd import _canonical_source
 
     assert (
         _canonical_source("https://user:token@example.com/owner/repo.git", None)
@@ -70,7 +70,7 @@ def test_canonical_source_never_persists_http_credentials():
 
 
 def test_cloned_origin_never_persists_http_credentials(tmp_path):
-    from hermes_cli.plugins_cmd import _scrub_cloned_origin
+    from jimmy_cli.plugins_cmd import _scrub_cloned_origin
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -96,7 +96,7 @@ def test_cloned_origin_never_persists_http_credentials(tmp_path):
 
 
 def test_git_errors_never_echo_source_credentials():
-    from hermes_cli.plugins_cmd import _safe_git_error
+    from jimmy_cli.plugins_cmd import _safe_git_error
 
     source = "https://user:secret@example.com/owner/repo.git?token=secret"
     result = subprocess.CompletedProcess(
@@ -114,11 +114,11 @@ def test_git_errors_never_echo_source_credentials():
 
 
 def test_exact_ref_installs_old_commit_and_normalizes_uppercase(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo, old_sha, new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
 
     target, _manifest, name = _install_plugin_core(
         repo.as_uri(), force=False, ref=old_sha.upper()
@@ -135,11 +135,11 @@ def test_exact_ref_installs_old_commit_and_normalizes_uppercase(monkeypatch, tmp
 
 @pytest.mark.parametrize("ref", ["", "main", "abc", "g" * 40, "a" * 39, "a" * 41])
 def test_invalid_ref_is_rejected_before_any_install_state(monkeypatch, tmp_path, ref):
-    from hermes_cli.plugins_cmd import PluginOperationError, _install_plugin_core
+    from jimmy_cli.plugins_cmd import PluginOperationError, _install_plugin_core
 
     repo, _old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
 
     with pytest.raises(PluginOperationError, match="40-character commit SHA"):
         _install_plugin_core(repo.as_uri(), force=False, ref=ref)
@@ -151,7 +151,7 @@ def test_invalid_ref_is_rejected_before_any_install_state(monkeypatch, tmp_path,
 def test_subdir_pin_records_source_identity_and_installs_requested_tree(
     monkeypatch, tmp_path
 ):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo = tmp_path / "monorepo"
     plugin = repo / "extensions" / "demo"
@@ -167,7 +167,7 @@ def test_subdir_pin_records_source_identity_and_installs_requested_tree(
     (plugin / "value.txt").write_text("new", encoding="utf-8")
     _git(repo, "commit", "-qam", "new")
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     identifier = f"{repo.as_uri()}#extensions/demo"
 
     target, _manifest, _name = _install_plugin_core(
@@ -185,11 +185,11 @@ def test_subdir_pin_records_source_identity_and_installs_requested_tree(
 def test_force_reinstall_does_not_drift_pin_without_explicit_new_ref(
     monkeypatch, tmp_path
 ):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo, old_sha, new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     _install_plugin_core(repo.as_uri(), force=False, ref=old_sha)
 
     target, _manifest, _name = _install_plugin_core(repo.as_uri(), force=True)
@@ -204,11 +204,11 @@ def test_force_reinstall_does_not_drift_pin_without_explicit_new_ref(
 
 
 def test_unpinned_install_and_force_reinstall_keep_tracking_head(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo, _old_sha, first_head = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
 
     target, _manifest, _name = _install_plugin_core(repo.as_uri(), force=False)
     assert _git(target, "rev-parse", "HEAD") == first_head
@@ -222,28 +222,28 @@ def test_unpinned_install_and_force_reinstall_keep_tracking_head(monkeypatch, tm
 
 
 def test_metadata_is_profile_local_and_read_from_disk_each_time(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core, _read_install_metadata
+    from jimmy_cli.plugins_cmd import _install_plugin_core, _read_install_metadata
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home_a = tmp_path / "profile-a"
     home_b = tmp_path / "profile-b"
-    monkeypatch.setenv("HERMES_HOME", str(home_a))
+    monkeypatch.setenv("JIMMY_HOME", str(home_a))
     _install_plugin_core(repo.as_uri(), force=False, ref=old_sha)
     assert _read_install_metadata()["demo"]["revision"] == old_sha
 
-    monkeypatch.setenv("HERMES_HOME", str(home_b))
+    monkeypatch.setenv("JIMMY_HOME", str(home_b))
     assert _read_install_metadata() == {}
 
-    monkeypatch.setenv("HERMES_HOME", str(home_a))
+    monkeypatch.setenv("JIMMY_HOME", str(home_a))
     assert _read_install_metadata()["demo"]["source"] == repo.as_uri()
 
 
 def test_pinned_plugin_update_refuses_to_drift(monkeypatch, tmp_path, capsys):
-    from hermes_cli.plugins_cmd import _install_plugin_core, cmd_update
+    from jimmy_cli.plugins_cmd import _install_plugin_core, cmd_update
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     _install_plugin_core(repo.as_uri(), force=False, ref=old_sha)
 
     with pytest.raises(SystemExit) as exc:
@@ -255,14 +255,14 @@ def test_pinned_plugin_update_refuses_to_drift(monkeypatch, tmp_path, capsys):
 
 
 def test_dashboard_update_also_refuses_to_drift_pin(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import (
+    from jimmy_cli.plugins_cmd import (
         _install_plugin_core,
         dashboard_update_user_plugin,
     )
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     _install_plugin_core(repo.as_uri(), force=False, ref=old_sha)
 
     result = dashboard_update_user_plugin("demo")
@@ -275,11 +275,11 @@ def test_dashboard_update_also_refuses_to_drift_pin(monkeypatch, tmp_path):
 def test_failed_force_reinstall_keeps_existing_plugin_and_metadata(
     monkeypatch, tmp_path
 ):
-    from hermes_cli.plugins_cmd import PluginOperationError, _install_plugin_core
+    from jimmy_cli.plugins_cmd import PluginOperationError, _install_plugin_core
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     target, _manifest, _name = _install_plugin_core(
         repo.as_uri(), force=False, ref=old_sha
     )
@@ -294,13 +294,13 @@ def test_failed_force_reinstall_keeps_existing_plugin_and_metadata(
 
 
 def test_checkout_mismatch_is_rejected(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import PluginOperationError, _checkout_exact_revision
+    from jimmy_cli.plugins_cmd import PluginOperationError, _checkout_exact_revision
 
     repo, old_sha, new_sha = _plugin_repo(tmp_path)
     clone = tmp_path / "clone"
     subprocess.run(["git", "clone", "-q", repo.as_uri(), str(clone)], check=True)
     monkeypatch.setattr(
-        "hermes_cli.plugins_cmd._git_head_revision", lambda _repo, _git: new_sha
+        "jimmy_cli.plugins_cmd._git_head_revision", lambda _repo, _git: new_sha
     )
 
     with pytest.raises(PluginOperationError, match="does not match requested"):
@@ -308,13 +308,13 @@ def test_checkout_mismatch_is_rejected(monkeypatch, tmp_path):
 
 
 def test_metadata_write_failure_rolls_back_new_install(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(
-        "hermes_cli.plugins_cmd._write_install_metadata",
+        "jimmy_cli.plugins_cmd._write_install_metadata",
         lambda _metadata: (_ for _ in ()).throw(OSError("disk full")),
     )
 
@@ -326,17 +326,17 @@ def test_metadata_write_failure_rolls_back_new_install(monkeypatch, tmp_path):
 
 
 def test_metadata_write_failure_rolls_back_removal(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core, _remove_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core, _remove_plugin_core
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     target, _manifest, _name = _install_plugin_core(
         repo.as_uri(), force=False, ref=old_sha
     )
     before = _metadata(home)
     monkeypatch.setattr(
-        "hermes_cli.plugins_cmd._write_install_metadata",
+        "jimmy_cli.plugins_cmd._write_install_metadata",
         lambda _metadata: (_ for _ in ()).throw(OSError("disk full")),
     )
 
@@ -350,11 +350,11 @@ def test_metadata_write_failure_rolls_back_removal(monkeypatch, tmp_path):
 
 
 def test_reinstall_after_manual_directory_removal_retains_pin(monkeypatch, tmp_path):
-    from hermes_cli.plugins_cmd import _install_plugin_core
+    from jimmy_cli.plugins_cmd import _install_plugin_core
 
     repo, old_sha, _new_sha = _plugin_repo(tmp_path)
     home = tmp_path / "home"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     target, _manifest, _name = _install_plugin_core(
         repo.as_uri(), force=False, ref=old_sha
     )

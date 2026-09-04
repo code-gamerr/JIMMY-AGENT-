@@ -1,0 +1,9 @@
+{
+  "agents": {
+    "openclaw": true,
+    "munder": true,
+    "ecc": true
+  },
+  "allow_coding_oneshot": true,
+  "max_concurrent_tasks": 3
+}

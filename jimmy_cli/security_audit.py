@@ -1,10 +1,10 @@
-"""On-demand supply-chain audit for Hermes Agent installs.
+"""On-demand supply-chain audit for Jimmy installs.
 
-Scans three surfaces a Hermes user actually controls and we can map to
+Scans three surfaces a Jimmy user actually controls and we can map to
 upstream advisories without auth or extra binaries:
 
-1. The Hermes venv (every PyPI dist via ``importlib.metadata``).
-2. Python deps declared by user-installed plugins under ``~/.hermes/plugins``
+1. The Jimmy venv (every PyPI dist via ``importlib.metadata``).
+2. Python deps declared by user-installed plugins under ``~/.jimmy/plugins``
    (``requirements.txt`` + ``pyproject.toml`` best-effort pin extraction).
 3. MCP servers wired in ``config.yaml`` whose ``command/args`` look like
    ``npx -y <pkg>@<ver>`` or ``uvx <pkg>==<ver>``.
@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional
 
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 
 OSV_BATCH_URL = "https://api.osv.dev/v1/querybatch"
 OSV_VULN_URL = "https://api.osv.dev/v1/vulns/{vid}"
@@ -164,14 +164,14 @@ def _parse_pyproject_pins(text: str) -> list[tuple[str, str]]:
     return pins
 
 
-def _discover_plugins(hermes_home: Path) -> list[Component]:
-    """Python deps declared by plugins under ``~/.hermes/plugins``.
+def _discover_plugins(jimmy_home: Path) -> list[Component]:
+    """Python deps declared by plugins under ``~/.jimmy/plugins``.
 
     Plugins typically don't install into the venv (they're directory-based
     with relative imports), so their stated requirements are useful audit
     surface even when the venv scan misses them.
     """
-    plugins_dir = hermes_home / "plugins"
+    plugins_dir = jimmy_home / "plugins"
     if not plugins_dir.is_dir():
         return []
 
@@ -258,7 +258,7 @@ def _extract_mcp_component(server_name: str, command: str, args: list[str]) -> O
 def _discover_mcp() -> list[Component]:
     """Pinned MCP server packages from ``config.yaml``."""
     try:
-        from hermes_cli.mcp_config import _get_mcp_servers
+        from jimmy_cli.mcp_config import _get_mcp_servers
     except Exception:
         return []
 
@@ -416,10 +416,10 @@ def _discover_components(
     skip_venv: bool = False,
     skip_plugins: bool = False,
     skip_mcp: bool = False,
-    hermes_home: Optional[Path] = None,
+    jimmy_home: Optional[Path] = None,
 ) -> list[Component]:
     """Discover all scannable components across the enabled sources."""
-    home = hermes_home or Path(get_hermes_home())
+    home = jimmy_home or Path(get_jimmy_home())
     components: list[Component] = []
     if not skip_venv:
         components.extend(_discover_venv())
@@ -435,7 +435,7 @@ def run_audit(
     skip_venv: bool = False,
     skip_plugins: bool = False,
     skip_mcp: bool = False,
-    hermes_home: Optional[Path] = None,
+    jimmy_home: Optional[Path] = None,
     components: Optional[list[Component]] = None,
 ) -> list[Finding]:
     """Query OSV for the given (or freshly discovered) components.
@@ -449,7 +449,7 @@ def run_audit(
             skip_venv=skip_venv,
             skip_plugins=skip_plugins,
             skip_mcp=skip_mcp,
-            hermes_home=hermes_home,
+            jimmy_home=jimmy_home,
         )
 
     if not components:
@@ -537,8 +537,8 @@ def _render_json(findings: list[Finding], total_components: int) -> str:
 
 
 def cmd_security_audit(args: argparse.Namespace) -> int:
-    """Implementation of `hermes security audit`."""
-    home = Path(get_hermes_home())
+    """Implementation of `jimmy security audit`."""
+    home = Path(get_jimmy_home())
     skip_venv = bool(getattr(args, "skip_venv", False))
     skip_plugins = bool(getattr(args, "skip_plugins", False))
     skip_mcp = bool(getattr(args, "skip_mcp", False))
@@ -553,7 +553,7 @@ def cmd_security_audit(args: argparse.Namespace) -> int:
         return 2
 
     components = _discover_components(
-        skip_venv=skip_venv, skip_plugins=skip_plugins, skip_mcp=skip_mcp, hermes_home=home
+        skip_venv=skip_venv, skip_plugins=skip_plugins, skip_mcp=skip_mcp, jimmy_home=home
     )
     total = len(components)
     if total == 0:
@@ -569,7 +569,7 @@ def cmd_security_audit(args: argparse.Namespace) -> int:
             skip_venv=skip_venv,
             skip_plugins=skip_plugins,
             skip_mcp=skip_mcp,
-            hermes_home=home,
+            jimmy_home=home,
             components=components,
         )
     except RuntimeError as exc:

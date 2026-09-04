@@ -1,7 +1,7 @@
 """Tests that ``model_catalog.excluded_providers`` hides providers from the
-interactive ``hermes model`` CLI picker.
+interactive ``jimmy model`` CLI picker.
 
-The CLI picker (``hermes_cli.main.select_provider_and_model``) builds its
+The CLI picker (``jimmy_cli.main.select_provider_and_model``) builds its
 provider menu from ``CANONICAL_PROVIDERS`` via ``group_providers`` — a
 separate code path from ``list_authenticated_providers``. These tests
 verify the exclusion config is honored there too, matching the
@@ -15,17 +15,17 @@ import pytest
 
 @pytest.fixture
 def config_home(tmp_path, monkeypatch):
-    """Isolated HERMES_HOME with a minimal config."""
-    home = tmp_path / "hermes"
+    """Isolated JIMMY_HOME with a minimal config."""
+    home = tmp_path / "jimmy"
     home.mkdir()
     config_yaml = home / "config.yaml"
     config_yaml.write_text("model: old-model\ncustom_providers: []\n")
     env_file = home / ".env"
     env_file.write_text("")
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.delenv("HERMES_MODEL", raising=False)
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.delenv("JIMMY_MODEL", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
-    monkeypatch.delenv("HERMES_INFERENCE_PROVIDER", raising=False)
+    monkeypatch.delenv("JIMMY_INFERENCE_PROVIDER", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     return home
@@ -42,7 +42,7 @@ def _capture_provider_labels(config_home):
     """Drive ``select_provider_and_model`` and return the provider-menu labels
     shown to the user (the first ``_prompt_provider_choice`` call). Cancels
     immediately after capturing."""
-    from hermes_cli.main import select_provider_and_model
+    from jimmy_cli.main import select_provider_and_model
 
     captured: dict = {}
 
@@ -52,7 +52,7 @@ def _capture_provider_labels(config_home):
             captured["labels"] = list(labels)
         return None  # cancel
 
-    with patch("hermes_cli.main._prompt_provider_choice",
+    with patch("jimmy_cli.main._prompt_provider_choice",
                side_effect=_capture_and_cancel), \
          patch("builtins.print"):
         select_provider_and_model()
@@ -62,7 +62,7 @@ def _capture_provider_labels(config_home):
 
 def test_cli_picker_hides_excluded_provider(config_home):
     """``excluded_providers: [openrouter]`` must remove the OpenRouter row
-    from the ``hermes model`` provider menu."""
+    from the ``jimmy model`` provider menu."""
     _write_config(config_home, **{"model_catalog": {"excluded_providers": ["openrouter"]}})
 
     labels = _capture_provider_labels(config_home)
@@ -75,11 +75,11 @@ def test_cli_picker_hides_excluded_provider(config_home):
 def test_cli_picker_hides_excluded_provider_by_alias(config_home):
     """Exclusion by an alias (not the canonical slug) must also hide the
     provider, matching ``list_authenticated_providers``' matching against
-    hermes_id / alias names."""
-    # 'openai' is an alias-style hermes id; ensure excluding it hides the
+    jimmy_id / alias names."""
+    # 'openai' is an alias-style jimmy id; ensure excluding it hides the
     # canonical openai provider row if present. Use the canonical slug's
     # alias from _PROVIDER_ALIASES to stay robust to renames.
-    from hermes_cli.models import _PROVIDER_ALIASES, CANONICAL_PROVIDERS
+    from jimmy_cli.models import _PROVIDER_ALIASES, CANONICAL_PROVIDERS
 
     # Find a canonical provider that has at least one alias and is a leaf
     # row (not folded into a multi-member group) so its label appears
@@ -94,7 +94,7 @@ def test_cli_picker_hides_excluded_provider_by_alias(config_home):
     if target_slug is None:
         pytest.skip("no aliased canonical provider available to test")
 
-    from hermes_cli.models import _PROVIDER_LABELS
+    from jimmy_cli.models import _PROVIDER_LABELS
     target_label_fragment = _PROVIDER_LABELS.get(target_slug, target_slug)
 
     # Baseline: the provider appears without exclusion.

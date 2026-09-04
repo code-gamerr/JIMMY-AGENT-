@@ -11,5 +11,5 @@ services:
       path: Dockerfile.jimmy
       remoteBuild: true
       # Public HTTPS targetPort must match dashboard listen port
-      # (HERMES_DASHBOARD_PORT / default 9119 in image).
+      # (JIMMY_DASHBOARD_PORT / default 9119 in image).
 infra: ./infra

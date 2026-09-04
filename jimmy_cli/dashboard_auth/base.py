@@ -12,7 +12,7 @@ class Session:
 
     All fields are mandatory. Providers that don't have a concept of orgs
     should set ``org_id`` to an empty string. ``access_token`` and
-    ``refresh_token`` are opaque to Hermes — provider-specific.
+    ``refresh_token`` are opaque to Jimmy — provider-specific.
     """
 
     user_id: str
@@ -23,7 +23,7 @@ class Session:
     expires_at: int  # unix seconds; the access_token's exp claim
     access_token: str
     refresh_token: str
-    # Optional Hermes profile this login is locked to (multi-user basic auth).
+    # Optional Jimmy profile this login is locked to (multi-user basic auth).
     # Empty string = no bind (operator may use the dashboard profile switcher).
     profile: str = ""
 

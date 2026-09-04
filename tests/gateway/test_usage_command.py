@@ -1,4 +1,4 @@
-from hermes_state import AsyncSessionDB
+from jimmy_state import AsyncSessionDB
 """Tests for gateway /usage command — agent cache lookup and output fields."""
 
 import threading
@@ -168,7 +168,7 @@ class TestUsageAccountSection:
         runner._session_db = AsyncSessionDB(MagicMock())
         runner._session_db._db.get_session.return_value = {
             "billing_provider": "nous",
-            "billing_base_url": "https://inference-api.nousresearch.com/v1/",
+            "billing_base_url": "https://inference-api.jimmy-agent.com/v1/",
         }
         runner._session_db._db.get_dominant_session_model_route.return_value = {
             "model": "z-ai/glm-5.2",

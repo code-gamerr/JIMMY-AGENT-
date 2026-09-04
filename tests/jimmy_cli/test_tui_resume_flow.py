@@ -29,7 +29,7 @@ def _raise_exit(rc):
 
 @pytest.fixture
 def main_mod(monkeypatch):
-    import hermes_cli.main as mod
+    import jimmy_cli.main as mod
 
     monkeypatch.setattr(mod, "_has_any_provider_configured", lambda: True)
     # Reset the idempotency guard so each test starts fresh.
@@ -55,7 +55,7 @@ def test_termux_skips_bundled_skill_sync_when_stamp_fresh(monkeypatch, tmp_path,
     calls = []
 
     monkeypatch.setenv("TERMUX_VERSION", "1")
-    monkeypatch.setattr(main_mod, "get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(main_mod, "get_jimmy_home", lambda: tmp_path)
     monkeypatch.setattr(main_mod, "_termux_bundled_skills_fingerprint", lambda: "fp1")
     main_mod._mark_termux_bundled_skills_synced()
     monkeypatch.setitem(
@@ -109,8 +109,8 @@ def test_exit_after_oneshot_flushes_stdio_and_calls_os_exit(
 def test_oneshot_subprocess_exits_without_teardown_abort():
     program = textwrap.dedent(
         """
-        import hermes_cli.oneshot as oneshot
-        from hermes_cli.main import _exit_after_oneshot
+        import jimmy_cli.oneshot as oneshot
+        from jimmy_cli.main import _exit_after_oneshot
 
         oneshot._run_agent = lambda *args, **kwargs: ("ok", {"final_response": "ok"})
         _exit_after_oneshot(oneshot.run_oneshot("hello"))
@@ -141,7 +141,7 @@ def test_oneshot_subprocess_exits_without_teardown_abort():
 def _stub_plugin_discovery(monkeypatch):
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.plugins",
+        "jimmy_cli.plugins",
         types.SimpleNamespace(discover_plugins=lambda: None),
     )
 
@@ -149,8 +149,8 @@ def _stub_plugin_discovery(monkeypatch):
 
 
 def test_oneshot_wires_session_db_for_recall(monkeypatch):
-    """hermes -z bypasses HermesCLI, but recall still needs SessionDB."""
-    from hermes_cli.oneshot import _run_agent
+    """jimmy -z bypasses JimmyCLI, but recall still needs SessionDB."""
+    from jimmy_cli.oneshot import _run_agent
 
     captured = {}
     sentinel_db = object()
@@ -177,22 +177,22 @@ def test_oneshot_wires_session_db_for_recall(monkeypatch):
         return module
 
     monkeypatch.setitem(sys.modules, "run_agent", mod("run_agent", AIAgent=FakeAgent))
-    monkeypatch.setitem(sys.modules, "hermes_state", mod("hermes_state", SessionDB=FakeSessionDB))
+    monkeypatch.setitem(sys.modules, "jimmy_state", mod("jimmy_state", SessionDB=FakeSessionDB))
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.config",
-        mod("hermes_cli.config", load_config=lambda: {"model": {"default": "m"}}),
+        "jimmy_cli.config",
+        mod("jimmy_cli.config", load_config=lambda: {"model": {"default": "m"}}),
     )
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.models",
-        mod("hermes_cli.models", detect_provider_for_model=lambda *_args, **_kwargs: None),
+        "jimmy_cli.models",
+        mod("jimmy_cli.models", detect_provider_for_model=lambda *_args, **_kwargs: None),
     )
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.runtime_provider",
+        "jimmy_cli.runtime_provider",
         mod(
-            "hermes_cli.runtime_provider",
+            "jimmy_cli.runtime_provider",
             resolve_runtime_provider=lambda **_kwargs: {
                 "api_key": "k",
                 "base_url": "u",
@@ -204,8 +204,8 @@ def test_oneshot_wires_session_db_for_recall(monkeypatch):
     )
     monkeypatch.setitem(
         sys.modules,
-        "hermes_cli.tools_config",
-        mod("hermes_cli.tools_config", _get_platform_tools=lambda *_args, **_kwargs: {"session_search"}),
+        "jimmy_cli.tools_config",
+        mod("jimmy_cli.tools_config", _get_platform_tools=lambda *_args, **_kwargs: {"session_search"}),
     )
 
     text, result = _run_agent("recall this")
@@ -229,7 +229,7 @@ def test_launch_tui_exports_model_provider_and_toolsets(monkeypatch, main_mod):
     def fake_call(argv, cwd=None, env=None):
         nonlocal active_path_during_call
         captured.update({"argv": argv, "cwd": cwd, "env": env})
-        active_path_during_call = Path(env["HERMES_TUI_ACTIVE_SESSION_FILE"])
+        active_path_during_call = Path(env["JIMMY_TUI_ACTIVE_SESSION_FILE"])
         assert active_path_during_call.exists()
         return 1
 
@@ -237,17 +237,17 @@ def test_launch_tui_exports_model_provider_and_toolsets(monkeypatch, main_mod):
 
     with pytest.raises(SystemExit):
         main_mod._launch_tui(
-            model="nous/hermes-test", provider="nous", toolsets="web, terminal"
+            model="nous/jimmy-test", provider="nous", toolsets="web, terminal"
         )
 
     env = captured["env"]
-    assert env["HERMES_MODEL"] == "nous/hermes-test"
-    assert env["HERMES_INFERENCE_MODEL"] == "nous/hermes-test"
-    assert env["HERMES_TUI_PROVIDER"] == "nous"
-    assert env["HERMES_INFERENCE_PROVIDER"] == "nous"
-    assert env["HERMES_TUI_TOOLSETS"] == "web,terminal"
-    active_path = Path(env["HERMES_TUI_ACTIVE_SESSION_FILE"])
-    assert active_path.name.startswith("hermes-tui-active-session-")
+    assert env["JIMMY_MODEL"] == "nous/jimmy-test"
+    assert env["JIMMY_INFERENCE_MODEL"] == "nous/jimmy-test"
+    assert env["JIMMY_TUI_PROVIDER"] == "nous"
+    assert env["JIMMY_INFERENCE_PROVIDER"] == "nous"
+    assert env["JIMMY_TUI_TOOLSETS"] == "web,terminal"
+    active_path = Path(env["JIMMY_TUI_ACTIVE_SESSION_FILE"])
+    assert active_path.name.startswith("jimmy-tui-active-session-")
     assert active_path.suffix == ".json"
     assert active_path_during_call == active_path
     assert not active_path.exists()
@@ -256,17 +256,17 @@ def test_launch_tui_exports_model_provider_and_toolsets(monkeypatch, main_mod):
 
 
 
-def test_make_tui_argv_dev_prebuilds_hermes_ink(monkeypatch, main_mod, tmp_path):
+def test_make_tui_argv_dev_prebuilds_jimmy_ink(monkeypatch, main_mod, tmp_path):
     tui_dir = tmp_path / "ui-tui"
     tsx = tui_dir / "node_modules" / ".bin" / "tsx"
-    ink_dir = tui_dir / "packages" / "hermes-ink"
+    ink_dir = tui_dir / "packages" / "jimmy-ink"
     tsx.parent.mkdir(parents=True)
     ink_dir.mkdir(parents=True)
     tsx.write_text("#!/usr/bin/env node\n", encoding="utf-8")
 
     monkeypatch.setattr(main_mod, "_ensure_tui_node", lambda: None)
     monkeypatch.setattr(main_mod, "_tui_need_npm_install", lambda _tui_dir: False)
-    monkeypatch.delenv("HERMES_TUI_DIR", raising=False)
+    monkeypatch.delenv("JIMMY_TUI_DIR", raising=False)
     monkeypatch.setattr(main_mod.shutil, "which", lambda bin_name: f"/usr/bin/{bin_name}")
 
     calls = []

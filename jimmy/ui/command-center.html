@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jimmy Command Center</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #f4d35e;
+      --green: #3fb950;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: Inter, system-ui, sans-serif; min-height: 100vh;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      background: #010409;
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.04em; }
+    header h1 span { color: var(--accent); }
+    .bind { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+    .layout {
+      display: grid; grid-template-columns: 280px 1fr 320px;
+      gap: 12px; padding: 12px; height: calc(100vh - 58px);
+    }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
+    }
+    .panel h2 {
+      margin: 0; padding: 10px 12px; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+    .panel .body { padding: 10px 12px; overflow: auto; flex: 1; }
+    textarea, select, input, button {
+      width: 100%; border-radius: 8px; border: 1px solid var(--border);
+      background: #0d1117; color: var(--text); padding: 10px; font: inherit;
+    }
+    button {
+      background: var(--accent); color: #1a1a1a; font-weight: 700; cursor: pointer;
+      border: none; margin-top: 8px;
+    }
+    button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .task {
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .task.active { border-color: var(--accent); }
+    .status { font-family: var(--mono); font-size: 11px; }
+    .RUNNING, .PLANNING, .ROUTING { color: var(--blue); }
+    .COMPLETED { color: var(--green); }
+    .FAILED, .CANCELLED { color: var(--red); }
+    .log {
+      font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+      line-height: 1.45; color: #c9d1d9;
+    }
+    .steps li { margin: 4px 0; color: var(--muted); }
+    .steps li.done { color: var(--green); }
+    .steps li.current { color: var(--accent); }
+    .agent { margin-bottom: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+    .agent .ok { color: var(--green); }
+    .agent .bad { color: var(--red); }
+    .files code { display: block; font-size: 12px; color: var(--blue); }
+    .center-grid {
+      display: grid; grid-template-rows: auto 1fr auto; gap: 12px; min-height: 0;
+    }
+    .center-grid .panel { min-height: 0; }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>Jimmy</span> Command Center</h1>
+    <div class="bind">127.0.0.1 · live events from real processes</div>
+  </header>
+  <div class="layout">
+    <div class="panel">
+      <h2>Submit / Queue</h2>
+      <div class="body">
+        <textarea id="request" rows="5" placeholder="Build authentication for my project."></textarea>
+        <select id="agent">
+          <option value="auto">auto-route</option>
+          <option value="munder">munder-difflin</option>
+          <option value="landing">landing site</option>
+          <option value="research">research</option>
+          <option value="openclaw">openclaw</option>
+          <option value="ecc">ECC</option>
+        </select>
+        <button id="submit">Run task</button>
+        <button class="secondary" id="refresh">Refresh</button>
+        <h2 style="border:0;padding:16px 0 8px">Active / History</h2>
+        <div id="tasks"></div>
+      </div>
+    </div>
+    <div class="center-grid">
+      <div class="panel">
+        <h2>Task detail</h2>
+        <div class="body" id="detail">Select a task.</div>
+      </div>
+      <div class="panel">
+        <h2>Live activity</h2>
+        <div class="body log" id="activity"></div>
+      </div>
+      <div class="panel">
+        <h2>Files changed / errors</h2>
+        <div class="body">
+          <div class="files" id="files"></div>
+          <div class="log" id="errors" style="margin-top:8px;color:var(--red)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Workers</h2>
+      <div class="body" id="agents"></div>
+      <h2>Experiences</h2>
+      <div class="body log" id="experiences"></div>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const TOKEN = params.get('token') || localStorage.getItem('jimmyToken') || '';
+    if (TOKEN) localStorage.setItem('jimmyToken', TOKEN);
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ 'X-Jimmy-Token': TOKEN }, opts.headers || {});
+      if (opts.body) headers['Content-Type'] = 'application/json';
+      const res = await fetch(path + (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN), {
+        ...opts,
+        headers,
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.error || res.statusText);
+      return data.data;
+    }
+
+    let selected = null;
+    let es = null;
+
+    function statusClass(s) { return s || ''; }
+
+    async function loadAgents() {
+      const agents = await api('/api/jimmy/agents');
+      document.getElementById('agents').innerHTML = agents.map(a => `
+        <div class="agent">
+          <strong>${a.label}</strong>
+          <div class="${a.ready ? 'ok' : 'bad'}">${a.ready ? 'READY' : 'NOT READY'} — ${a.detail}</div>
+          <div class="bind">${a.workspace}</div>
+        </div>`).join('');
+    }
+
+    async function loadTasks() {
+      const tasks = await api('/api/jimmy/tasks');
+      const el = document.getElementById('tasks');
+      el.innerHTML = tasks.map(t => `
+        <div class="task ${selected === t.task_id ? 'active' : ''}" data-id="${t.task_id}">
+          <div><strong>#${t.task_id}</strong> · ${t.selected_agent || 'routing…'}</div>
+          <div class="status ${statusClass(t.status)}">${t.status}</div>
+          <div style="color:var(--muted);font-size:12px">${(t.user_request || '').slice(0, 80)}</div>
+        </div>`).join('') || '<div class="bind">No tasks yet</div>';
+      el.querySelectorAll('.task').forEach(node => {
+        node.onclick = () => selectTask(node.dataset.id);
+      });
+    }
+
+    async function loadExperiences() {
+      const items = await api('/api/jimmy/experiences');
+      document.getElementById('experiences').textContent = items.map(e =>
+        `${e.success ? '✓' : '✗'} [${e.agent}] ${e.objective.slice(0, 60)}\n  ${e.strategy}`
+      ).join('\n\n') || 'No stored experiences yet.';
+    }
+
+    function renderDetail(payload) {
+      const t = payload.task;
+      const steps = (t.plan_steps || []).map(s =>
+        `<li class="${s.done ? 'done' : ''}">${s.done ? '✓' : '○'} ${s.label}</li>`
+      ).join('');
+      document.getElementById('detail').innerHTML = `
+        <div><strong>TASK #${t.task_id}</strong></div>
+        <div>Task: ${escapeHtml(t.user_request)}</div>
+        <div>Agent: ${t.selected_agent || '—'}</div>
+        <div class="status ${t.status}">Status: ${t.status}</div>
+        <ul class="steps">${steps}</ul>
+        <div style="margin-top:8px;color:var(--muted)">Result</div>
+        <div class="log">${escapeHtml((t.result && t.result.summary) || '—')}</div>`;
+      document.getElementById('files').innerHTML = (t.files_changed || []).map(f =>
+        `<code>${escapeHtml(f)}</code>`).join('') || '<span class="bind">No file changes observed yet</span>';
+      document.getElementById('errors').textContent = (t.errors || []).join('\n') || '';
+      document.getElementById('activity').textContent = (payload.events || []).map(e =>
+        `${e.ts}  ${e.type}  ${JSON.stringify(e.payload).slice(0, 180)}`
+      ).join('\n');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function selectTask(id) {
+      selected = id;
+      if (es) es.close();
+      const payload = await api('/api/jimmy/tasks/' + id);
+      renderDetail(payload);
+      await loadTasks();
+      es = new EventSource('/api/jimmy/events?task_id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(TOKEN));
+      es.onmessage = async (msg) => {
+        const event = JSON.parse(msg.data);
+        const box = document.getElementById('activity');
+        box.textContent += `\n${event.ts}  ${event.type}  ${JSON.stringify(event.payload).slice(0, 180)}`;
+        box.scrollTop = box.scrollHeight;
+        const refreshed = await api('/api/jimmy/tasks/' + id);
+        renderDetail(refreshed);
+        loadTasks();
+      };
+    }
+
+    document.getElementById('submit').onclick = async () => {
+      const user_request = document.getElementById('request').value.trim();
+      const agent = document.getElementById('agent').value;
+      if (!user_request) return;
+      const task = await api('/api/jimmy/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ user_request, agent }),
+      });
+      document.getElementById('request').value = '';
+      await loadTasks();
+      selectTask(task.task_id);
+    };
+    document.getElementById('refresh').onclick = async () => {
+      await Promise.all([loadAgents(), loadTasks(), loadExperiences()]);
+    };
+
+    (async () => {
+      try {
+        await Promise.all([loadAgents(), loadTasks(), loadExperiences()]);
+      } catch (err) {
+        document.getElementById('detail').textContent = 'Auth/API error: ' + err.message +
+          ' — open the URL printed by `jimmy command-center` (includes token).';
+      }
+    })();
+  </script>
+</body>
+</html>

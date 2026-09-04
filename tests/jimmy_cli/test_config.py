@@ -1,4 +1,4 @@
-"""Tests for hermes_cli configuration management."""
+"""Tests for jimmy_cli configuration management."""
 
 import os
 from pathlib import Path
@@ -7,11 +7,11 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from hermes_cli.config import (
+from jimmy_cli.config import (
     DEFAULT_CONFIG,
     check_config_version,
-    get_hermes_home,
-    ensure_hermes_home,
+    get_jimmy_home,
+    ensure_jimmy_home,
     get_compatible_custom_providers,
     _explicit_config_paths,
     _normalize_max_turns_config,
@@ -31,19 +31,19 @@ from hermes_cli.config import (
 )
 
 
-class TestGetHermesHome:
+class TestGetJimmyHome:
     def test_default_path(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_HOME", None)
-            home = get_hermes_home()
-            assert home == Path.home() / ".hermes"
+            os.environ.pop("JIMMY_HOME", None)
+            home = get_jimmy_home()
+            assert home == Path.home() / ".jimmy"
 
 
-class TestEnsureHermesHome:
+class TestEnsureJimmyHome:
 
     def test_creates_default_soul_md_if_missing(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
-            ensure_hermes_home()
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
+            ensure_jimmy_home()
             soul_path = tmp_path / "SOUL.md"
             assert soul_path.exists()
             assert soul_path.read_text(encoding="utf-8").strip() != ""
@@ -53,12 +53,12 @@ class TestEnsureHermesHome:
         # Older installers seeded a comment-only scaffold that shadowed the
         # runtime default. A SOUL.md still matching that scaffold carries no
         # user persona and should be upgraded in place to DEFAULT_SOUL_MD.
-        from hermes_cli.default_soul import DEFAULT_SOUL_MD, _LEGACY_TEMPLATE_SOULS
+        from jimmy_cli.default_soul import DEFAULT_SOUL_MD, _LEGACY_TEMPLATE_SOULS
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             soul_path = tmp_path / "SOUL.md"
             soul_path.write_text(_LEGACY_TEMPLATE_SOULS[0] + "\n", encoding="utf-8")
-            ensure_hermes_home()
+            ensure_jimmy_home()
             assert soul_path.read_text(encoding="utf-8") == DEFAULT_SOUL_MD
 
 
@@ -67,7 +67,7 @@ class TestEnsureHermesHome:
 
 class TestLoadConfigDefaults:
     def test_returns_defaults_when_no_file(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config = load_config()
             assert config["model"] == DEFAULT_CONFIG["model"]
             assert config["agent"]["max_turns"] == DEFAULT_CONFIG["agent"]["max_turns"]
@@ -77,7 +77,7 @@ class TestLoadConfigDefaults:
             assert config["display"]["interim_assistant_messages"] is True
 
     def test_legacy_root_level_max_turns_migrates_to_agent_config(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config_path = tmp_path / "config.yaml"
             config_path.write_text("max_turns: 42\n")
 
@@ -92,7 +92,7 @@ class TestLoadConfigParseFailure:
     Before issue #23570 this was a single ``print(...)`` that scrolled past
     on the first invocation — users saw aux-fallback misbehavior with no clue
     their config.yaml was being ignored. The helper must:
-      * log at WARNING (so ``hermes logs`` surfaces it)
+      * log at WARNING (so ``jimmy logs`` surfaces it)
       * also write to stderr (so it's visible at startup even before
         ``setup_logging()`` has wired up file handlers)
       * dedup on (path, mtime_ns, size) so concurrent loads don't spam
@@ -109,10 +109,10 @@ class TestLoadConfigParseFailure:
         Ported from google-gemini/gemini-cli#21541 (policy-file TOML recovery),
         adapted: we back up but deliberately do NOT reset config.yaml.
         """
-        from hermes_cli import config as cfg_mod
+        from jimmy_cli import config as cfg_mod
         cfg_mod._CONFIG_PARSE_WARNED.clear()
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             broken = "\tmodel: test/custom\nbroken indent:\n"
             (tmp_path / "config.yaml").write_text(broken)
 
@@ -142,10 +142,10 @@ class TestLoadConfigParseFailure:
         parses again.
         """
         import time
-        from hermes_cli import config as cfg_mod
+        from jimmy_cli import config as cfg_mod
         cfg_mod._CONFIG_PARSE_WARNED.clear()
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             cfg = tmp_path / "config.yaml"
             cfg.write_text(
                 "model:\n  default: test/custom-model\n"
@@ -178,7 +178,7 @@ class TestEmptyConfigSections:
     and must not replace the default dict for that section (#58277)."""
 
     def test_null_section_keeps_defaults_in_load_config(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             (tmp_path / "config.yaml").write_text(
                 "model:\n  default: test/custom\n"
                 "terminal:\n"
@@ -193,7 +193,7 @@ class TestEmptyConfigSections:
     def test_null_override_of_non_dict_default_still_applies(self, tmp_path):
         """None only shields dict defaults — explicit null for a scalar
         key remains an override (unchanged behavior)."""
-        from hermes_cli.config import _deep_merge
+        from jimmy_cli.config import _deep_merge
 
         merged = _deep_merge({"scalar": 5, "section": {"a": 1}},
                              {"scalar": None, "section": None})
@@ -214,7 +214,7 @@ class TestSaveAndLoadRoundtrip:
         return fake_open
 
     def test_roundtrip(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config = load_config()
             config["model"] = "test/custom-model"
             config["agent"]["max_turns"] = 42
@@ -233,7 +233,7 @@ class TestSaveAndLoadRoundtrip:
         original = "model: test/original\n"
         config_path.write_text(original, encoding="utf-8")
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             with patch("builtins.open", side_effect=self._deny_config_reads(config_path)):
                 with pytest.raises(RuntimeError, match="Refusing to overwrite"):
                     save_config({"model": "test/replacement"})
@@ -249,7 +249,7 @@ class TestSaveAndLoadRoundtrip:
 class TestSaveEnvValueSecure:
 
     def test_secure_save_returns_metadata_only(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             result = save_env_value_secure("GITHUB_TOKEN", "ghp_test_secret")
             assert result == {
                 "success": True,
@@ -273,7 +273,7 @@ class TestSaveEnvValueSecure:
         env_path.write_text("EXISTING=value\n")
         os.chmod(env_path, 0o640)
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             save_env_value("TENOR_API_KEY", "sk-test-secret")
 
         env_mode = env_path.stat().st_mode & 0o777
@@ -283,7 +283,7 @@ class TestSaveEnvValueSecure:
         """Regression test for #30355."""
         from dotenv import dotenv_values
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}, clear=False):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}, clear=False):
             os.environ.pop("ANTHROPIC_TOKEN", None)
             token = "sk-ant-oat01-abc#xyz#more"
             save_env_value("ANTHROPIC_TOKEN", token)
@@ -305,7 +305,7 @@ class TestSaveEnvValueSecure:
         """
         # User-typed value that already includes surrounding quotes as data.
         raw = '"/Users/me/Application Support/key"'
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}, clear=False):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}, clear=False):
             os.environ.pop("TERMINAL_SSH_KEY", None)
             save_env_value("TERMINAL_SSH_KEY", raw)
             first = (tmp_path / ".env").read_text(encoding="utf-8")
@@ -327,7 +327,7 @@ class TestRemoveEnvValue:
     def test_removes_key_from_env_file(self, tmp_path):
         env_path = tmp_path / ".env"
         env_path.write_text("KEY_A=value_a\nKEY_B=value_b\nKEY_C=value_c\n")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path), "KEY_B": "value_b"}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path), "KEY_B": "value_b"}):
             result = remove_env_value("KEY_B")
             assert result is True
             content = env_path.read_text()
@@ -339,7 +339,7 @@ class TestRemoveEnvValue:
     def test_clears_os_environ_even_when_not_in_file(self, tmp_path):
         env_path = tmp_path / ".env"
         env_path.write_text("OTHER=stuff\n")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path), "ORPHAN_KEY": "orphan"}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path), "ORPHAN_KEY": "orphan"}):
             remove_env_value("ORPHAN_KEY")
             assert "ORPHAN_KEY" not in os.environ
 
@@ -357,7 +357,7 @@ class TestRemoveEnvValue:
         env_path.write_text("KEEP=value\nDROP=gone\n")
         os.chmod(env_path, 0o640)
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path), "DROP": "gone"}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path), "DROP": "gone"}):
             removed = remove_env_value("DROP")
 
         assert removed is True
@@ -371,7 +371,7 @@ class TestSaveConfigAtomicity:
 
     def test_no_partial_write_on_crash(self, tmp_path):
         """If save_config crashes mid-write, the previous file stays intact."""
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             # Write an initial config
             config = load_config()
             config["model"] = "original-model"
@@ -395,7 +395,7 @@ class TestSaveConfigAtomicity:
 
     def test_no_leftover_temp_files(self, tmp_path):
         """Failed writes must clean up their temp files."""
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config = load_config()
             save_config(config)
 
@@ -411,7 +411,7 @@ class TestSaveConfigAtomicity:
 
     def test_atomic_write_creates_valid_yaml(self, tmp_path):
         """The written file must be valid YAML matching the input."""
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config = load_config()
             config["model"] = "test/atomic-model"
             config["agent"]["max_turns"] = 77
@@ -435,15 +435,15 @@ class TestSanitizeEnvLines:
     def test_migrate_reports_normalized_line_formatting(self, capsys):
         latest_version = DEFAULT_CONFIG["_config_version"]
         with (
-            patch("hermes_cli.config.sanitize_env_file", return_value=2),
+            patch("jimmy_cli.config.sanitize_env_file", return_value=2),
             patch(
-                "hermes_cli.config.check_config_version",
+                "jimmy_cli.config.check_config_version",
                 return_value=(latest_version, latest_version),
             ),
-            patch("hermes_cli.config.read_raw_config", return_value={}),
-            patch("hermes_cli.config.get_missing_env_vars", return_value=[]),
-            patch("hermes_cli.config.get_missing_config_fields", return_value=[]),
-            patch("hermes_cli.config.get_missing_skill_config_vars", return_value=[]),
+            patch("jimmy_cli.config.read_raw_config", return_value={}),
+            patch("jimmy_cli.config.get_missing_env_vars", return_value=[]),
+            patch("jimmy_cli.config.get_missing_config_fields", return_value=[]),
+            patch("jimmy_cli.config.get_missing_skill_config_vars", return_value=[]),
         ):
             migrate_config(interactive=False)
 
@@ -475,7 +475,7 @@ class TestSanitizeEnvLines:
             "FAL_KEY=good\n"
             "OPENROUTER_API_KEY=valFIRECRAWL_API_KEY=val2\n"
         )
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             fixes = sanitize_env_file()
             assert fixes == 0
 
@@ -489,7 +489,7 @@ class TestSanitizeEnvLines:
         """No changes when file is already clean."""
         env_file = tmp_path / ".env"
         env_file.write_text("GOOD_KEY=good\nOTHER_KEY=other\n")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             fixes = sanitize_env_file()
             assert fixes == 0
 
@@ -499,40 +499,40 @@ class TestOptionalEnvVarsRegistry:
 
     def test_tavily_api_key_registered(self):
         """TAVILY_API_KEY is listed in OPTIONAL_ENV_VARS."""
-        from hermes_cli.config import OPTIONAL_ENV_VARS
+        from jimmy_cli.config import OPTIONAL_ENV_VARS
         assert "TAVILY_API_KEY" in OPTIONAL_ENV_VARS
 
 
     def test_tavily_api_key_has_url(self):
         """TAVILY_API_KEY has a URL."""
-        from hermes_cli.config import OPTIONAL_ENV_VARS
+        from jimmy_cli.config import OPTIONAL_ENV_VARS
         assert OPTIONAL_ENV_VARS["TAVILY_API_KEY"]["url"] == "https://app.tavily.com/home"
 
     def test_tavily_in_env_vars_by_version(self):
         """TAVILY_API_KEY is listed in ENV_VARS_BY_VERSION."""
-        from hermes_cli.config import ENV_VARS_BY_VERSION
+        from jimmy_cli.config import ENV_VARS_BY_VERSION
         all_vars = []
         for vars_list in ENV_VARS_BY_VERSION.values():
             all_vars.extend(vars_list)
         assert "TAVILY_API_KEY" in all_vars
 
     def test_max_iterations_not_offered_as_env_var(self):
-        """HERMES_MAX_ITERATIONS must NOT be in OPTIONAL_ENV_VARS (issue #17534).
+        """JIMMY_MAX_ITERATIONS must NOT be in OPTIONAL_ENV_VARS (issue #17534).
 
-        Offering it as an editable env var (dashboard, `hermes setup`) lets a
+        Offering it as an editable env var (dashboard, `jimmy setup`) lets a
         user write it to .env, recreating the stale ghost that shadows
         config.yaml's agent.max_turns. The iteration budget is configured ONLY
-        via config.yaml; HERMES_MAX_ITERATIONS remains a read-only backward-compat
+        via config.yaml; JIMMY_MAX_ITERATIONS remains a read-only backward-compat
         fallback in the gateway/CLI, never a promoted write target.
         """
-        from hermes_cli.config import OPTIONAL_ENV_VARS
-        assert "HERMES_MAX_ITERATIONS" not in OPTIONAL_ENV_VARS
+        from jimmy_cli.config import OPTIONAL_ENV_VARS
+        assert "JIMMY_MAX_ITERATIONS" not in OPTIONAL_ENV_VARS
 
 
 class TestMemoryProviderEnvVarsRegistry:
     """Every memory provider that reads an API key from the environment must
     have that key catalogued in OPTIONAL_ENV_VARS so the dashboard Keys page
-    and `hermes setup` surface it (previously only Honcho was listed, leaving
+    and `jimmy setup` surface it (previously only Honcho was listed, leaving
     Hindsight/Supermemory/Mem0/RetainDB/ByteRover/OpenViking invisible).
 
     This is a behavior contract, not a snapshot: it asserts each provider's
@@ -552,20 +552,20 @@ class TestMemoryProviderEnvVarsRegistry:
     }
 
     def test_memory_provider_keys_are_catalogued(self):
-        from hermes_cli.config import OPTIONAL_ENV_VARS
+        from jimmy_cli.config import OPTIONAL_ENV_VARS
         missing = [k for k in self.MEMORY_PROVIDER_KEYS if k not in OPTIONAL_ENV_VARS]
         assert not missing, f"memory provider keys missing from OPTIONAL_ENV_VARS: {missing}"
 
 
     def test_memory_provider_keys_advertise_their_tool(self):
-        from hermes_cli.config import OPTIONAL_ENV_VARS
+        from jimmy_cli.config import OPTIONAL_ENV_VARS
         for key, tool in self.MEMORY_PROVIDER_KEYS.items():
             assert tool in OPTIONAL_ENV_VARS[key].get("tools", []), key
 
 
 class TestConfigMigrationSecretPrompts:
     def test_required_secret_env_prompt_uses_masked_prompt(self, tmp_path, monkeypatch):
-        from hermes_cli import config as cfg_mod
+        from jimmy_cli import config as cfg_mod
 
         saved = {}
 
@@ -598,7 +598,7 @@ class TestConfigMigrationSecretPrompts:
             lambda name, value: saved.update({name: value}),
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             results = cfg_mod.migrate_config(interactive=True, quiet=True)
 
         assert saved["prompt"] == "  Test API key: "
@@ -611,7 +611,7 @@ class TestConfigVersionDetection:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("model: {}\n", encoding="utf-8")
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             assert load_config()["_config_version"] == DEFAULT_CONFIG["_config_version"]
             assert check_config_version() == (0, DEFAULT_CONFIG["_config_version"])
 
@@ -644,7 +644,7 @@ class TestConfigSupportFloor:
             },
         )
         (tmp_path / ".env").write_text("ANTHROPIC_TOKEN=old-token\n")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             results = migrate_config(interactive=False, quiet=False)
 
             # File untouched — no migration, no version bump, no rewrite.
@@ -659,7 +659,7 @@ class TestConfigSupportFloor:
         )
         assert expected_fragment in captured.out
         assert expected_fragment in captured.err
-        assert "run `hermes setup` to regenerate" in captured.out
+        assert "run `jimmy setup` to regenerate" in captured.out
         assert "_config_version: 12" in captured.out
         assert any(expected_fragment in w for w in results["warnings"])
         # No 'Config version: X → Y' line — nothing was migrated.
@@ -669,7 +669,7 @@ class TestConfigSupportFloor:
         config_path, original = self._write_config(
             tmp_path, {"_config_version": 11}
         )
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             results = migrate_config(interactive=False, quiet=True)
         assert config_path.read_text(encoding="utf-8") == original
         captured = capsys.readouterr()
@@ -677,15 +677,15 @@ class TestConfigSupportFloor:
         assert captured.out == ""
         assert results["warnings"]
 
-    def test_floor_message_uses_display_hermes_home(self):
-        from hermes_cli.config_migrations import support_floor_message
-        from hermes_constants import display_hermes_home
+    def test_floor_message_uses_display_jimmy_home(self):
+        from jimmy_cli.config_migrations import support_floor_message
+        from jimmy_constants import display_jimmy_home
 
         msg = support_floor_message()
-        assert f"{display_hermes_home()}/config.yaml" in msg
+        assert f"{display_jimmy_home()}/config.yaml" in msg
 
     def test_registry_has_no_targets_below_floor(self):
-        from hermes_cli.config_migrations import (
+        from jimmy_cli.config_migrations import (
             MIGRATIONS,
             SUPPORT_FLOOR_VERSION,
         )
@@ -773,7 +773,7 @@ class TestConfigSupportFloor:
     ):
         config_path, _ = self._write_config(tmp_path, fixture)
         (tmp_path / ".env").write_text(self._ENV_FIXTURE, encoding="utf-8")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             migrate_config(interactive=False, quiet=True)
         raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
         # Pin the golden version the fixtures were captured at, then compare
@@ -801,14 +801,14 @@ class TestCustomProviderCompatibility:
 
     @staticmethod
     def _run_ladder(current_ver: int):
-        from hermes_cli.config_migrations import run_migrations
+        from jimmy_cli.config_migrations import run_migrations
 
         results = {"env_added": [], "config_added": [], "warnings": []}
         run_migrations(current_ver, results, quiet=True)
         return results
 
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._run_ladder(11)
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
@@ -858,7 +858,7 @@ class TestCustomProviderCompatibility:
             encoding="utf-8",
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._run_ladder(11)
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
             compatible = get_compatible_custom_providers(raw)
@@ -909,7 +909,7 @@ class TestCustomProviderCompatibility:
             encoding="utf-8",
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             compatible = get_compatible_custom_providers()
 
         assert len(compatible) == 1
@@ -939,7 +939,7 @@ class TestCustomProviderCompatibility:
             encoding="utf-8",
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             compatible = get_compatible_custom_providers()
 
         assert compatible == [
@@ -964,12 +964,12 @@ class TestInterimAssistantMessageConfig:
             encoding="utf-8",
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             migrate_config(interactive=False, quiet=True)
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
             loaded = load_config()
 
-        from hermes_cli.config import DEFAULT_CONFIG
+        from jimmy_cli.config import DEFAULT_CONFIG
         assert raw["_config_version"] == DEFAULT_CONFIG["_config_version"]
         # The user's explicit non-default value is preserved on disk.
         assert raw["display"]["tool_progress"] == "off"
@@ -1016,8 +1016,8 @@ class TestDiscordChannelPromptsConfig:
         )
 
         results = {"env_added": [], "config_added": [], "warnings": []}
-        from hermes_cli.config_migrations import run_migrations
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        from jimmy_cli.config_migrations import run_migrations
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             # Drive the ladder directly: migrate_config() refuses sub-v12
             # configs since the support floor, but the write-invariant this
             # test guards (#40821) lives in the steps themselves.
@@ -1043,39 +1043,39 @@ class TestDiscordChannelPromptsConfig:
 class TestEnvWriteDenylist:
     """``save_env_value`` refuses to persist env-var names that
     influence how subprocesses execute — ``LD_PRELOAD``, ``PYTHONPATH``,
-    ``PATH``, ``EDITOR``, etc. — or any ``HERMES_*`` runtime flag.
+    ``PATH``, ``EDITOR``, etc. — or any ``JIMMY_*`` runtime flag.
 
     The dashboard exposes ``PUT /api/env`` to any authed caller (and
     the session token lives in the SPA's HTML where any future plugin
     XSS or local process could exfiltrate it). Without this gate, an
     attacker who steals the token could plant
-    ``LD_PRELOAD=/tmp/evil.so`` in ``.env`` and own the next Hermes
+    ``LD_PRELOAD=/tmp/evil.so`` in ``.env`` and own the next Jimmy
     process on next startup via the dotenv → ``os.environ`` chain in
-    ``hermes_cli/env_loader.py``.
+    ``jimmy_cli/env_loader.py``.
 
     Regression test for the dashboard pentest finding filed alongside
     the ``web-pentest`` skill (PR #32265 / issue #32267).
     """
 
     @pytest.fixture(autouse=True)
-    def _hermes_home(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        ensure_hermes_home()
+    def _jimmy_home(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
+        ensure_jimmy_home()
 
 
     @pytest.mark.parametrize(
         "allowed_key",
         [
-            "HERMES_LANGFUSE_PUBLIC_KEY",
-            "HERMES_SPOTIFY_CLIENT_ID",
-            "HERMES_QWEN_BASE_URL",
-            "HERMES_MAX_ITERATIONS",
+            "JIMMY_LANGFUSE_PUBLIC_KEY",
+            "JIMMY_SPOTIFY_CLIENT_ID",
+            "JIMMY_QWEN_BASE_URL",
+            "JIMMY_MAX_ITERATIONS",
         ],
     )
-    def test_hermes_integration_keys_still_writable(self, allowed_key):
-        """``HERMES_*`` overall is NOT blocked — only the four runtime
+    def test_jimmy_integration_keys_still_writable(self, allowed_key):
+        """``JIMMY_*`` overall is NOT blocked — only the four runtime
         location names (HOME/PROFILE/CONFIG/ENV) are. Integration
-        credentials following the ``HERMES_*`` convention must keep
+        credentials following the ``JIMMY_*`` convention must keep
         working or we'd regress every provider setup wizard that
         currently writes one of these (auth.py, Spotify, Langfuse, …)."""
         save_env_value(allowed_key, "test-value-123")
@@ -1104,7 +1104,7 @@ class TestWriteApprovalMigration:
         (tmp_path / "config.yaml").write_text(body)
 
     def test_approve_maps_to_true(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._write(tmp_path,
                         "_config_version: 28\nmemory:\n  write_mode: approve\n"
                         "skills:\n  write_mode: approve\n")
@@ -1116,7 +1116,7 @@ class TestWriteApprovalMigration:
             assert "write_mode" not in raw["skills"]
 
     def test_on_and_off_map_to_false(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             # YAML 1.1 parses bare on/off as bools — write_mode could be either
             # the string or the bool; both legacy "not gating" values → False.
             self._write(tmp_path,
@@ -1168,7 +1168,7 @@ class TestMigrationWriteInvariant:
             }, sort_keys=False),
             encoding="utf-8",
         )
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             migrate_config(interactive=False, quiet=True)
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
             loaded = load_config()
@@ -1212,7 +1212,7 @@ feishu:
   require_mention: true
 """
         (tmp_path / "config.yaml").write_text(body, encoding="utf-8")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             save_config(
                 {
                     "_config_version": 30,
@@ -1233,7 +1233,7 @@ feishu:
 
 
     def test_persist_migration_writes_full_read_raw_config(self, tmp_path):
-        from hermes_cli.config import _persist_migration, read_raw_config
+        from jimmy_cli.config import _persist_migration, read_raw_config
 
         body = """_config_version: 30
 model:
@@ -1249,7 +1249,7 @@ platforms:
       app_secret: xxx
 """
         (tmp_path / "config.yaml").write_text(body, encoding="utf-8")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             config = read_raw_config()
             config.setdefault("agent", {})["verify_on_stop"] = False
             config["_config_version"] = 32
@@ -1282,7 +1282,7 @@ feishu:
   require_mention: true
 """
         (tmp_path / "config.yaml").write_text(body, encoding="utf-8")
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             migrate_config(interactive=False, quiet=True)
             raw = yaml.safe_load((tmp_path / "config.yaml").read_text(encoding="utf-8"))
 
@@ -1305,7 +1305,7 @@ class TestDelegationCapUnificationMigration:
 
 
     def test_no_delegation_section_is_noop(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._write(tmp_path, "_config_version: 32\nmodel:\n  provider: openrouter\n")
             migrate_config(interactive=False, quiet=True)
             raw = yaml.safe_load((tmp_path / "config.yaml").read_text())
@@ -1320,7 +1320,7 @@ class TestBackgroundNotificationsConciseMigration:
         (tmp_path / "config.yaml").write_text(body, encoding="utf-8")
 
     def test_all_becomes_concise(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._write(
                 tmp_path,
                 "_config_version: 34\n"
@@ -1338,7 +1338,7 @@ class TestBackgroundNotificationsConciseMigration:
             ("off", False), ("result", "result"),
             ("error", "error"), ("concise", "concise"),
         ):
-            with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+            with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
                 self._write(
                     tmp_path,
                     "_config_version: 34\n"
@@ -1350,7 +1350,7 @@ class TestBackgroundNotificationsConciseMigration:
             assert raw["display"]["background_process_notifications"] == expected
 
     def test_unset_key_is_not_materialized(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._write(tmp_path, "_config_version: 34\nmodel:\n  provider: openrouter\n")
             migrate_config(interactive=False, quiet=True)
             raw = yaml.safe_load((tmp_path / "config.yaml").read_text())
@@ -1376,7 +1376,7 @@ class TestConfigNormalizationDoesNotOverwriteUserValues:
             encoding="utf-8",
         )
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             save_config(load_config())
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
@@ -1405,18 +1405,18 @@ class TestCodexAppServerAutoConfig:
         assert DEFAULT_CONFIG["compression"]["codex_gpt55_autoraise"] is True
 
     def test_preserves_existing_codex_app_server_auto_value(self, tmp_path):
-        with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+        with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
             self._write(
                 tmp_path,
                 "_config_version: 31\n"
                 "compression:\n"
-                "  codex_app_server_auto: hermes\n",
+                "  codex_app_server_auto: jimmy\n",
             )
 
             migrate_config(interactive=False, quiet=True)
 
             raw = yaml.safe_load((tmp_path / "config.yaml").read_text())
-            assert raw["compression"]["codex_app_server_auto"] == "hermes"
+            assert raw["compression"]["codex_app_server_auto"] == "jimmy"
 
 
 class TestIsProviderEnabled:
@@ -1461,12 +1461,12 @@ class TestProviderEnabledRuntimeGate:
         }
         config_path = tmp_path / "config.yaml"
         config_path.write_text(yaml.safe_dump(cfg))
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
         # Bust the in-process config cache so the override picks up.
-        from hermes_cli import config as cfg_mod
+        from jimmy_cli import config as cfg_mod
         cfg_mod._cached_config = None  # type: ignore[attr-defined]
 
-        from hermes_cli.runtime_provider import resolve_runtime_provider
+        from jimmy_cli.runtime_provider import resolve_runtime_provider
         with pytest.raises(ValueError, match="disabled"):
             resolve_runtime_provider(requested="my-fork")
 
@@ -1491,7 +1491,7 @@ def test_default_config_kanban_block_not_dropped_by_duplicate_key():
 def test_default_config_has_no_duplicate_top_level_keys():
     """Guard against any duplicate key silently shadowing a default."""
     import ast
-    import hermes_cli.config as cfg_mod
+    import jimmy_cli.config as cfg_mod
 
     src = open(cfg_mod.__file__, encoding="utf-8").read()
     tree = ast.parse(src)

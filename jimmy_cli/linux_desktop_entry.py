@@ -1,14 +1,14 @@
-"""Install and remove the Linux desktop entry (``hermes.desktop``).
+"""Install and remove the Linux desktop entry (``jimmy.desktop``).
 
-``hermes desktop`` builds and launches the Electron app. On Linux, a
+``jimmy desktop`` builds and launches the Electron app. On Linux, a
 freshly-built app has no launcher presence: no menu item, no icon. This
 module writes the XDG desktop entry that gives it one.
-``hermes uninstall --gui`` removes the entry again.
+``jimmy uninstall --gui`` removes the entry again.
 
 Two values must be absolute for the entry to work:
 
   - ``Exec`` — the launcher runs without shell ``PATH`` customizations, so
-    a bare ``hermes desktop`` fails when hermes lives in ``~/.local/bin``
+    a bare ``jimmy desktop`` fails when jimmy lives in ``~/.local/bin``
     or a venv. Resolve the real binary and write its full path.
   - ``Icon`` — an unqualified icon name needs an indexed icon theme. The
     spec allows an absolute path instead, so point at the app icon in the
@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-DESKTOP_ENTRY_NAME = "hermes.desktop"
+DESKTOP_ENTRY_NAME = "jimmy.desktop"
 
 
 def is_supported() -> bool:
@@ -48,7 +48,7 @@ def _xdg_data_home() -> Path:
 
 
 def desktop_entry_path() -> Path:
-    """Where the ``hermes.desktop`` entry lives."""
+    """Where the ``jimmy.desktop`` entry lives."""
     return _xdg_data_home() / "applications" / DESKTOP_ENTRY_NAME
 
 
@@ -58,19 +58,19 @@ def icon_path(project_root: Path) -> Path:
 
 
 def resolve_exec_command() -> str:
-    """Build the absolute ``Exec=`` command line for ``hermes desktop``.
+    """Build the absolute ``Exec=`` command line for ``jimmy desktop``.
 
-    Prefer the real ``hermes`` executable (argv[0] or PATH). When Hermes
+    Prefer the real ``jimmy`` executable (argv[0] or PATH). When Jimmy
     runs as a module with no launcher installed, use the current
     interpreter, also absolute.
     """
-    from hermes_cli.relaunch import resolve_hermes_bin
+    from jimmy_cli.relaunch import resolve_jimmy_bin
 
-    bin_path = resolve_hermes_bin()
+    bin_path = resolve_jimmy_bin()
     if bin_path:
         argv = [str(Path(bin_path).resolve()), "desktop"]
     else:
-        argv = [str(Path(sys.executable).resolve()), "-m", "hermes_cli.main", "desktop"]
+        argv = [str(Path(sys.executable).resolve()), "-m", "jimmy_cli.main", "desktop"]
     return " ".join(_quote_exec_arg(a) for a in argv)
 
 
@@ -90,15 +90,15 @@ def render_desktop_entry(exec_command: str, icon: str) -> str:
     return (
         "[Desktop Entry]\n"
         "Type=Application\n"
-        "Name=Hermes\n"
-        "GenericName=Hermes Desktop\n"
-        "Comment=Launch Hermes Desktop\n"
+        "Name=Jimmy\n"
+        "GenericName=Jimmy Desktop\n"
+        "Comment=Launch Jimmy Desktop\n"
         f"Exec={exec_command}\n"
         f"Icon={icon}\n"
         "Terminal=false\n"
         "Categories=Utility;\n"
         "StartupNotify=true\n"
-        "StartupWMClass=Hermes\n"
+        "StartupWMClass=Jimmy\n"
     )
 
 
@@ -141,7 +141,7 @@ def _run_quiet(cmd: "list[str]") -> bool:
 
 
 def install_desktop_entry(project_root: Path) -> Optional[Path]:
-    """Write (or refresh) the Hermes desktop entry. Return its path.
+    """Write (or refresh) the Jimmy desktop entry. Return its path.
 
     Return ``None`` on non-Linux platforms or when the write fails. This
     is a convenience, never a reason to fail a launch.
@@ -153,7 +153,7 @@ def install_desktop_entry(project_root: Path) -> Optional[Path]:
     icon = icon_path(project_root)
     # Use the themed name when the checkout has no icon (a lite or
     # packaged install). A broken absolute path renders as no icon.
-    icon_value = str(icon) if icon.is_file() else "hermes"
+    icon_value = str(icon) if icon.is_file() else "jimmy"
     contents = render_desktop_entry(resolve_exec_command(), icon_value)
 
     try:

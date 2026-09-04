@@ -13,30 +13,31 @@ import argparse
 
 import pytest
 
-from hermes_cli.subcommands.auth import build_auth_parser
-from hermes_cli.subcommands.backup import build_backup_parser
-from hermes_cli.subcommands.config import build_config_parser
-from hermes_cli.subcommands.dashboard import build_dashboard_parser
-from hermes_cli.subcommands.debug import build_debug_parser
-from hermes_cli.subcommands.doctor import build_doctor_parser
-from hermes_cli.subcommands.dump import build_dump_parser
-from hermes_cli.subcommands.gui import build_gui_parser
-from hermes_cli.subcommands.hooks import build_hooks_parser
-from hermes_cli.subcommands.import_cmd import build_import_cmd_parser
-from hermes_cli.subcommands.login import build_login_parser
-from hermes_cli.subcommands.logout import build_logout_parser
-from hermes_cli.subcommands.logs import build_logs_parser
-from hermes_cli.subcommands.model import build_model_parser
+from jimmy_cli.subcommands.auth import build_auth_parser
+from jimmy_cli.subcommands.backup import build_backup_parser
+from jimmy_cli.subcommands.config import build_config_parser
+from jimmy_cli.subcommands.dashboard import build_dashboard_parser
+from jimmy_cli.subcommands.debug import build_debug_parser
+from jimmy_cli.subcommands.doctor import build_doctor_parser
+from jimmy_cli.subcommands.dump import build_dump_parser
+from jimmy_cli.subcommands.gui import build_gui_parser
+from jimmy_cli.subcommands.hooks import build_hooks_parser
+from jimmy_cli.subcommands.import_cmd import build_import_cmd_parser
+from jimmy_cli.subcommands.login import build_login_parser
+from jimmy_cli.subcommands.logout import build_logout_parser
+from jimmy_cli.subcommands.logs import build_logs_parser
+from jimmy_cli.subcommands.model import build_model_parser
 
-from hermes_cli.subcommands.prompt_size import build_prompt_size_parser
-from hermes_cli.subcommands.security import build_security_parser
-from hermes_cli.subcommands.setup import build_setup_parser
-from hermes_cli.subcommands.slack import build_slack_parser
-from hermes_cli.subcommands.status import build_status_parser
-from hermes_cli.subcommands.uninstall import build_uninstall_parser
-from hermes_cli.subcommands.update import build_update_parser
-from hermes_cli.subcommands.webhook import build_webhook_parser
-from hermes_cli.subcommands.whatsapp import build_whatsapp_parser
+from jimmy_cli.subcommands.prompt_size import build_prompt_size_parser
+from jimmy_cli.subcommands.optimize import build_optimize_parser
+from jimmy_cli.subcommands.security import build_security_parser
+from jimmy_cli.subcommands.setup import build_setup_parser
+from jimmy_cli.subcommands.slack import build_slack_parser
+from jimmy_cli.subcommands.status import build_status_parser
+from jimmy_cli.subcommands.uninstall import build_uninstall_parser
+from jimmy_cli.subcommands.update import build_update_parser
+from jimmy_cli.subcommands.webhook import build_webhook_parser
+from jimmy_cli.subcommands.whatsapp import build_whatsapp_parser
 
 
 def _h(name):
@@ -71,14 +72,15 @@ SINGLE_HANDLER_CASES = [
     ("gui", build_gui_parser, "cmd_gui", ["gui"]),
     ("logs", build_logs_parser, "cmd_logs", ["logs"]),
     ("prompt-size", build_prompt_size_parser, "cmd_prompt_size", ["prompt-size"]),
+    ("optimize", build_optimize_parser, "cmd_optimize", ["optimize", "list-tasks"]),
 ]
 
 
 
 
 def test_config_get_unset_subcommands_parse():
-    """`hermes config get/unset` parse key args (and --json for get)."""
-    parser = argparse.ArgumentParser(prog="hermes")
+    """`jimmy config get/unset` parse key args (and --json for get)."""
+    parser = argparse.ArgumentParser(prog="jimmy")
     sub = parser.add_subparsers(dest="command")
     handler = _h("config")
     build_config_parser(sub, cmd_config=handler)
@@ -97,11 +99,11 @@ def test_config_get_unset_subcommands_parse():
 
 
 
-# ── deprecated `hermes login` fails gracefully, not with argparse error ────
+# ── deprecated `jimmy login` fails gracefully, not with argparse error ────
 #
-# `hermes login` is a removed command; its handler (`login_command` in
-# `hermes_cli/auth.py`) prints a deprecation notice pointing at `hermes auth` /
-# `hermes model` and exits 0.  Two behavior contracts guard the UX:
+# `jimmy login` is a removed command; its handler (`login_command` in
+# `jimmy_cli/auth.py`) prints a deprecation notice pointing at `jimmy auth` /
+# `jimmy model` and exits 0.  Two behavior contracts guard the UX:
 #   1. ANY `--provider <value>` (including ones the user actually wants, like
 #      `anthropic`) must parse and reach the handler — never crash in argparse
 #      with `invalid choice` before the friendly redirect is printed (#24756).
@@ -109,7 +111,7 @@ def test_config_get_unset_subcommands_parse():
 
 
 def _login_parser():
-    parser = argparse.ArgumentParser(prog="hermes")
+    parser = argparse.ArgumentParser(prog="jimmy")
     sub = parser.add_subparsers(dest="command")
     build_login_parser(sub, cmd_login=_h("login"))
     return parser
@@ -118,13 +120,13 @@ def _login_parser():
 
 
 def test_login_subparser_help_is_suppressed():
-    """The deprecated `login` row must not appear in `hermes --help`.
+    """The deprecated `login` row must not appear in `jimmy --help`.
 
     Must hold without leaking argparse's literal `==SUPPRESS==` placeholder,
     which `help=argparse.SUPPRESS` emits for a top-level subparser on 3.12+.
     The fix omits the `help=` kwarg entirely instead.
     """
-    parser = argparse.ArgumentParser(prog="hermes")
+    parser = argparse.ArgumentParser(prog="jimmy")
     sub = parser.add_subparsers(dest="command")
     build_login_parser(sub, cmd_login=_h("login"))
     help_text = parser.format_help()

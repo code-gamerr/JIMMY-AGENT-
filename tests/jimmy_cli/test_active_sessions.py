@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from hermes_cli import active_sessions
+from jimmy_cli import active_sessions
 
 
 def test_resolve_max_concurrent_sessions_values(caplog):
@@ -47,8 +47,8 @@ def test_resolve_max_concurrent_sessions_values(caplog):
 
 
 def test_cross_process_acquire_claims_only_one_last_slot(tmp_path, monkeypatch):
-    home = tmp_path / ".hermes"
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    home = tmp_path / ".jimmy"
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     repo_root = Path(__file__).resolve().parents[2]
     ready_dir = tmp_path / "ready"
     ready_dir.mkdir()
@@ -56,12 +56,12 @@ def test_cross_process_acquire_claims_only_one_last_slot(tmp_path, monkeypatch):
     results_dir.mkdir()
     go_file = tmp_path / "go"
     env = os.environ.copy()
-    env["HERMES_HOME"] = str(home)
+    env["JIMMY_HOME"] = str(home)
     env["PYTHONPATH"] = str(repo_root)
     script = (
         "import os, time\n"
         "from pathlib import Path\n"
-        "from hermes_cli.active_sessions import try_acquire_active_session\n"
+        "from jimmy_cli.active_sessions import try_acquire_active_session\n"
         "idx = os.environ['WORKER_INDEX']\n"
         "worker_count = int(os.environ['WORKER_COUNT'])\n"
         "delayed_worker = os.environ.get('DELAYED_WORKER_INDEX')\n"
@@ -142,11 +142,11 @@ def test_cross_process_acquire_claims_only_one_last_slot(tmp_path, monkeypatch):
 def test_release_orphaned_leases_reclaims_only_unowned_own_pid_entries(tmp_path, monkeypatch):
     """A long-lived server must reclaim leases whose session skipped teardown.
 
-    ``_prune_dead`` only fires when the owning pid dies, so a ``hermes
+    ``_prune_dead`` only fires when the owning pid dies, so a ``jimmy
     dashboard`` running for days holds a leaked lease until restart. The
     process reconciles against the leases it still owns instead.
     """
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path / ".jimmy"))
     cfg = {"max_concurrent_sessions": 5}
     kept, orphan = (
         active_sessions.try_acquire_active_session(
@@ -172,20 +172,20 @@ def test_release_orphaned_leases_reclaims_only_unowned_own_pid_entries(tmp_path,
 def test_release_under_profile_home_override_targets_acquisition_registry(
     tmp_path, monkeypatch
 ):
-    """Regression for #85431: a lease acquired against the root HERMES_HOME
+    """Regression for #85431: a lease acquired against the root JIMMY_HOME
     must release from the root registry even when ``release()`` runs inside a
     profile home override (native multiplex runs agent cleanup under
     ``_profile_runtime_scope``). Before the fix the root entry survived and
     the session cap filled with phantom leases."""
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
-    root = tmp_path / "hermes"
+    root = tmp_path / "jimmy"
     profile = root / "profiles" / "worker"
     profile.mkdir(parents=True)
-    monkeypatch.setenv("HERMES_HOME", str(root))
+    monkeypatch.setenv("JIMMY_HOME", str(root))
 
     lease, error = active_sessions.try_acquire_active_session(
         session_id="agent:worker:telegram:dm:synthetic",
@@ -196,11 +196,11 @@ def test_release_under_profile_home_override_targets_acquisition_registry(
     root_registry = root / "runtime" / "active_sessions.json"
     assert root_registry.exists()
 
-    token = set_hermes_home_override(str(profile))
+    token = set_jimmy_home_override(str(profile))
     try:
         lease.release()
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
     assert lease.released is True
     remaining = active_sessions._read_entries(root_registry)
@@ -214,15 +214,15 @@ def test_transfer_under_profile_home_override_targets_acquisition_registry(
 ):
     """Sibling site of #85431: transfer must also update the registry the
     lease was acquired against, not one resolved from the current override."""
-    from hermes_constants import (
-        reset_hermes_home_override,
-        set_hermes_home_override,
+    from jimmy_constants import (
+        reset_jimmy_home_override,
+        set_jimmy_home_override,
     )
 
-    root = tmp_path / "hermes"
+    root = tmp_path / "jimmy"
     profile = root / "profiles" / "worker"
     profile.mkdir(parents=True)
-    monkeypatch.setenv("HERMES_HOME", str(root))
+    monkeypatch.setenv("JIMMY_HOME", str(root))
 
     lease, error = active_sessions.try_acquire_active_session(
         session_id="before",
@@ -231,11 +231,11 @@ def test_transfer_under_profile_home_override_targets_acquisition_registry(
     )
     assert lease is not None and error is None
 
-    token = set_hermes_home_override(str(profile))
+    token = set_jimmy_home_override(str(profile))
     try:
         assert active_sessions.transfer_active_session(lease, session_id="after")
     finally:
-        reset_hermes_home_override(token)
+        reset_jimmy_home_override(token)
 
     root_registry = root / "runtime" / "active_sessions.json"
     entries = active_sessions._read_entries(root_registry)

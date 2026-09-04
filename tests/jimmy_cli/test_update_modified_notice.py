@@ -1,11 +1,11 @@
-"""Guard: every `hermes update` path that reports user-modified skills must
+"""Guard: every `jimmy update` path that reports user-modified skills must
 also tell the user how to find them.
 
-`hermes update` keeps (does not overwrite) bundled skills the user edited and
+`jimmy update` keeps (does not overwrite) bundled skills the user edited and
 prints a ``~ N user-modified (kept)`` count. There are two independent update
-code paths in ``hermes_cli/main.py`` that print this notice (the git-pull path
+code paths in ``jimmy_cli/main.py`` that print this notice (the git-pull path
 in ``_cmd_update_impl`` and the unpack/install path). Both must point the user
-at ``hermes skills list-modified`` so the count is actionable — otherwise,
+at ``jimmy skills list-modified`` so the count is actionable — otherwise,
 depending on which path a user hits, they may never learn the discovery command
 exists.
 
@@ -17,16 +17,16 @@ keeps holding if the wording is reworded, as long as both sites stay in sync.
 import re
 from pathlib import Path
 
-import hermes_cli.main as main_mod
-import hermes_cli.update_cmd as update_mod
+import jimmy_cli.main as main_mod
+import jimmy_cli.update_cmd as update_mod
 
 
 _COUNT_RE = re.compile(r"user-modified \(kept\)")
-_HINT_RE = re.compile(r"hermes skills list-modified")
+_HINT_RE = re.compile(r"jimmy skills list-modified")
 
 
 def _source_lines() -> list[str]:
-    # The update pipeline was extracted to hermes_cli/update_cmd.py
+    # The update pipeline was extracted to jimmy_cli/update_cmd.py
     # (main.py decomposition); scan both homes of the notice.
     return [
         line
@@ -55,6 +55,6 @@ def test_every_user_modified_notice_points_at_list_modified():
         assert _HINT_RE.search(window), (
             "a 'user-modified (kept)' notice near line "
             f"{idx + 1} of main.py does not point users at "
-            "`hermes skills list-modified` within the following lines — the "
+            "`jimmy skills list-modified` within the following lines — the "
             "update paths have drifted apart again:\n" + window
         )

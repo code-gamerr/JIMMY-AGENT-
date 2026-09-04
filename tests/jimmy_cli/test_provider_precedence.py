@@ -8,19 +8,19 @@ OPENAI_API_KEY exported (or model.provider set) got routed to Anthropic.
 """
 import pytest
 
-from hermes_cli.auth import resolve_provider, AuthError
+from jimmy_cli.auth import resolve_provider, AuthError
 
 
 def _login(monkeypatch, provider_id):
     """Simulate a logged-in OAuth active_provider in auth.json."""
-    monkeypatch.setattr("hermes_cli.auth._load_auth_store",
+    monkeypatch.setattr("jimmy_cli.auth._load_auth_store",
                         lambda: {"active_provider": provider_id})
-    monkeypatch.setattr("hermes_cli.auth.get_auth_status",
+    monkeypatch.setattr("jimmy_cli.auth.get_auth_status",
                         lambda p: {"logged_in": p == provider_id})
 
 
 def _config(monkeypatch, model_cfg):
-    monkeypatch.setattr("hermes_cli.config.load_config", lambda: {"model": model_cfg})
+    monkeypatch.setattr("jimmy_cli.config.load_config", lambda: {"model": model_cfg})
 
 
 def _no_aws(monkeypatch):
@@ -30,7 +30,7 @@ def _no_aws(monkeypatch):
 
 def _clear_provider_env(monkeypatch):
     for var in ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "GLM_API_KEY", "ZAI_API_KEY",
-                "KIMI_API_KEY", "MINIMAX_API_KEY", "HERMES_INFERENCE_PROVIDER"):
+                "KIMI_API_KEY", "MINIMAX_API_KEY", "JIMMY_INFERENCE_PROVIDER"):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -71,7 +71,7 @@ class TestProviderPrecedence:
         _no_aws(monkeypatch)
         _login(monkeypatch, "anthropic")
         _config(monkeypatch, {"default": "claude-x"})  # populated, no provider
-        with caplog.at_level(logging.WARNING, logger="hermes_cli.auth"):
+        with caplog.at_level(logging.WARNING, logger="jimmy_cli.auth"):
             assert resolve_provider("auto") == "anthropic"
         assert any("no `provider` key" in r.message for r in caplog.records)
 

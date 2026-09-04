@@ -8,7 +8,7 @@ forever" gap:
    to the sibling console ``python.exe`` so respawns and regenerated
    launchers use the hidden-console design (#54220/#56747) and don't die
    with ``RuntimeError: sys.stderr is None`` (#71671).
-2. ``hermes_cli.main._refresh_windows_gateway_launchers`` — ``hermes
+2. ``jimmy_cli.main._refresh_windows_gateway_launchers`` — ``jimmy
    update`` regenerates the installed Scheduled Task / Startup launcher
    scripts instead of leaving install-time artifacts stale forever.
 
@@ -25,8 +25,8 @@ from unittest import mock
 
 import pytest
 
-import hermes_cli.gateway_windows as gateway_windows
-import hermes_cli.main as cli_main
+import jimmy_cli.gateway_windows as gateway_windows
+import jimmy_cli.main as cli_main
 
 
 # ---------------------------------------------------------------------------
@@ -69,10 +69,10 @@ def test_restart_spec_normalizes_legacy_pythonw_argv(tmp_path):
     """
     pythonw, python = _make_venv(tmp_path, with_console_python=True)
 
-    argv = [str(pythonw), "-m", "hermes_cli.main", "gateway", "run"]
+    argv = [str(pythonw), "-m", "jimmy_cli.main", "gateway", "run"]
     with mock.patch.object(
         gateway_windows, "_stable_gateway_working_dir", return_value=str(tmp_path)
-    ), mock.patch("hermes_cli.config.get_hermes_home", return_value=str(tmp_path)):
+    ), mock.patch("jimmy_cli.config.get_jimmy_home", return_value=str(tmp_path)):
         new_argv, cwd, env = gateway_windows.windowless_gateway_restart_spec(list(argv))
 
     assert new_argv[0] == str(python)
@@ -82,7 +82,7 @@ def test_restart_spec_normalizes_legacy_pythonw_argv(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _refresh_windows_gateway_launchers: hermes update regenerates launchers
+# _refresh_windows_gateway_launchers: jimmy update regenerates launchers
 # ---------------------------------------------------------------------------
 
 

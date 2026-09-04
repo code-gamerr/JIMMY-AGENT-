@@ -7,8 +7,8 @@ and the whole machine (dashboard included) became unreachable.
 
 Covers the two safeguards added in response:
 
-1. :func:`hermes_cli.kanban_db.derive_default_max_in_progress` /
-   :func:`hermes_cli.kanban_db.resolve_max_in_progress` — memory-derived
+1. :func:`jimmy_cli.kanban_db.derive_default_max_in_progress` /
+   :func:`jimmy_cli.kanban_db.resolve_max_in_progress` — memory-derived
    default global concurrency cap when the operator never set one.
 2. The live memory-pressure guard inside ``dispatch_once`` — critical
    pressure spawns nothing; elevated pressure spawns at most one; unknown
@@ -21,15 +21,15 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli import kanban_db as kb
+from jimmy_cli import kanban_db as kb
 
 
 @pytest.fixture
 def kanban_home(tmp_path, monkeypatch):
-    """Isolated HERMES_HOME with an empty kanban DB."""
-    home = tmp_path / ".hermes"
+    """Isolated JIMMY_HOME with an empty kanban DB."""
+    home = tmp_path / ".jimmy"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     kb.init_db()
     return home

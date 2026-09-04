@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-import hermes_cli.gateway as gateway
+import jimmy_cli.gateway as gateway
 
 
 class TestEnsureLingerEnabled:
@@ -67,16 +67,16 @@ class TestEnsureLingerEnabled:
 
 
 def test_systemd_install_calls_linger_helper(monkeypatch, tmp_path, capsys):
-    unit_path = tmp_path / "systemd" / "user" / "hermes-gateway.service"
+    unit_path = tmp_path / "systemd" / "user" / "jimmy-gateway.service"
 
     monkeypatch.setattr(gateway, "get_systemd_unit_path", lambda system=False: unit_path)
     # Non-temp home so the temp-home write guard (which trips on the
-    # hermetic test HERMES_HOME) stays out of the way.
+    # hermetic test JIMMY_HOME) stays out of the way.
     monkeypatch.setattr(
         gateway,
         "generate_systemd_unit",
         lambda system=False, run_as_user=None: (
-            '[Service]\nEnvironment="HERMES_HOME=/home/alice/.hermes"\n'
+            '[Service]\nEnvironment="JIMMY_HOME=/home/alice/.jimmy"\n'
         ),
     )
 

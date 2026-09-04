@@ -1,4 +1,4 @@
-"""hermes memory setup|status — configure memory provider plugins.
+"""jimmy memory setup|status — configure memory provider plugins.
 
 Auto-detects installed memory providers via the plugin system.
 Interactive curses-based UI for provider selection, then walks through
@@ -13,8 +13,8 @@ import sys
 import shlex
 from pathlib import Path
 
-from hermes_constants import get_hermes_home
-from hermes_cli.secret_prompt import masked_secret_prompt
+from jimmy_constants import get_jimmy_home
+from jimmy_cli.secret_prompt import masked_secret_prompt
 
 _CANCELLED = -1
 
@@ -26,7 +26,7 @@ def _provider_pip_dependencies(provider_name: str, declared: list) -> list:
     some providers install mode-dependent extras at setup time that the
     manifest can't express. Hindsight's ``local_embedded`` mode installs
     ``hindsight-all`` (daemon + embedder + client) during
-    ``hermes memory setup`` — if the update-time refresh only reinstalled
+    ``jimmy memory setup`` — if the update-time refresh only reinstalled
     the declared ``hindsight-client``, the embedded daemon would stay
     broken after a venv rebuild stripped ``hindsight-embed`` (#70636).
     """
@@ -34,7 +34,7 @@ def _provider_pip_dependencies(provider_name: str, declared: list) -> list:
     if provider_name == "hindsight":
         try:
             import json
-            cfg_path = get_hermes_home() / "hindsight" / "config.json"
+            cfg_path = get_jimmy_home() / "hindsight" / "config.json"
             cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
             mode = cfg.get("mode", "")
             # "local" is a legacy alias for "local_embedded"
@@ -46,7 +46,7 @@ def _provider_pip_dependencies(provider_name: str, declared: list) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Curses-based interactive picker (same pattern as hermes tools)
+# Curses-based interactive picker (same pattern as jimmy tools)
 # ---------------------------------------------------------------------------
 
 def _curses_select(
@@ -61,7 +61,7 @@ def _curses_select(
     items: list of (label, description) tuples.
     Returns selected index, or cancel_returns/default on escape/quit.
     """
-    from hermes_cli.curses_ui import curses_radiolist
+    from jimmy_cli.curses_ui import curses_radiolist
 
     if cancel_returns is None:
         cancel_returns = default
@@ -110,7 +110,7 @@ def _install_dependencies(provider_name: str, *, force: bool = False) -> None:
     When ``force`` is true, every declared dependency is handed to the
     installer even if its import currently succeeds — the resolver then
     reinstalls anything missing or version-drifted and no-ops on satisfied
-    ranges. This is how ``hermes update`` heals the active memory provider
+    ranges. This is how ``jimmy update`` heals the active memory provider
     after a venv rebuild/sync removed or downgraded its bridge packages
     (#53272, #70636).
     """
@@ -164,7 +164,7 @@ def _install_dependencies(provider_name: str, *, force: bool = False) -> None:
 
     # Environment-aware install: on immutable hosted images the agent venv
     # is sealed read-only and installs must go to the durable target on the
-    # data volume (HERMES_LAZY_INSTALL_TARGET). install_specs handles the
+    # data volume (JIMMY_LAZY_INSTALL_TARGET). install_specs handles the
     # routing/gating; on normal installs it is venv-scoped as before (NS-605).
     from tools.lazy_deps import install_specs
 
@@ -244,7 +244,7 @@ def _get_available_providers() -> list:
 
 def cmd_setup_provider(provider_name: str) -> None:
     """Run memory setup for a specific provider, skipping the picker."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     providers = _get_available_providers()
     match = None
@@ -255,7 +255,7 @@ def cmd_setup_provider(provider_name: str) -> None:
 
     if not match:
         print(f"\n  Memory provider '{provider_name}' not found.")
-        print("  Run 'hermes memory setup' to see available providers.\n")
+        print("  Run 'jimmy memory setup' to see available providers.\n")
         return
 
     name, _, provider = match
@@ -269,8 +269,8 @@ def cmd_setup_provider(provider_name: str) -> None:
         config["memory"] = {}
 
     if hasattr(provider, "post_setup"):
-        hermes_home = str(get_hermes_home())
-        provider.post_setup(hermes_home, config)
+        jimmy_home = str(get_jimmy_home())
+        provider.post_setup(jimmy_home, config)
         return
 
     # Fallback: generic schema-based setup (same as cmd_setup)
@@ -282,13 +282,13 @@ def cmd_setup_provider(provider_name: str) -> None:
 
 def cmd_setup(args) -> None:
     """Interactive memory provider setup wizard."""
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     providers = _get_available_providers()
 
     if not providers:
         print("\n  No memory provider plugins detected.")
-        print("  Install a plugin to ~/.hermes/plugins/ and try again.\n")
+        print("  Install a plugin to ~/.jimmy/plugins/ and try again.\n")
         return
 
     # Build picker items
@@ -325,8 +325,8 @@ def cmd_setup(args) -> None:
     # If the provider has a post_setup hook, delegate entirely to it.
     # The hook handles its own config, connection test, and activation.
     if hasattr(provider, "post_setup"):
-        hermes_home = str(get_hermes_home())
-        provider.post_setup(hermes_home, config)
+        jimmy_home = str(get_jimmy_home())
+        provider.post_setup(jimmy_home, config)
         return
 
     schema = provider.get_config_schema() if hasattr(provider, "get_config_schema") else []
@@ -335,7 +335,7 @@ def cmd_setup(args) -> None:
     if not isinstance(provider_config, dict):
         provider_config = {}
 
-    env_path = get_hermes_home() / ".env"
+    env_path = get_jimmy_home() / ".env"
     env_writes = {}
 
     if schema:
@@ -405,10 +405,10 @@ def cmd_setup(args) -> None:
     save_config(config)
 
     # Write non-secret config to provider's native location
-    hermes_home = str(get_hermes_home())
+    jimmy_home = str(get_jimmy_home())
     if provider_config and hasattr(provider, "save_config"):
         try:
-            provider.save_config(provider_config, hermes_home)
+            provider.save_config(provider_config, jimmy_home)
         except Exception as e:
             print(f"  Failed to write provider config: {e}")
 
@@ -477,7 +477,7 @@ def _write_env_vars(env_path: Path, env_writes: dict) -> None:
 
 def cmd_status(args) -> None:
     """Show current memory provider config."""
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     config = load_config()
     mem_config = config.get("memory", {})
@@ -491,7 +491,7 @@ def cmd_status(args) -> None:
 
     # Check if the memory tool is enabled for the CLI platform via the
     # canonical resolver and respects the check_fn gate when both stores are disabled.
-    from hermes_cli.tools_config import _get_platform_tools
+    from jimmy_cli.tools_config import _get_platform_tools
     from tools.memory_tool import check_memory_requirements
     cli_tools = _get_platform_tools(config, "cli", include_default_mcp_servers=False)
     memory_tool_enabled = ("memory" in cli_tools) and check_memory_requirements()
@@ -548,14 +548,14 @@ def cmd_status(args) -> None:
                             line += f"  → {url}"
                         print(line)
                 print(
-                    "  Note: systemd/gateway services do not inherit ~/.hermes/.env —"
+                    "  Note: systemd/gateway services do not inherit ~/.jimmy/.env —"
                 )
                 print(
                     "        set any variables above in the service environment."
                 )
         else:
             print("\n  Plugin:    NOT installed ✗")
-            print(f"  Install the '{provider_name}' memory plugin to ~/.hermes/plugins/")
+            print(f"  Install the '{provider_name}' memory plugin to ~/.jimmy/plugins/")
 
     if providers:
         print("\n  Installed plugins:")

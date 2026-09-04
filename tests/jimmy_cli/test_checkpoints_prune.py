@@ -1,4 +1,4 @@
-"""Tests for `hermes checkpoints prune`'s orphan confirmation flow.
+"""Tests for `jimmy checkpoints prune`'s orphan confirmation flow.
 
 Covers the P1 raised on PR #69141: the confirmation preview must cover
 BOTH v2 projects (`store_status()["projects"]`) and pre-v2 shadow repos
@@ -34,7 +34,7 @@ _V2_ORPHAN_ONLY_STATUS = {
 _PRE_V2_ONLY_STATUS = {
     "projects": [],
     "pre_v2_projects": [
-        {"path": "/home/user/.hermes/checkpoints/deadbeefcafebabe", "workdir": None, "exists": False},
+        {"path": "/home/user/.jimmy/checkpoints/deadbeefcafebabe", "workdir": None, "exists": False},
     ],
 }
 
@@ -43,7 +43,7 @@ _MIXED_STATUS = {
         {"hash": "abc123", "workdir": "/gone/v2-project", "exists": False, "commits": 4},
     ],
     "pre_v2_projects": [
-        {"path": "/home/user/.hermes/checkpoints/deadbeefcafebabe", "workdir": "/gone/pre-v2-project", "exists": False},
+        {"path": "/home/user/.jimmy/checkpoints/deadbeefcafebabe", "workdir": "/gone/pre-v2-project", "exists": False},
     ],
 }
 
@@ -77,7 +77,7 @@ def _patch_checkpoint_manager(monkeypatch, status: dict, prune_calls: list):
 
 @pytest.mark.parametrize("status", [_PRE_V2_ONLY_STATUS, _MIXED_STATUS], ids=["pre_v2_only", "mixed"])
 def test_keep_orphans_skips_prompt(monkeypatch, capsys, status):
-    import hermes_cli.checkpoints as checkpoints_cli
+    import jimmy_cli.checkpoints as checkpoints_cli
 
     prune_calls: list = []
     _patch_checkpoint_manager(monkeypatch, status, prune_calls)
@@ -109,7 +109,7 @@ def test_empty_preview_binds_empty_allowlist(monkeypatch, capsys):
     must not be deletable: the allowlist passed down must be the exact
     (empty) displayed set, never the unrestricted None sentinel.
     """
-    import hermes_cli.checkpoints as checkpoints_cli
+    import jimmy_cli.checkpoints as checkpoints_cli
 
     prune_calls: list = []
     _patch_checkpoint_manager(monkeypatch, _V2_ORPHAN_ONLY_STATUS, prune_calls)

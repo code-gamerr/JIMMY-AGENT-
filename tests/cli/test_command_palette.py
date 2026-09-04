@@ -2,12 +2,12 @@
 
 from types import SimpleNamespace
 
-from cli import HermesCLI
-from hermes_cli.commands import HELP_SESSION_SUBGROUPS
+from cli import JimmyCLI
+from jimmy_cli.commands import HELP_SESSION_SUBGROUPS
 
 
 def _bare_cli():
-    cli = HermesCLI.__new__(HermesCLI)
+    cli = JimmyCLI.__new__(JimmyCLI)
     return cli
 
 

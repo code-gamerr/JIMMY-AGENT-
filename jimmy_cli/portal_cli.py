@@ -1,4 +1,4 @@
-"""``hermes portal`` — removed (Nous Portal / Tool Gateway)."""
+"""``jimmy portal`` — removed (Nous Portal / Tool Gateway)."""
 from __future__ import annotations
 
 import sys
@@ -6,7 +6,7 @@ import sys
 
 _REMOVED = (
     "Nous Portal CLI was removed. "
-    "Configure models with `hermes model` and tools with `hermes tools`."
+    "Configure models with `jimmy model` and tools with `jimmy tools`."
 )
 
 
@@ -16,15 +16,15 @@ def _cmd_removed(args) -> int:
 
 
 def portal_command(args) -> int:
-    """Top-level dispatch for `hermes portal <subcommand>`."""
+    """Top-level dispatch for `jimmy portal <subcommand>`."""
     return _cmd_removed(args)
 
 
 def add_parser(subparsers) -> None:
-    """Register ``hermes portal`` (stubs that report removal)."""
+    """Register ``jimmy portal`` (stubs that report removal)."""
     portal = subparsers.add_parser(
         "portal",
-        help="(removed) Nous Portal — use hermes model / hermes tools",
+        help="(removed) Nous Portal — use jimmy model / jimmy tools",
         description=_REMOVED,
     )
     portal.set_defaults(func=portal_command)

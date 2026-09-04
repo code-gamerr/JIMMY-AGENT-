@@ -1,7 +1,7 @@
-"""Tests for npm ``EBADENGINE`` recovery (``hermes_cli/npm_engine.py``).
+"""Tests for npm ``EBADENGINE`` recovery (``jimmy_cli/npm_engine.py``).
 
 The behaviour under test is a contract about *reacting* to npm's own engine
-check: npm states the range it wants in the failure, Hermes upgrades only an
+check: npm states the range it wants in the failure, Jimmy upgrades only an
 npm it owns, and every other case leaves the original failure alone.
 """
 
@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-import hermes_cli.npm_engine as npm_engine
-from hermes_cli.npm_engine import (
+import jimmy_cli.npm_engine as npm_engine
+from jimmy_cli.npm_engine import (
     actual_npm_version,
     is_ebadengine,
     managed_npm_prefix,
@@ -25,8 +25,8 @@ from hermes_cli.npm_engine import (
 EBADENGINE_OUTPUT = """
 npm error code EBADENGINE
 npm error engine Unsupported engine
-npm error engine Not compatible with your version of node/npm: hermes-agent@1.0.0
-npm error notsup Not compatible with your version of node/npm: hermes-agent@1.0.0
+npm error engine Not compatible with your version of node/npm: jimmy-agent@1.0.0
+npm error notsup Not compatible with your version of node/npm: jimmy-agent@1.0.0
 npm error notsup Required: {"node":">=20.0.0","npm":"<11.10.0 || >=12.0.0"}
 npm error notsup Actual:   {"npm":"11.10.0","node":"v22.23.1"}
 """
@@ -87,19 +87,19 @@ class TestDetection:
 
 class TestManagedDetection:
     """The upgrade must fire for every spelling of the managed npm, and for
-    no other npm — this is the boundary between "Hermes fixes it" and "the
+    no other npm — this is the boundary between "Jimmy fixes it" and "the
     user's own toolchain is left alone"."""
 
     @pytest.fixture
     def managed_tree(self, tmp_path, monkeypatch):
-        home = tmp_path / ".hermes"
+        home = tmp_path / ".jimmy"
         node = home / "node"
         (node / "bin").mkdir(parents=True)
         (node / "lib" / "node_modules" / "npm" / "bin").mkdir(parents=True)
         cli = node / "lib" / "node_modules" / "npm" / "bin" / "npm-cli.js"
         cli.write_text("#!/usr/bin/env node\n", encoding="utf-8")
         (node / "bin" / "npm").symlink_to(cli)
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         return home
 
     def test_direct_managed_bin_is_managed(self, managed_tree):
@@ -132,13 +132,13 @@ class TestInUseDeferral:
 
     @pytest.fixture
     def managed_npm(self, tmp_path, monkeypatch):
-        home = tmp_path / ".hermes"
+        home = tmp_path / ".jimmy"
         bin_dir = home / "node" / "bin"
         bin_dir.mkdir(parents=True)
         npm = bin_dir / "npm"
         npm.write_text("#!/bin/sh\n", encoding="utf-8")
         npm.chmod(0o755)
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         return npm
 
     def test_in_use_managed_tree_defers_upgrade_without_running_npm(
@@ -183,13 +183,13 @@ class TestRepairDecision:
 
     @pytest.fixture
     def managed_npm(self, tmp_path, monkeypatch):
-        home = tmp_path / ".hermes"
+        home = tmp_path / ".jimmy"
         bin_dir = home / "node" / "bin"
         bin_dir.mkdir(parents=True)
         npm = bin_dir / "npm"
         npm.write_text("#!/bin/sh\n", encoding="utf-8")
         npm.chmod(0o755)
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         return npm
 
     def test_upgrades_managed_npm_with_the_range_npm_asked_for(
@@ -244,16 +244,16 @@ class TestRepairDecision:
     def test_foreign_npm_provisions_managed_runtime_instead(
         self, tmp_path, monkeypatch
     ):
-        """A system/nvm/brew/Nix npm is never modified — Hermes provisions its
+        """A system/nvm/brew/Nix npm is never modified — Jimmy provisions its
         own managed tree, upgrades THAT npm into range, and returns it."""
-        home = tmp_path / ".hermes"
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        home = tmp_path / ".jimmy"
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         system_npm = tmp_path / "usr-bin-npm"
         system_npm.write_text("#!/bin/sh\n", encoding="utf-8")
 
         managed = home / "node" / "bin" / "npm"
 
-        import hermes_cli.npm_engine as npm_engine
+        import jimmy_cli.npm_engine as npm_engine
 
         def fake_bootstrap():
             managed.parent.mkdir(parents=True, exist_ok=True)
@@ -263,7 +263,7 @@ class TestRepairDecision:
 
         upgrades = []
         monkeypatch.setattr(
-            npm_engine, "bootstrap_hermes_managed_node", fake_bootstrap
+            npm_engine, "bootstrap_jimmy_managed_node", fake_bootstrap
         )
         monkeypatch.setattr(
             npm_engine,
@@ -283,15 +283,15 @@ class TestRepairDecision:
     def test_foreign_npm_failed_bootstrap_prints_manual_fix(
         self, tmp_path, monkeypatch, capsys
     ):
-        home = tmp_path / ".hermes"
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        home = tmp_path / ".jimmy"
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         system_npm = tmp_path / "usr-bin-npm"
         system_npm.write_text("#!/bin/sh\n", encoding="utf-8")
 
-        import hermes_cli.npm_engine as npm_engine
+        import jimmy_cli.npm_engine as npm_engine
 
         monkeypatch.setattr(
-            npm_engine, "bootstrap_hermes_managed_node", lambda: None
+            npm_engine, "bootstrap_jimmy_managed_node", lambda: None
         )
         assert not maybe_repair_npm_engine(str(system_npm), EBADENGINE_OUTPUT)
 
@@ -312,8 +312,8 @@ class TestRepairDecision:
         """A too-old system NODE can't be fixed by any npm upgrade, but the
         managed tree ships a supported Node — provisioning covers it. The
         managed npm is still upgraded to the repo's own engines.npm range."""
-        home = tmp_path / ".hermes"
-        monkeypatch.setenv("HERMES_HOME", str(home))
+        home = tmp_path / ".jimmy"
+        monkeypatch.setenv("JIMMY_HOME", str(home))
         system_npm = tmp_path / "usr-bin-npm"
         system_npm.write_text("#!/bin/sh\n", encoding="utf-8")
 
@@ -325,7 +325,7 @@ class TestRepairDecision:
 
         managed = home / "node" / "bin" / "npm"
 
-        import hermes_cli.npm_engine as npm_engine
+        import jimmy_cli.npm_engine as npm_engine
 
         def fake_bootstrap():
             managed.parent.mkdir(parents=True, exist_ok=True)
@@ -335,7 +335,7 @@ class TestRepairDecision:
 
         upgrades = []
         monkeypatch.setattr(
-            npm_engine, "bootstrap_hermes_managed_node", fake_bootstrap
+            npm_engine, "bootstrap_jimmy_managed_node", fake_bootstrap
         )
         monkeypatch.setattr(
             npm_engine,

@@ -1,12 +1,12 @@
 """Tests for _web_ui_build_needed — staleness check for the web UI dist.
 
 The freshness check uses a SHA-256 content hash of the web source tree
-(mirroring the desktop build), recorded in a stamp file under $HERMES_HOME,
-NOT mtime comparison — so ``git pull`` / ``hermes update`` that rewrite
+(mirroring the desktop build), recorded in a stamp file under $JIMMY_HOME,
+NOT mtime comparison — so ``git pull`` / ``jimmy update`` that rewrite
 source mtimes without changing content no longer fool it.
 
-Critical invariant: the dashboard Vite build outputs to hermes_cli/web_dist/
-(vite.config.ts: outDir: "../../hermes_cli/web_dist"), NOT web/dist/.
+Critical invariant: the dashboard Vite build outputs to jimmy_cli/web_dist/
+(vite.config.ts: outDir: "../../jimmy_cli/web_dist"), NOT web/dist/.
 The sentinel must be checked in the correct output directory or the
 freshness check is a no-op and the OOM rebuild always runs.
 """
@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli.main import (
+from jimmy_cli.main import (
     _web_ui_build_needed,
     _build_web_ui,
     _compute_web_ui_content_hash,
@@ -32,9 +32,9 @@ from hermes_cli.main import (
 
 
 @pytest.fixture(autouse=True)
-def _isolated_hermes_home(tmp_path, monkeypatch):
+def _isolated_jimmy_home(tmp_path, monkeypatch):
     """Keep web-build-stamp writes inside the test's tmp dir, never the real home."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "_hermes_home"))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path / "_jimmy_home"))
 
 
 def _touch(path: Path, offset: float = 0.0) -> None:
@@ -50,7 +50,7 @@ def _make_web_dir(tmp_path: Path) -> tuple[Path, Path]:
     web_dir = tmp_path / "web"
     web_dir.mkdir(parents=True)
     (web_dir / "package.json").touch()
-    dist_dir = tmp_path / "hermes_cli" / "web_dist"
+    dist_dir = tmp_path / "jimmy_cli" / "web_dist"
     return web_dir, dist_dir
 
 
@@ -76,7 +76,7 @@ class TestWebUIBuildNeeded:
 
     def test_mtime_only_change_is_not_stale(self, tmp_path):
         """The whole point: bumping mtimes without changing bytes (what
-        ``git pull`` / ``hermes update`` do) must NOT report stale."""
+        ``git pull`` / ``jimmy update`` do) must NOT report stale."""
         web_dir, dist_dir = _make_web_dir(tmp_path)
         src = web_dir / "src" / "App.tsx"
         src.parent.mkdir(parents=True, exist_ok=True)
@@ -145,9 +145,9 @@ class TestBuildWebUISkipsWhenFresh:
 
         install_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
         build_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
-             patch("hermes_cli.main._run_with_idle_timeout", return_value=build_cp) as mock_build:
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
+             patch("jimmy_cli.main._run_with_idle_timeout", return_value=build_cp) as mock_build:
             result = _build_web_ui(web_dir)
 
         assert result is True
@@ -161,7 +161,7 @@ class TestBuildWebUISkipsWhenFresh:
 
     def test_workspace_root_install_names_update_closure(self, tmp_path, monkeypatch):
         """From the workspace root, _build_web_ui must install the SAME
-        closure as `hermes update` (ui-tui + web + --include-workspace-root).
+        closure as `jimmy update` (ui-tui + web + --include-workspace-root).
 
         The install helper prefers `npm ci`, which deletes node_modules before
         reifying the requested tree — a narrower `--workspace web`-only pass
@@ -178,9 +178,9 @@ class TestBuildWebUISkipsWhenFresh:
 
         install_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
         build_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
-             patch("hermes_cli.main._run_with_idle_timeout", return_value=build_cp):
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
+             patch("jimmy_cli.main._run_with_idle_timeout", return_value=build_cp):
             result = _build_web_ui(web_dir)
 
         assert result is True
@@ -201,9 +201,9 @@ class TestBuildWebUISkipsWhenFresh:
 
         install_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
         build_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
-             patch("hermes_cli.main._run_with_idle_timeout", return_value=build_cp):
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_cp) as mock_run, \
+             patch("jimmy_cli.main._run_with_idle_timeout", return_value=build_cp):
             result = _build_web_ui(web_dir)
 
         assert result is True
@@ -223,9 +223,9 @@ class TestBuildWebUISkipsWhenFresh:
 
         install_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
         build_cp = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main.subprocess.run", return_value=install_cp), \
-             patch("hermes_cli.main._run_with_idle_timeout", return_value=build_cp) as mock_idle:
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_cp), \
+             patch("jimmy_cli.main._run_with_idle_timeout", return_value=build_cp) as mock_idle:
             result = _build_web_ui(web_dir)
 
         assert result is True
@@ -247,10 +247,10 @@ class TestBuildWebUIRetryAndStaleFallback:
         # build attempt 1: fail; build attempt 2: success.
         build_fail = Subprocess.CompletedProcess([], 1, stdout="EPERM", stderr="")
         build_ok = Subprocess.CompletedProcess([], 0, stdout="", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main._time.sleep") as mock_sleep, \
-             patch("hermes_cli.main.subprocess.run", return_value=install_ok), \
-             patch("hermes_cli.main._run_with_idle_timeout",
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main._time.sleep") as mock_sleep, \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_ok), \
+             patch("jimmy_cli.main._run_with_idle_timeout",
                    side_effect=[build_fail, build_ok]) as mock_idle:
             result = _build_web_ui(web_dir)
 
@@ -267,10 +267,10 @@ class TestBuildWebUIRetryAndStaleFallback:
         Subprocess = __import__("subprocess")
         install_ok = Subprocess.CompletedProcess([], 0, stdout="", stderr="")
         build_fail = Subprocess.CompletedProcess([], 1, stdout="vite ENOMEM", stderr="")
-        with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main._time.sleep"), \
-             patch("hermes_cli.main.subprocess.run", return_value=install_ok), \
-             patch("hermes_cli.main._run_with_idle_timeout",
+        with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main._time.sleep"), \
+             patch("jimmy_cli.main.subprocess.run", return_value=install_ok), \
+             patch("jimmy_cli.main._run_with_idle_timeout",
                    side_effect=[build_fail, build_fail]):
             result = _build_web_ui(web_dir, fatal=True)
 
@@ -300,7 +300,7 @@ class TestBuildWebUIFlock:
         the winner's output and skips a duplicate build."""
         import fcntl
         import threading
-        from hermes_cli.main import _build_web_ui as build
+        from jimmy_cli.main import _build_web_ui as build
 
         web_dir, dist_dir = _make_web_dir(tmp_path)
         # No dist yet — contender must take the blocking-wait path.
@@ -317,8 +317,8 @@ class TestBuildWebUIFlock:
         t = threading.Timer(0.2, release_after_building)
         t.start()
         try:
-            with patch("hermes_cli.main.shutil.which", return_value="/usr/bin/npm"), \
-                 patch("hermes_cli.main.subprocess.run") as mock_run:
+            with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
+                 patch("jimmy_cli.main.subprocess.run") as mock_run:
                 result = build(web_dir)
         finally:
             t.join()
@@ -396,12 +396,12 @@ class TestBuildRecoversFromMissingToolchain:
         )
         build_ok = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
 
-        with patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
-             patch("hermes_cli.main._run_with_idle_timeout", side_effect=[build_fail, build_ok]) as mock_build, \
-             patch("hermes_cli.main._web_ui_build_needed", return_value=True), \
-             patch("hermes_cli.main._write_web_ui_build_stamp"), \
-             patch("hermes_cli.main._time.sleep"):
+        with patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
+             patch("jimmy_cli.main._run_with_idle_timeout", side_effect=[build_fail, build_ok]) as mock_build, \
+             patch("jimmy_cli.main._web_ui_build_needed", return_value=True), \
+             patch("jimmy_cli.main._write_web_ui_build_stamp"), \
+             patch("jimmy_cli.main._time.sleep"):
             result = _build_web_ui(web_dir)
 
         assert result is True
@@ -416,11 +416,11 @@ class TestBuildRecoversFromMissingToolchain:
         install_ok = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
         build_ok = __import__("subprocess").CompletedProcess([], 0, stdout="", stderr="")
 
-        with patch("hermes_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
-             patch("hermes_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
-             patch("hermes_cli.main._run_with_idle_timeout", return_value=build_ok) as mock_build, \
-             patch("hermes_cli.main._web_ui_build_needed", return_value=True), \
-             patch("hermes_cli.main._write_web_ui_build_stamp"):
+        with patch("jimmy_cli.main._resolve_node_runtime_npm", return_value="/usr/bin/npm"), \
+             patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
+             patch("jimmy_cli.main._run_with_idle_timeout", return_value=build_ok) as mock_build, \
+             patch("jimmy_cli.main._web_ui_build_needed", return_value=True), \
+             patch("jimmy_cli.main._write_web_ui_build_stamp"):
             result = _build_web_ui(web_dir)
 
         assert result is True

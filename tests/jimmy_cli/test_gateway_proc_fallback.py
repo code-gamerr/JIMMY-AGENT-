@@ -3,7 +3,7 @@
 Verifies that _scan_gateway_pids() uses /proc/*/cmdline when available
 (Docker without procps) and falls back to ps only when /proc is absent.
 
-See: NousResearch/hermes-agent#7622
+See: Jimmy/jimmy-agent#7622
 """
 
 import os
@@ -11,14 +11,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import hermes_cli.gateway as gateway_mod
+import jimmy_cli.gateway as gateway_mod
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_GATEWAY_CMD = "python -m hermes_cli.main gateway run"
+_GATEWAY_CMD = "python -m jimmy_cli.main gateway run"
 _OTHER_CMD = "python -m some_other_thing"
 
 
@@ -66,7 +66,7 @@ class TestProcFallback:
     def test_detects_gateway_pid_via_proc(self):
         my_pid = os.getpid()
         entries = {
-            my_pid: "python -m hermes_cli.main",   # own process — excluded
+            my_pid: "python -m jimmy_cli.main",   # own process — excluded
             12345: _GATEWAY_CMD,
             99999: _OTHER_CMD,
         }
@@ -76,7 +76,7 @@ class TestProcFallback:
             patch("os.path.isdir", side_effect=_isdir),
             patch("os.listdir", side_effect=_listdir),
             patch("builtins.open", side_effect=_open),
-            patch("hermes_cli.gateway._get_ancestor_pids", return_value=set()),
+            patch("jimmy_cli.gateway._get_ancestor_pids", return_value=set()),
             patch("subprocess.run") as mock_ps,
         ):
             pids = gateway_mod._scan_gateway_pids(set(), all_profiles=True)
@@ -104,7 +104,7 @@ class TestProcFallback:
             patch("os.path.isdir", side_effect=_isdir),
             patch("os.listdir", side_effect=_listdir),
             patch("builtins.open", side_effect=_open),
-            patch("hermes_cli.gateway._get_ancestor_pids", return_value=set()),
+            patch("jimmy_cli.gateway._get_ancestor_pids", return_value=set()),
             patch("subprocess.run") as mock_ps,
         ):
             pids = gateway_mod._scan_gateway_pids(set(), all_profiles=True)

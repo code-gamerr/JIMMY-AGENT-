@@ -1,7 +1,7 @@
 """The Windows hand-off keeps serving progress while its main thread blocks.
 
 windows.ps1 answers /progress from a dedicated runspace precisely so the
-window keeps moving through the long silent stretches (`hermes update`, pip,
+window keeps moving through the long silent stretches (`jimmy update`, pip,
 the desktop rebuild) that made an 18-minute update look hung. This drives the
 real script and polls the real listener; the posix half of the same contract
 is covered in test_desktop_update_shim_progress.py.
@@ -43,7 +43,7 @@ def test_progress_advances_while_the_orchestrator_blocks(tmp_path: Path) -> None
     # too tight for a slow runner — the second sample slid past the hold,
     # caught the cleared terminal state, and failed '' == 'Testing quiet
     # update' (PR #90358 rerun, Aug 2026).
-    env["HERMES_SELFTEST_HOLD_SECONDS"] = "10"
+    env["JIMMY_SELFTEST_HOLD_SECONDS"] = "10"
 
     with output_path.open("wb") as output:
         process = subprocess.Popen(
@@ -79,7 +79,7 @@ def test_progress_advances_while_the_orchestrator_blocks(tmp_path: Path) -> None
 
         # The URL prints BEFORE the orchestrator publishes its held stage —
         # sampling immediately races the publish and can catch the page's
-        # boot default instead ('Hermes will open once done.' ==
+        # boot default instead ('Jimmy will open once done.' ==
         # 'Testing quiet update', PR #90358 first run). Wait for the held
         # stage to actually land, THEN start the stability window.
         held_stage = "Testing quiet update"

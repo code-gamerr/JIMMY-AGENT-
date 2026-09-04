@@ -1,6 +1,6 @@
-"""Shared curses-based UI components for Hermes CLI.
+"""Shared curses-based UI components for Jimmy CLI.
 
-Used by `hermes tools` and `hermes skills` for interactive checklists.
+Used by `jimmy tools` and `jimmy skills` for interactive checklists.
 Provides a curses multi-select with keyboard navigation, plus a
 text-based numbered fallback for terminals without curses support.
 """
@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Set, Tuple, Union
 
-from hermes_cli.colors import Colors, color
+from jimmy_cli.colors import Colors, color
 
 # Rich radiolist rows: (text, style). style is None | "yellow" | "dim".
 # Plain ``str`` items remain fully supported.

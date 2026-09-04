@@ -1,9 +1,9 @@
 """Managed scope must reach cli.py's independent config loader (CLI_CONFIG).
 
 cli.py's load_cli_config() builds config separately from
-hermes_cli.config._load_config_impl, so the managed-scope merge has to be
+jimmy_cli.config._load_config_impl, so the managed-scope merge has to be
 applied in BOTH places or the interactive CLI/TUI surface (skin, display prefs)
-silently ignores administrator-pinned values while `hermes config`/`doctor`
+silently ignores administrator-pinned values while `jimmy config`/`doctor`
 honor them. This locks the cli.py path.
 """
 import importlib
@@ -17,10 +17,10 @@ def homes(tmp_path, monkeypatch):
     home.mkdir()
     managed = tmp_path / "managed"
     managed.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_MANAGED_DIR", str(managed))
-    import hermes_cli.config as cfg
-    from hermes_cli import managed_scope
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_MANAGED_DIR", str(managed))
+    import jimmy_cli.config as cfg
+    from jimmy_cli import managed_scope
 
     cfg._LOAD_CONFIG_CACHE.clear()
     cfg._RAW_CONFIG_CACHE.clear()
@@ -31,15 +31,15 @@ def homes(tmp_path, monkeypatch):
 def _load_cli_config(home):
     """Call cli.py's standalone loader fresh.
 
-    cli.py binds ``_hermes_home = get_hermes_home()`` at import time (module
-    singleton), so monkeypatching HERMES_HOME after import doesn't move it.
+    cli.py binds ``_jimmy_home = get_jimmy_home()`` at import time (module
+    singleton), so monkeypatching JIMMY_HOME after import doesn't move it.
     Point the module's cached home at the test's home for the duration of the
     call. (In real use cli is imported once per process with the real home, so
-    this only matters for tests that swap HERMES_HOME.)
+    this only matters for tests that swap JIMMY_HOME.)
     """
     import cli
 
-    cli._hermes_home = home
+    cli._jimmy_home = home
     return cli.load_cli_config()
 
 
@@ -48,7 +48,7 @@ def test_cli_config_honors_managed_skin(homes):
     home, managed = homes
     (home / "config.yaml").write_text("display:\n  skin: user_skin\n", encoding="utf-8")
     (managed / "config.yaml").write_text("display:\n  skin: charizard\n", encoding="utf-8")
-    from hermes_cli import managed_scope
+    from jimmy_cli import managed_scope
 
     managed_scope.invalidate_managed_cache()
     cfg = _load_cli_config(home)
@@ -62,7 +62,7 @@ def test_cli_config_managed_leaf_preserves_user_siblings(homes):
         "display:\n  skin: user_skin\n  show_reasoning: true\n", encoding="utf-8"
     )
     (managed / "config.yaml").write_text("display:\n  skin: charizard\n", encoding="utf-8")
-    from hermes_cli import managed_scope
+    from jimmy_cli import managed_scope
 
     managed_scope.invalidate_managed_cache()
     cfg = _load_cli_config(home)

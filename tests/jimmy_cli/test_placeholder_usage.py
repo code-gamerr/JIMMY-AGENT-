@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli.config import config_command, show_config
-from hermes_cli.setup import _print_setup_summary
+from jimmy_cli.config import config_command, show_config
+from jimmy_cli.setup import _print_setup_summary
 
 
 def test_config_set_usage_marks_placeholders(capsys):
@@ -22,7 +22,7 @@ def test_config_set_usage_marks_placeholders(capsys):
     # (schema validation for unknown keys). Placeholder convention is preserved:
     # the literal ``<key>`` and ``<value>`` markers must still be present so
     # downstream tooling can detect placeholder syntax.
-    assert "Usage: hermes config set" in out
+    assert "Usage: jimmy config set" in out
     assert "<key>" in out
     assert "<value>" in out
     # --force escape hatch must be documented in the usage line.
@@ -30,10 +30,10 @@ def test_config_set_usage_marks_placeholders(capsys):
 
 
 def test_show_config_marks_placeholders(tmp_path, capsys):
-    with patch.dict(os.environ, {"HERMES_HOME": str(tmp_path)}):
+    with patch.dict(os.environ, {"JIMMY_HOME": str(tmp_path)}):
         show_config()
 
     out = capsys.readouterr().out
-    assert "hermes config set <key> <value>" in out
+    assert "jimmy config set <key> <value>" in out
 
 

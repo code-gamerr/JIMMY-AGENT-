@@ -1,10 +1,10 @@
-"""Tests for the session-store size-delta label (`hermes sessions optimize*`).
+"""Tests for the session-store size-delta label (`jimmy sessions optimize*`).
 
 A negative before/after delta means the DB grew — printing
 "reclaimed -163.0 MB" for that reads as data loss (issue #70146).
 """
 
-from hermes_cli.main import _size_delta_label
+from jimmy_cli.main import _size_delta_label
 
 
 def test_shrink_reports_reclaimed():

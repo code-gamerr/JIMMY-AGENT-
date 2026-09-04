@@ -11,7 +11,7 @@ import logging
 import pytest
 import yaml
 
-from hermes_cli.plugins import (
+from jimmy_cli.plugins import (
     PluginManager,
     PluginManifest,
     SUPPORTED_MANIFEST_VERSION,
@@ -41,22 +41,22 @@ def _enable(home, names, entries=None):
 
 
 @pytest.fixture
-def hermes_home(tmp_path, monkeypatch):
-    home = tmp_path / "hermes_home"
+def jimmy_home(tmp_path, monkeypatch):
+    home = tmp_path / "jimmy_home"
     (home / "plugins").mkdir(parents=True)
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_ENABLE_PROJECT_PLUGINS", "0")
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_ENABLE_PROJECT_PLUGINS", "0")
     monkeypatch.setenv(
-        "HERMES_BUNDLED_PLUGINS", str(tmp_path / "empty-bundled")
+        "JIMMY_BUNDLED_PLUGINS", str(tmp_path / "empty-bundled")
     )
     (tmp_path / "empty-bundled").mkdir()
     return home
 
 
 class TestV1Regression:
-    def test_v1_manifest_parses_with_defaults(self, hermes_home):
-        _write_plugin(hermes_home / "plugins", "oldie")
-        _enable(hermes_home, ["oldie"])
+    def test_v1_manifest_parses_with_defaults(self, jimmy_home):
+        _write_plugin(jimmy_home / "plugins", "oldie")
+        _enable(jimmy_home, ["oldie"])
         mgr = PluginManager()
         mgr.discover_and_load()
         loaded = mgr._plugins["oldie"]
@@ -71,13 +71,13 @@ class TestV1Regression:
         assert m.homepage == ""
         assert m.tags == []
 
-    def test_v1_unknown_fields_do_not_warn_loudly(self, hermes_home, caplog):
+    def test_v1_unknown_fields_do_not_warn_loudly(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "oldie",
+            jimmy_home / "plugins", "oldie",
             manifest_extra={"mystery_field": True},
         )
-        _enable(hermes_home, ["oldie"])
-        with caplog.at_level(logging.WARNING, logger="hermes_cli.plugins"):
+        _enable(jimmy_home, ["oldie"])
+        with caplog.at_level(logging.WARNING, logger="jimmy_cli.plugins"):
             mgr = PluginManager()
             mgr.discover_and_load()
         assert mgr._plugins["oldie"].enabled
@@ -85,9 +85,9 @@ class TestV1Regression:
 
 
 class TestV2Parsing:
-    def test_v2_fields_parse(self, hermes_home):
+    def test_v2_fields_parse(self, jimmy_home):
         _write_plugin(
-            hermes_home / "plugins", "modern",
+            jimmy_home / "plugins", "modern",
             manifest_extra={
                 "manifest_version": 2,
                 "api_version": 1,
@@ -104,7 +104,7 @@ class TestV2Parsing:
                 },
             },
         )
-        _enable(hermes_home, ["modern"])
+        _enable(jimmy_home, ["modern"])
         mgr = PluginManager()
         mgr.discover_and_load()
         m = mgr._plugins["modern"].manifest
@@ -122,35 +122,35 @@ class TestV2Parsing:
         # plugin still loads
         assert mgr._plugins["modern"].enabled or mgr._plugins["modern"].error
 
-    def test_unknown_field_in_v2_warns_but_loads(self, hermes_home, caplog):
+    def test_unknown_field_in_v2_warns_but_loads(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "modern",
+            jimmy_home / "plugins", "modern",
             manifest_extra={"manifest_version": 2, "hovercraft": "eels"},
         )
-        _enable(hermes_home, ["modern"])
+        _enable(jimmy_home, ["modern"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
         assert mgr._plugins["modern"].enabled
         assert "hovercraft" in caplog.text
 
-    def test_future_manifest_version_warns_but_loads(self, hermes_home, caplog):
+    def test_future_manifest_version_warns_but_loads(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "fromfuture",
+            jimmy_home / "plugins", "fromfuture",
             manifest_extra={
                 "manifest_version": SUPPORTED_MANIFEST_VERSION + 5,
             },
         )
-        _enable(hermes_home, ["fromfuture"])
+        _enable(jimmy_home, ["fromfuture"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
         assert mgr._plugins["fromfuture"].enabled
-        assert "newer than this Hermes" in caplog.text
+        assert "newer than this Jimmy" in caplog.text
 
-    def test_malformed_v2_fields_warn_and_degrade(self, hermes_home, caplog):
+    def test_malformed_v2_fields_warn_and_degrade(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "sloppy",
+            jimmy_home / "plugins", "sloppy",
             manifest_extra={
                 "manifest_version": 2,
                 "api_version": "banana",
@@ -159,7 +159,7 @@ class TestV2Parsing:
                 "tags": "not-a-list",
             },
         )
-        _enable(hermes_home, ["sloppy"])
+        _enable(jimmy_home, ["sloppy"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
@@ -173,12 +173,12 @@ class TestV2Parsing:
 
 
 class TestDependencyOrder:
-    def test_dep_registers_before_dependent(self, hermes_home):
+    def test_dep_registers_before_dependent(self, jimmy_home):
         # zzz-consumer requires aaa-base... but alphabetically consumer
         # would load AFTER base anyway, so invert: aaa-consumer requires
         # zzz-base, forcing the topo sort to override alpha order.
         _write_plugin(
-            hermes_home / "plugins", "aaa-consumer",
+            jimmy_home / "plugins", "aaa-consumer",
             manifest_extra={
                 "manifest_version": 2,
                 "requires_plugins": [{"id": "zzz-base"}],
@@ -186,10 +186,10 @@ class TestDependencyOrder:
             register_body="import sys; sys._m2_order.append('aaa-consumer')",
         )
         _write_plugin(
-            hermes_home / "plugins", "zzz-base",
+            jimmy_home / "plugins", "zzz-base",
             register_body="import sys; sys._m2_order.append('zzz-base')",
         )
-        _enable(hermes_home, ["aaa-consumer", "zzz-base"])
+        _enable(jimmy_home, ["aaa-consumer", "zzz-base"])
         import sys
 
         sys._m2_order = []
@@ -200,15 +200,15 @@ class TestDependencyOrder:
         finally:
             del sys._m2_order
 
-    def test_missing_dep_warns_but_loads(self, hermes_home, caplog):
+    def test_missing_dep_warns_but_loads(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "needy",
+            jimmy_home / "plugins", "needy",
             manifest_extra={
                 "manifest_version": 2,
                 "requires_plugins": [{"id": "ghost-plugin"}],
             },
         )
-        _enable(hermes_home, ["needy"])
+        _enable(jimmy_home, ["needy"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
@@ -216,9 +216,9 @@ class TestDependencyOrder:
         assert "ghost-plugin" in caplog.text
         assert "loading anyway" in caplog.text
 
-    def test_cycle_warns_and_falls_back_alpha(self, hermes_home, caplog):
+    def test_cycle_warns_and_falls_back_alpha(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "cyc-a",
+            jimmy_home / "plugins", "cyc-a",
             manifest_extra={
                 "manifest_version": 2,
                 "requires_plugins": [{"id": "cyc-b"}],
@@ -226,14 +226,14 @@ class TestDependencyOrder:
             register_body="import sys; sys._m2_cycle.append('cyc-a')",
         )
         _write_plugin(
-            hermes_home / "plugins", "cyc-b",
+            jimmy_home / "plugins", "cyc-b",
             manifest_extra={
                 "manifest_version": 2,
                 "requires_plugins": [{"id": "cyc-a"}],
             },
             register_body="import sys; sys._m2_cycle.append('cyc-b')",
         )
-        _enable(hermes_home, ["cyc-a", "cyc-b"])
+        _enable(jimmy_home, ["cyc-a", "cyc-b"])
         import sys
 
         sys._m2_cycle = []
@@ -271,9 +271,9 @@ class TestDependencyOrder:
 
 
 class TestConfigSchema:
-    def test_type_mismatch_warns_but_loads(self, hermes_home, caplog):
+    def test_type_mismatch_warns_but_loads(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "cfgd",
+            jimmy_home / "plugins", "cfgd",
             manifest_extra={
                 "manifest_version": 2,
                 "config_schema": {
@@ -283,7 +283,7 @@ class TestConfigSchema:
             },
         )
         _enable(
-            hermes_home, ["cfgd"],
+            jimmy_home, ["cfgd"],
             entries={"cfgd": {"settings": {"api_url": 42, "retries": 3}}},
         )
         with caplog.at_level(logging.WARNING):
@@ -317,16 +317,16 @@ class TestConfigSchema:
         )
         assert warnings and "should be int" in warnings[0]
 
-    def test_unknown_declared_type_skips_check(self, hermes_home, caplog):
+    def test_unknown_declared_type_skips_check(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "weird",
+            jimmy_home / "plugins", "weird",
             manifest_extra={
                 "manifest_version": 2,
                 "config_schema": {"thing": {"type": "quaternion"}},
             },
         )
         _enable(
-            hermes_home, ["weird"],
+            jimmy_home, ["weird"],
             entries={"weird": {"settings": {"thing": 1}}},
         )
         with caplog.at_level(logging.WARNING):
@@ -339,7 +339,7 @@ class TestConfigSchema:
 
 class TestPythonDependenciesSeam:
     def test_missing_pip_dep_surfaced_with_hint_not_installed(
-        self, hermes_home, caplog, monkeypatch
+        self, jimmy_home, caplog, monkeypatch
     ):
         calls = []
         import subprocess
@@ -351,7 +351,7 @@ class TestPythonDependenciesSeam:
         monkeypatch.setattr(subprocess, "run", _spy_run)
         monkeypatch.setattr(subprocess, "check_call", _spy_run)
         _write_plugin(
-            hermes_home / "plugins", "pipful",
+            jimmy_home / "plugins", "pipful",
             manifest_extra={
                 "manifest_version": 2,
                 "python_dependencies": [
@@ -359,7 +359,7 @@ class TestPythonDependenciesSeam:
                 ],
             },
         )
-        _enable(hermes_home, ["pipful"])
+        _enable(jimmy_home, ["pipful"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
@@ -369,15 +369,15 @@ class TestPythonDependenciesSeam:
         assert "does not install plugin dependencies automatically" in caplog.text
         assert calls == []
 
-    def test_satisfied_pip_dep_is_quiet(self, hermes_home, caplog):
+    def test_satisfied_pip_dep_is_quiet(self, jimmy_home, caplog):
         _write_plugin(
-            hermes_home / "plugins", "pipok",
+            jimmy_home / "plugins", "pipok",
             manifest_extra={
                 "manifest_version": 2,
                 "python_dependencies": ["pyyaml>=5,<7"],
             },
         )
-        _enable(hermes_home, ["pipok"])
+        _enable(jimmy_home, ["pipok"])
         with caplog.at_level(logging.WARNING):
             mgr = PluginManager()
             mgr.discover_and_load()
@@ -386,10 +386,10 @@ class TestPythonDependenciesSeam:
 
 
 class TestCtxHasPlugin:
-    def test_has_plugin_probe(self, hermes_home):
-        _write_plugin(hermes_home / "plugins", "probe-target")
+    def test_has_plugin_probe(self, jimmy_home):
+        _write_plugin(jimmy_home / "plugins", "probe-target")
         _write_plugin(
-            hermes_home / "plugins", "prober",
+            jimmy_home / "plugins", "prober",
             manifest_extra={
                 "manifest_version": 2,
                 "requires_plugins": [{"id": "probe-target"}],
@@ -399,7 +399,7 @@ class TestCtxHasPlugin:
                 "ctx.has_plugin('probe-target'), ctx.has_plugin('nope'))"
             ),
         )
-        _enable(hermes_home, ["probe-target", "prober"])
+        _enable(jimmy_home, ["probe-target", "prober"])
         import sys
 
         try:

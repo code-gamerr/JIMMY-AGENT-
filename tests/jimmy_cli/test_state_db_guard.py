@@ -9,7 +9,7 @@ import sqlite3
 
 import pytest
 
-from hermes_cli.backup import copy_db_and_verify, verify_sqlite_integrity
+from jimmy_cli.backup import copy_db_and_verify, verify_sqlite_integrity
 
 
 @pytest.fixture()
@@ -87,14 +87,14 @@ def test_restore_flow_end_to_end(valid_db, tmp_path):
 
 class TestPreUpdateBackupIntegrityGuard:
     """E2E: run the real ``_run_pre_update_backup`` against a temp
-    HERMES_HOME whose state.db is corrupted mid-flight (#68474)."""
+    JIMMY_HOME whose state.db is corrupted mid-flight (#68474)."""
 
     @pytest.fixture()
-    def hermes_home(self, tmp_path, monkeypatch):
+    def jimmy_home(self, tmp_path, monkeypatch):
         from pathlib import Path
         import sys
 
-        root = tmp_path / ".hermes"
+        root = tmp_path / ".jimmy"
         root.mkdir()
         (root / "config.yaml").write_text("model:\n  provider: openrouter\n")
         db = root / "state.db"
@@ -102,17 +102,17 @@ class TestPreUpdateBackupIntegrityGuard:
         conn.execute("CREATE TABLE sessions (id INTEGER PRIMARY KEY)")
         conn.commit()
         conn.close()
-        monkeypatch.setenv("HERMES_HOME", str(root))
+        monkeypatch.setenv("JIMMY_HOME", str(root))
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         for mod in list(sys.modules.keys()):
-            if mod.startswith("hermes_cli.config") or mod == "hermes_constants":
+            if mod.startswith("jimmy_cli.config") or mod == "jimmy_constants":
                 del sys.modules[mod]
         return root
 
-    def test_healthy_db_stays_quiet(self, hermes_home, capsys):
+    def test_healthy_db_stays_quiet(self, jimmy_home, capsys):
         from argparse import Namespace
 
-        from hermes_cli.main import _run_pre_update_backup
+        from jimmy_cli.main import _run_pre_update_backup
 
         snap_id = _run_pre_update_backup(Namespace(no_backup=False, backup=False))
         out = capsys.readouterr().out
@@ -120,19 +120,19 @@ class TestPreUpdateBackupIntegrityGuard:
         assert "Pre-update snapshot" in out
         assert "integrity check FAILED" not in out
 
-    def test_zeroed_db_after_snapshot_is_loud(self, hermes_home, capsys, monkeypatch):
+    def test_zeroed_db_after_snapshot_is_loud(self, jimmy_home, capsys, monkeypatch):
         """If state.db is zeroed right after the snapshot completes, the
         guard must warn loudly instead of proceeding silently (exit-0 mask)."""
         from argparse import Namespace
 
-        import hermes_cli.backup as backup_mod
-        from hermes_cli.main import _run_pre_update_backup
+        import jimmy_cli.backup as backup_mod
+        from jimmy_cli.main import _run_pre_update_backup
 
         real_create = backup_mod.create_quick_snapshot
 
         def create_then_zero(**kwargs):
             snap_id = real_create(**kwargs)
-            live = hermes_home / "state.db"
+            live = jimmy_home / "state.db"
             live.write_bytes(b"\x00" * live.stat().st_size)
             return snap_id
 

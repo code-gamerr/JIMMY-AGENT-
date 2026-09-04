@@ -10,7 +10,7 @@ stacking a backlog.
 
 This is deliberately session-scoped and in-process (CLI process or gateway
 process must be running) — the durable cross-process scheduling surface
-remains ``hermes cron`` / the ``cronjob`` tool, which runs in isolated
+remains ``jimmy cron`` / the ``cronjob`` tool, which runs in isolated
 sessions. A heartbeat is for "keep re-entering THIS conversation", the
 cron system is for "run this job on a schedule". Distinct by design.
 
@@ -147,10 +147,10 @@ def _meta_key(session_id: str) -> str:
 
 
 def _get_session_db() -> Optional[Any]:
-    # Reuse the goals module's per-HERMES_HOME cached SessionDB so both
+    # Reuse the goals module's per-JIMMY_HOME cached SessionDB so both
     # features share one connection instead of thrashing the file.
     try:
-        from hermes_cli.goals import _get_session_db as _goals_db
+        from jimmy_cli.goals import _get_session_db as _goals_db
 
         return _goals_db()
     except Exception as exc:  # pragma: no cover
@@ -184,7 +184,7 @@ def save_heartbeat(session_id: str, state: HeartbeatState) -> None:
         return
     db = _get_session_db()
     if db is None:
-        from hermes_cli.goals import _warn_dropped_write
+        from jimmy_cli.goals import _warn_dropped_write
 
         _warn_dropped_write("HeartbeatManager", "heartbeat", session_id)
         return

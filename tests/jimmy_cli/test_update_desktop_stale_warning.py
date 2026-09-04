@@ -1,6 +1,6 @@
 """A failed Desktop pack must not look like a successful update.
 
-#88251: ``hermes update`` treated a failed desktop pack as non-fatal, printed
+#88251: ``jimmy update`` treated a failed desktop pack as non-fatal, printed
 an early warning, then still ended with ``✓ Update complete!``. The Python
 side moved on; the Electron app stayed on the previous build.
 
@@ -12,8 +12,8 @@ complete`` instead of the success line, and gateway mode writes ``1`` to
 
 import pytest
 
-from hermes_cli import update_cmd
-from hermes_cli.update_cmd import (
+from jimmy_cli import update_cmd
+from jimmy_cli.update_cmd import (
     _print_update_summary,
     _rebuild_desktop_after_update,
     _write_gateway_update_exit_code,
@@ -53,10 +53,10 @@ def desktop_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(update_cmd, "_m", lambda: _FakeMain)
     monkeypatch.setattr(
-        "hermes_constants.with_hermes_node_path", lambda: {}, raising=False
+        "jimmy_constants.with_jimmy_node_path", lambda: {}, raising=False
     )
     monkeypatch.setattr(
-        "hermes_constants.display_hermes_home", lambda: str(tmp_path), raising=False
+        "jimmy_constants.display_jimmy_home", lambda: str(tmp_path), raising=False
     )
     return desktop_dir, calls
 
@@ -130,7 +130,7 @@ def test_summary_omits_success_banner_when_desktop_rebuild_failed(capsys):
     assert "Update complete" not in out
     assert "partially complete" in out
     assert "desktop app was not rebuilt" in out
-    assert "hermes desktop" in out
+    assert "jimmy desktop" in out
 
 
 def test_summary_keeps_success_banner_when_desktop_ok(capsys, monkeypatch):
@@ -161,7 +161,7 @@ def test_summary_combines_node_and_desktop_failures(capsys):
 
 
 def test_gateway_exit_code_file_tracks_desktop_rebuild(tmp_path, monkeypatch):
-    monkeypatch.setattr(update_cmd, "get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(update_cmd, "get_jimmy_home", lambda: tmp_path)
     _write_gateway_update_exit_code(True)
     assert (tmp_path / ".update_exit_code").read_text(encoding="utf-8") == "0"
     _write_gateway_update_exit_code(False)

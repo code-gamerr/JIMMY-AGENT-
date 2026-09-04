@@ -223,7 +223,7 @@ class TestClassifyApiError:
                 "status": 404,
                 "message": (
                     "Model 'gpt-5' is not available on the Free Tier. "
-                    "Upgrade at https://portal.nousresearch.com or pick a free model."
+                    "Upgrade at https://portal.jimmy-agent.com or pick a free model."
                 ),
             },
         )
@@ -241,7 +241,7 @@ class TestClassifyApiError:
                 "message": (
                     "Model 'openai/gpt-5.5-pro' requires available credits. "
                     "Your account balance is too low to use paid models — "
-                    "add credits at https://portal.nousresearch.com or pick a free model."
+                    "add credits at https://portal.jimmy-agent.com or pick a free model."
                 ),
             },
         )

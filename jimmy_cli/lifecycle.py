@@ -1,4 +1,4 @@
-"""Hermes lifecycle dispatch for first-party observers and plugins."""
+"""Jimmy lifecycle dispatch for first-party observers and plugins."""
 
 from __future__ import annotations
 
@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 def invoke_hook(hook_name: str, **kwargs: Any) -> List[Any]:
     """Notify first-party observers, then invoke compatibility plugin hooks."""
     try:
-        from hermes_cli.observability import observe_lifecycle
+        from jimmy_cli.observability import observe_lifecycle
 
         observe_lifecycle(hook_name, **kwargs)
     except Exception:
         logger.warning("Built-in observability hook failed", exc_info=True)
 
-    from hermes_cli import plugins
+    from jimmy_cli import plugins
 
     return plugins.invoke_hook(hook_name, **kwargs)
 
@@ -25,14 +25,14 @@ def invoke_hook(hook_name: str, **kwargs: Any) -> List[Any]:
 def has_hook(hook_name: str) -> bool:
     """Return whether a first-party observer or plugin consumes a hook."""
     try:
-        from hermes_cli.observability import handles_hook
+        from jimmy_cli.observability import handles_hook
 
         if handles_hook(hook_name):
             return True
     except Exception:
         logger.warning("Unable to inspect built-in observability hooks", exc_info=True)
 
-    from hermes_cli import plugins
+    from jimmy_cli import plugins
 
     return plugins.has_hook(hook_name)
 
@@ -40,7 +40,7 @@ def has_hook(hook_name: str) -> bool:
 def finalize_session(**kwargs: Any) -> List[Any]:
     """Notify observers and hard-close one core-owned Relay conversation."""
     try:
-        from hermes_cli.observability import observe_lifecycle
+        from jimmy_cli.observability import observe_lifecycle
 
         observe_lifecycle("on_session_finalize", **kwargs)
     except Exception:
@@ -58,6 +58,6 @@ def finalize_session(**kwargs: Any) -> List[Any]:
         except Exception:
             logger.warning("Core Relay session finalization failed", exc_info=True)
 
-    from hermes_cli import plugins
+    from jimmy_cli import plugins
 
     return plugins.invoke_hook("on_session_finalize", **kwargs)

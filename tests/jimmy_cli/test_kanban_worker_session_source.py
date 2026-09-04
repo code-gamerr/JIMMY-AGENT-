@@ -1,6 +1,6 @@
 """Kanban worker runs must not surface as user conversations.
 
-Workers spawn as `hermes chat -q "work kanban task <id>"`, which used to land in
+Workers spawn as `jimmy chat -q "work kanban task <id>"`, which used to land in
 state.db as an untitled `cli` row — the desktop sidebar then rendered one entry
 per attempt, labeled with the worker's own prompt.
 """
@@ -9,12 +9,12 @@ import os
 
 import pytest
 
-from hermes_state import SessionDB
+from jimmy_state import SessionDB
 
 
 @pytest.fixture()
 def db(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("JIMMY_HOME", str(tmp_path))
     database = SessionDB(db_path=tmp_path / "state.db")
     yield database
     database.close()
@@ -22,7 +22,7 @@ def db(tmp_path, monkeypatch):
 
 def test_worker_spawn_tags_session_source_kanban(monkeypatch, tmp_path):
     """The dispatcher tags the worker's env so its session is a `kanban` row."""
-    from hermes_cli import kanban_db as kb
+    from jimmy_cli import kanban_db as kb
 
     captured = {}
 
@@ -59,7 +59,7 @@ def test_worker_spawn_tags_session_source_kanban(monkeypatch, tmp_path):
 
     kb._default_spawn(task, workspace)
 
-    assert captured["env"]["HERMES_SESSION_SOURCE"] == "kanban"
+    assert captured["env"]["JIMMY_SESSION_SOURCE"] == "kanban"
 
 
 def test_kanban_rows_stay_out_of_the_session_list(db):

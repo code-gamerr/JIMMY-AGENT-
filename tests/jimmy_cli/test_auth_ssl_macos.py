@@ -1,4 +1,4 @@
-"""Tests for hermes_cli.auth._default_verify platform-aware fallback.
+"""Tests for jimmy_cli.auth._default_verify platform-aware fallback.
 
 On macOS with Homebrew Python, the system OpenSSL cannot locate the
 system trust store, so we explicitly load certifi's bundle. On other
@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 
-from hermes_cli.auth import _default_verify, _resolve_verify
+from jimmy_cli.auth import _default_verify, _resolve_verify
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ class TestResolveVerifyIntegration:
 
     @pytest.mark.linux_only
     def test_no_ca_uses_default_verify_on_linux(self, monkeypatch):
-        for var in ("HERMES_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+        for var in ("JIMMY_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
             monkeypatch.delenv(var, raising=False)
         assert _resolve_verify() is True
 
@@ -82,5 +82,5 @@ class TestResolveVerifyIntegration:
     def test_insecure_wins_over_everything(self, monkeypatch, tmp_path):
         bundle = tmp_path / "ca.pem"
         bundle.write_text("stub")
-        monkeypatch.setenv("HERMES_CA_BUNDLE", str(bundle))
+        monkeypatch.setenv("JIMMY_CA_BUNDLE", str(bundle))
         assert _resolve_verify(insecure=True) is False

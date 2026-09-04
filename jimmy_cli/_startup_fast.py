@@ -1,8 +1,8 @@
 """Pre-import startup fast paths — THE canonical lightweight helpers.
 
-This module is imported by ``hermes_cli/main.py`` BEFORE its heavy import
+This module is imported by ``jimmy_cli/main.py`` BEFORE its heavy import
 wall (config, argparse tree, logging, providers). Everything here must stay
-**stdlib-only and cheap** (os/sys file probes; no yaml, no hermes_cli.config,
+**stdlib-only and cheap** (os/sys file probes; no yaml, no jimmy_cli.config,
 no argparse). A guard test (``test_startup_fast_import_weight``) subprocess-
 imports this module and fails if any heavy module sneaks into sys.modules.
 
@@ -17,7 +17,7 @@ by both the fast path and the module constants, makes that drift
 structurally impossible; the parity guard test would have caught eb4040242
 the day it landed.
 
-``hermes_cli/config.py``'s ``get_container_exec_info()`` reads the same
+``jimmy_cli/config.py``'s ``get_container_exec_info()`` reads the same
 ``.container-mode`` file; keep the file-format assumptions here and there in
 sync (this module deliberately only PROBES existence/typos cheaply and errs
 toward the slow path, which then does the authoritative parse).
@@ -92,9 +92,9 @@ def is_container_startup_environment() -> bool:
     return "docker" in cgroup or "podman" in cgroup or "/lxc/" in cgroup
 
 
-def active_profile_may_override_home(hermes_root: str) -> bool:
-    """Cheap probe: does an active non-default profile redirect HERMES_HOME?"""
-    active_profile = os.path.join(hermes_root, "active_profile")
+def active_profile_may_override_home(jimmy_root: str) -> bool:
+    """Cheap probe: does an active non-default profile redirect JIMMY_HOME?"""
+    active_profile = os.path.join(jimmy_root, "active_profile")
     try:
         if os.path.exists(active_profile):
             with open(active_profile, encoding="utf-8") as handle:
@@ -106,10 +106,10 @@ def active_profile_may_override_home(hermes_root: str) -> bool:
 
 
 def _resolved_home() -> str:
-    hermes_home = os.environ.get("HERMES_HOME", "").strip()
-    if hermes_home:
-        return hermes_home
-    return os.path.join(os.path.expanduser("~"), ".hermes")
+    jimmy_home = os.environ.get("JIMMY_HOME", "").strip()
+    if jimmy_home:
+        return jimmy_home
+    return os.path.join(os.path.expanduser("~"), ".jimmy")
 
 
 def container_mode_may_be_active() -> bool:
@@ -121,22 +121,22 @@ def container_mode_may_be_active() -> bool:
     host's version instead of the container's. Hence: any profile
     ambiguity → assume container mode may be active.
     """
-    if os.environ.get("HERMES_DEV") == "1":
+    if os.environ.get("JIMMY_DEV") == "1":
         return False
     if is_container_startup_environment():
         return False
 
-    hermes_home = os.environ.get("HERMES_HOME", "").strip()
-    if hermes_home:
-        if os.path.exists(os.path.join(hermes_home, ".container-mode")):
+    jimmy_home = os.environ.get("JIMMY_HOME", "").strip()
+    if jimmy_home:
+        if os.path.exists(os.path.join(jimmy_home, ".container-mode")):
             return True
-        parent_name = os.path.basename(os.path.dirname(os.path.normpath(hermes_home)))
+        parent_name = os.path.basename(os.path.dirname(os.path.normpath(jimmy_home)))
         return (
             parent_name != "profiles"
-            and active_profile_may_override_home(hermes_home)
+            and active_profile_may_override_home(jimmy_home)
         )
 
-    default_home = os.path.join(os.path.expanduser("~"), ".hermes")
+    default_home = os.path.join(os.path.expanduser("~"), ".jimmy")
     if active_profile_may_override_home(default_home):
         return True
     return os.path.exists(os.path.join(default_home, ".container-mode"))
@@ -169,7 +169,7 @@ def read_install_method() -> str | None:
     order) — the managed/git/pip fallbacks need heavier imports and stay on
     the slow path. On the fast path home ambiguity is already excluded:
     ``container_mode_may_be_active()`` bails to the slow path whenever a
-    non-default profile might redirect HERMES_HOME.
+    non-default profile might redirect JIMMY_HOME.
     """
     stamp = os.path.join(_resolved_home(), ".install_method")
     try:
@@ -181,27 +181,27 @@ def read_install_method() -> str | None:
 
 
 def print_fast_version_info(*, check_updates: bool = True) -> None:
-    """THE canonical ``hermes --version`` output (also used by /version).
+    """THE canonical ``jimmy --version`` output (also used by /version).
 
     The static lines print instantly from stdlib-only probes; everything
     heavier (upstream SHA in the version line, authoritative install-method
     detection, the update-status check) is lazy-imported AFTER the first
     line is already on screen, so perceived latency stays instant while the
     output carries the full information that used to require the (removed)
-    ``hermes version`` subcommand. Every lazy block degrades gracefully —
+    ``jimmy version`` subcommand. Every lazy block degrades gracefully —
     a broken/heavy import can never take the basic version output down.
     """
     # Line 1: registry-owned banner label (includes "· upstream <sha>" for
     # git installs). banner.py keeps rich/prompt_toolkit lazy, so this
     # import is light; fall back to the plain label if anything fails.
     try:
-        from hermes_cli.banner import format_banner_version_label
+        from jimmy_cli.banner import format_banner_version_label
 
         print(format_banner_version_label())
     except Exception:
-        from hermes_cli import __release_date__, __version__
+        from jimmy_cli import __release_date__, __version__
 
-        print(f"Hermes Agent v{__version__} ({__release_date__})")
+        print(f"Jimmy v{__version__} ({__release_date__})")
 
     print(f"Install directory: {project_root_str()}")
 
@@ -212,7 +212,7 @@ def print_fast_version_info(*, check_updates: bool = True) -> None:
     try:
         from pathlib import Path
 
-        from hermes_cli.config import detect_install_method
+        from jimmy_cli.config import detect_install_method
 
         install_method = detect_install_method(Path(project_root_str()))
     except Exception:
@@ -232,8 +232,8 @@ def print_fast_version_info(*, check_updates: bool = True) -> None:
     # version info). Bounded by check_for_updates' own subprocess/network
     # timeouts and its 6-hour cache; any failure prints nothing.
     try:
-        from hermes_cli.banner import UPDATE_AVAILABLE_NO_COUNT, check_for_updates
-        from hermes_cli.config import recommended_update_command
+        from jimmy_cli.banner import UPDATE_AVAILABLE_NO_COUNT, check_for_updates
+        from jimmy_cli.config import recommended_update_command
 
         behind = check_for_updates()
         if behind == UPDATE_AVAILABLE_NO_COUNT:
@@ -251,17 +251,17 @@ def print_fast_version_info(*, check_updates: bool = True) -> None:
 
 
 def try_fast_version(argv: list[str] | None = None) -> bool:
-    """Handle ``hermes --version`` before the heavy import wall.
+    """Handle ``jimmy --version`` before the heavy import wall.
 
     Only ``--version``/``-V`` (the ``version`` subcommand was removed —
     ``--version`` now carries the full output incl. update status), and
     never when container mode may need to route the command into the
-    container. Termux keeps the HERMES_TERMUX_DISABLE_FAST_CLI escape hatch.
+    container. Termux keeps the JIMMY_TERMUX_DISABLE_FAST_CLI escape hatch.
     """
     if argv is None:
         argv = sys.argv[1:]
     is_termux = is_termux_env()
-    if is_termux and os.environ.get("HERMES_TERMUX_DISABLE_FAST_CLI") == "1":
+    if is_termux and os.environ.get("JIMMY_TERMUX_DISABLE_FAST_CLI") == "1":
         return False
     if is_termux:
         if not is_termux_fast_version_argv(argv):

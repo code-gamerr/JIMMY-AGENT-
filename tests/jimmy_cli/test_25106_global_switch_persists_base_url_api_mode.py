@@ -1,7 +1,7 @@
 """Regression tests for #25106: CLI `/model <name> --global` never persisted
 ``model.base_url``/``model.api_mode`` to config.yaml, so a global provider
 switch left the PREVIOUS provider's endpoint/wire-protocol on disk. The next
-`hermes` launch re-read the stale base_url and routed the new model at the
+`jimmy` launch re-read the stale base_url and routed the new model at the
 old host.
 
 Both ``_handle_model_switch`` (typed ``/model <name>``) and
@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hermes_cli.model_switch import ModelSwitchResult
+from jimmy_cli.model_switch import ModelSwitchResult
 
 
 def _make_result(*, base_url="https://api.minimax.io/v1", api_mode="chat_completions", provider_changed=True):
@@ -61,7 +61,7 @@ class _StubCLI:
     ):
         import cli as cli_mod
 
-        return cli_mod.HermesCLI._confirm_and_apply_cli_model_switch(
+        return cli_mod.JimmyCLI._confirm_and_apply_cli_model_switch(
             self, result, persist_global, one_turn, custom_provs
         )
 
@@ -79,12 +79,12 @@ def _run_switch(monkeypatch, result, cmd="/model MiniMax-M3 --global"):
         saved[key] = value
 
     monkeypatch.setattr(cli_mod, "save_config_value", _fake_save)
-    monkeypatch.setattr("hermes_cli.model_switch.switch_model", lambda **kw: result)
+    monkeypatch.setattr("jimmy_cli.model_switch.switch_model", lambda **kw: result)
     monkeypatch.setattr(
-        "hermes_cli.inventory.load_picker_context",
+        "jimmy_cli.inventory.load_picker_context",
         lambda: (_ for _ in ()).throw(RuntimeError("no picker context in test")),
     )
-    cli_mod.HermesCLI._handle_model_switch(_StubCLI(), cmd)
+    cli_mod.JimmyCLI._handle_model_switch(_StubCLI(), cmd)
     return saved
 
 
@@ -107,13 +107,13 @@ def test_session_only_switch_does_not_touch_config(monkeypatch):
     monkeypatch.setattr(cli_mod, "_cprint", lambda *a, **k: None)
     save_calls = []
     monkeypatch.setattr(cli_mod, "save_config_value", lambda *a, **k: save_calls.append(a))
-    monkeypatch.setattr("hermes_cli.model_switch.switch_model", lambda **kw: _make_result())
+    monkeypatch.setattr("jimmy_cli.model_switch.switch_model", lambda **kw: _make_result())
     monkeypatch.setattr(
-        "hermes_cli.inventory.load_picker_context",
+        "jimmy_cli.inventory.load_picker_context",
         lambda: (_ for _ in ()).throw(RuntimeError("no picker context in test")),
     )
 
-    cli_mod.HermesCLI._handle_model_switch(_StubCLI(), "/model MiniMax-M3 --session")
+    cli_mod.JimmyCLI._handle_model_switch(_StubCLI(), "/model MiniMax-M3 --session")
 
     assert save_calls == []
 
@@ -133,7 +133,7 @@ def _run_apply(monkeypatch, result, persist_global=True):
         saved[key] = value
 
     monkeypatch.setattr(cli_mod, "save_config_value", _fake_save)
-    cli_mod.HermesCLI._apply_model_switch_result(_StubCLI(), result, persist_global)
+    cli_mod.JimmyCLI._apply_model_switch_result(_StubCLI(), result, persist_global)
     return saved
 
 

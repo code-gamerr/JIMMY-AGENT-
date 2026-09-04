@@ -9,13 +9,13 @@ import pytest
 
 @pytest.fixture
 def main_mod():
-    import hermes_cli.main as m
+    import jimmy_cli.main as m
 
     return m
 
 
 def _touch_ink(root: Path) -> None:
-    ink = root / "node_modules" / "@hermes" / "ink" / "package.json"
+    ink = root / "node_modules" / "@jimmy" / "ink" / "package.json"
     ink.parent.mkdir(parents=True, exist_ok=True)
     ink.write_text("{}")
 
@@ -49,7 +49,7 @@ def test_make_tui_argv_uses_bundled_tui_when_workspace_missing(
 ) -> None:
     """Prebuilt-install regression (#56665): a prebuilt install (Docker
     image, Nix build, or prior `npm run build`) ships
-    hermes_cli/tui_dist/entry.js but never ships ui-tui/ (that directory only
+    jimmy_cli/tui_dist/entry.js but never ships ui-tui/ (that directory only
     exists in a git checkout). _make_tui_argv must try the bundled entry.js
     BEFORE _ensure_tui_workspace() — requiring the workspace first hard-exits
     every prebuilt dashboard Chat tab connection with `sys.exit(1)` (surfaced
@@ -57,7 +57,7 @@ def test_make_tui_argv_uses_bundled_tui_when_workspace_missing(
     runnable bundled TUI on disk. The bundled shortcut must succeed without
     ever touching the (missing) ui-tui workspace or git.
     """
-    monkeypatch.delenv("HERMES_TUI_DIR", raising=False)
+    monkeypatch.delenv("JIMMY_TUI_DIR", raising=False)
     monkeypatch.setattr(main_mod, "_ensure_tui_node", lambda: None)
 
     bundled_entry = tmp_path / "bundled" / "entry.js"
@@ -124,7 +124,7 @@ def test_no_stray_lockfiles_in_workspace_subdirs(main_mod) -> None:
         root / "apps" / "desktop",
         root / "apps" / "shared",
     ]
-    # Also sweep ui-tui/packages/* (hermes-ink etc.)
+    # Also sweep ui-tui/packages/* (jimmy-ink etc.)
     tui_pkgs = root / "ui-tui" / "packages"
     if tui_pkgs.is_dir():
         subdirs.extend(d for d in tui_pkgs.iterdir() if d.is_dir())

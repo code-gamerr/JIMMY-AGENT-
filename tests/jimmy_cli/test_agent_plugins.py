@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_cli.agent_plugins import (
+from jimmy_cli.agent_plugins import (
     MCP_SCHEMA_V1,
     PLUGIN_SCHEMA_V1,
     AgentPluginError,
@@ -345,8 +345,8 @@ def test_enabled_portable_mcp_probe_does_not_load_plugins(
     )
     bundled = tmp_path / "bundled"
     bundled.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_BUNDLED_PLUGINS", str(bundled))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_BUNDLED_PLUGINS", str(bundled))
 
     assert has_enabled_agent_plugin_mcp(
         {"plugins": {"enabled": ["portable.test"]}}
@@ -382,8 +382,8 @@ def test_portable_mcp_probe_counts_streamable_http_config(
     )
     bundled = tmp_path / "bundled"
     bundled.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_BUNDLED_PLUGINS", str(bundled))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_BUNDLED_PLUGINS", str(bundled))
 
     assert has_enabled_agent_plugin_mcp(
         {"plugins": {"enabled": ["portable.test"]}}
@@ -411,8 +411,8 @@ def test_portable_mcp_probe_ignores_unsupported_only_config(
     )
     bundled = tmp_path / "bundled"
     bundled.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_BUNDLED_PLUGINS", str(bundled))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_BUNDLED_PLUGINS", str(bundled))
 
     assert not has_enabled_agent_plugin_mcp(
         {"plugins": {"enabled": ["portable.test"]}}
@@ -552,8 +552,8 @@ def test_portable_mcp_probe_honors_native_precedence(
     )
     bundled = tmp_path / "bundled"
     bundled.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
-    monkeypatch.setenv("HERMES_BUNDLED_PLUGINS", str(bundled))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
+    monkeypatch.setenv("JIMMY_BUNDLED_PLUGINS", str(bundled))
 
     assert not has_enabled_agent_plugin_mcp(
         {"plugins": {"enabled": ["portable.test"]}}

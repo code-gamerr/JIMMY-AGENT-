@@ -1,4 +1,4 @@
-"""``hermes sessions`` command — extracted from ``hermes_cli/main.py``.
+"""``jimmy sessions`` command — extracted from ``jimmy_cli/main.py``.
 
 Mechanical move (main.py decomposition): ``cmd_sessions`` was a ``def`` nested
 inside ``main()``'s body; its dispatch on ``args.sessions_action`` is lifted
@@ -11,10 +11,10 @@ byte-identical. A symtable/AST closure check found exactly two free variables:
   threaded as a keyword parameter via ``functools.partial`` at the
   ``set_defaults(func=...)`` wiring site in ``main()``.
 
-Helpers that stay in ``hermes_cli.main`` (``get_hermes_home``,
+Helpers that stay in ``jimmy_cli.main`` (``get_jimmy_home``,
 ``_relative_time``, ``_session_browse_picker``, ``_size_delta_label``) are
 delegated through call-time wrappers below so existing test monkeypatches on
-``hermes_cli.main.<name>`` keep reaching this code path, and so imports stay
+``jimmy_cli.main.<name>`` keep reaching this code path, and so imports stay
 one-way (main.py imports this module; the reverse happens only lazily at call
 time — no import cycle).
 """
@@ -25,14 +25,14 @@ from pathlib import Path
 
 
 def _m():
-    """Lazy ``hermes_cli.main`` reference (call-time, keeps patches working)."""
-    from hermes_cli import main
+    """Lazy ``jimmy_cli.main`` reference (call-time, keeps patches working)."""
+    from jimmy_cli import main
 
     return main
 
 
-def get_hermes_home():
-    return _m().get_hermes_home()
+def get_jimmy_home():
+    return _m().get_jimmy_home()
 
 
 def _relative_time(ts):
@@ -55,21 +55,21 @@ def _confirm_prompt(prompt: str) -> bool:
         return False
 
 
-#: Default age floor for `hermes sessions prune --never-active`.  Deliberately
+#: Default age floor for `jimmy sessions prune --never-active`.  Deliberately
 #: generous: the rows are worthless but harmless, and a young never-active row
 #: may simply be a chat that nobody has replied to yet.
 _NEVER_ACTIVE_DEFAULT_DAYS = 30.0
 
 
 def _prune_never_active_keyed(db, args):
-    """`hermes sessions prune --never-active` — drop leaked/dead keyed rows.
+    """`jimmy sessions prune --never-active` — drop leaked/dead keyed rows.
 
     Targets keyed gateway rows that were opened and never used at all.  The
     population is dominated by escaped test fixtures (#82770), which the
     hermetic-isolation guard can only stop from being *created* — rows already
     written to a developer's state.db need a sweep to leave.
     """
-    from hermes_cli.session_filters import format_epoch, parse_duration_seconds
+    from jimmy_cli.session_filters import format_epoch, parse_duration_seconds
 
     older_than = getattr(args, "older_than", None)
     if older_than is None:
@@ -111,7 +111,7 @@ def _prune_never_active_keyed(db, args):
         print("Aborted.")
         return
 
-    sessions_dir = get_hermes_home() / "sessions"
+    sessions_dir = get_jimmy_home() / "sessions"
     deleted, routing_deleted = db.prune_never_active_keyed_sessions(
         older_than_days=days, sessions_dir=sessions_dir
     )
@@ -131,7 +131,7 @@ def cmd_sessions(args, sessions_parser=None):
     # Recovery additionally promises never to open the supplied source
     # directly, so it operates through its own disposable source copy.
     if action == "repair":
-        from hermes_state import (
+        from jimmy_state import (
             DEFAULT_DB_PATH,
             _db_opens_cleanly,
             repair_state_db_schema,
@@ -157,7 +157,7 @@ def cmd_sessions(args, sessions_parser=None):
                 print(f"  backup: {report['backup_path']}")
             print(f"  strategy: {report.get('strategy')}")
             try:
-                from hermes_state import SessionDB
+                from jimmy_state import SessionDB
 
                 _repair_db = SessionDB()
                 try:
@@ -181,18 +181,18 @@ def cmd_sessions(args, sessions_parser=None):
             print("")
             print("  Next step — offline recovery (never modifies the source):")
             source_hint = report.get("backup_path") or db_path
-            print(f"    hermes sessions recover --source {source_hint} \\")
+            print(f"    jimmy sessions recover --source {source_hint} \\")
             print("        --inspect-only")
             print("  If that reports the data is recoverable, rebuild it into")
             print("  a NEW database (the active one is left untouched):")
-            print(f"    hermes sessions recover --source {source_hint} \\")
+            print(f"    jimmy sessions recover --source {source_hint} \\")
             print("        --output recovered-state.db")
         return
 
     if action == "recover":
         import sqlite3 as _sqlite3
 
-        from hermes_cli.session_recovery import (
+        from jimmy_cli.session_recovery import (
             SessionRecoveryError,
             inspect_session_database,
             recover_session_database,
@@ -303,7 +303,7 @@ def cmd_sessions(args, sessions_parser=None):
         return 1
 
     if action == "import":
-        from hermes_cli.foreign_sessions import run_sessions_import
+        from jimmy_cli.foreign_sessions import run_sessions_import
 
         result = run_sessions_import(args)
         # A path was explicitly given but nothing imported → real error (bad
@@ -315,7 +315,7 @@ def cmd_sessions(args, sessions_parser=None):
         return
 
     try:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
     except Exception as e:
@@ -327,7 +327,7 @@ def cmd_sessions(args, sessions_parser=None):
     _exclude = None if _source else ["tool"]
 
     if action == "list":
-        from hermes_state import workspace_key as _ws_key
+        from jimmy_state import workspace_key as _ws_key
 
         sessions = db.list_sessions_rich(
             source=args.source, exclude_sources=_exclude, limit=args.limit
@@ -401,7 +401,7 @@ def cmd_sessions(args, sessions_parser=None):
                 print(f"{preview:<50} {last_active:<13} {s['source']:<6} {sid}")
 
     elif action == "export":
-        from hermes_cli.session_filters import (
+        from jimmy_cli.session_filters import (
             build_prune_filters,
             describe_filters,
         )
@@ -430,7 +430,7 @@ def cmd_sessions(args, sessions_parser=None):
         def _redact(data):
             if not args.redact or data is None:
                 return data
-            from hermes_cli.session_export_md import redact_session_data
+            from jimmy_cli.session_export_md import redact_session_data
 
             return redact_session_data(data)
 
@@ -470,12 +470,12 @@ def cmd_sessions(args, sessions_parser=None):
 
         # Prompt-only export (--only user-prompts): one prompt record per
         # line (jsonl) or headed sections (md). Delegates rendering to
-        # hermes_cli.session_export.
+        # jimmy_cli.session_export.
         if getattr(args, "only", None):
             if args.format not in ("jsonl", "md"):
                 print("--only user-prompts supports --format jsonl or md.")
                 return
-            from hermes_cli.session_export import (
+            from jimmy_cli.session_export import (
                 export_record_count,
                 render_sessions_export,
             )
@@ -507,7 +507,7 @@ def cmd_sessions(args, sessions_parser=None):
             if not args.output or args.output == "-":
                 print("HTML export requires an output file path.")
                 return
-            from hermes_cli.session_export_html import (
+            from jimmy_cli.session_export_html import (
                 generate_html_export,
                 generate_multi_session_html_export,
             )
@@ -625,7 +625,7 @@ def cmd_sessions(args, sessions_parser=None):
                     out_dir = (
                         Path(args.output).expanduser()
                         if args.output and args.output != "-"
-                        else get_hermes_home() / "session-exports"
+                        else get_jimmy_home() / "session-exports"
                     )
                     out_dir.mkdir(parents=True, exist_ok=True)
                     exported = 0
@@ -705,7 +705,7 @@ def cmd_sessions(args, sessions_parser=None):
             return
 
         # Markdown / QMD export
-        from hermes_cli.session_export_md import (
+        from jimmy_cli.session_export_md import (
             append_manifest_entry,
             verify_export_file,
             write_session_markdown,
@@ -715,7 +715,7 @@ def cmd_sessions(args, sessions_parser=None):
             print("Markdown/QMD export writes files; stdout (-) is only supported with --format jsonl.")
             db.close()
             return
-        output_dir = Path(args.output).expanduser() if args.output else get_hermes_home() / "session-exports"
+        output_dir = Path(args.output).expanduser() if args.output else get_jimmy_home() / "session-exports"
 
         def _export_one(session_id: str, *, include_lineage: bool = False):
             data = (
@@ -809,7 +809,7 @@ def cmd_sessions(args, sessions_parser=None):
                         )
                         db.close()
                         return
-                sessions_dir = get_hermes_home() / "sessions"
+                sessions_dir = get_jimmy_home() / "sessions"
                 if db.delete_session(
                     resolved_session_id,
                     sessions_dir=sessions_dir,
@@ -887,7 +887,7 @@ def cmd_sessions(args, sessions_parser=None):
                 return
         elif _pinned_note:
             print(f"Warning: deleting a pinned session '{resolved_session_id}'.")
-        sessions_dir = get_hermes_home() / "sessions"
+        sessions_dir = get_jimmy_home() / "sessions"
         if db.delete_session(resolved_session_id, sessions_dir=sessions_dir):
             print(f"Deleted session '{resolved_session_id}'.")
         else:
@@ -901,14 +901,14 @@ def cmd_sessions(args, sessions_parser=None):
         _prune_never_active_keyed(db, args)
 
     elif action in ("prune", "archive"):
-        from hermes_cli.session_filters import (
+        from jimmy_cli.session_filters import (
             build_prune_filters,
             describe_filters,
             format_epoch,
         )
 
         # Preserve the historical default ONLY for a truly bare
-        # `hermes sessions prune`: no time window and no filters at all
+        # `jimmy sessions prune`: no time window and no filters at all
         # means "older than 90 days". ANY filter — including --source —
         # suppresses the implicit cutoff, so `prune --source cron`
         # matches ALL cron sessions regardless of age. The preview +
@@ -978,9 +978,9 @@ def cmd_sessions(args, sessions_parser=None):
                 _verb_word = "deleted" if action == "prune" else "archived"
                 _optin = (
                     "Pass --include-pinned to delete them anyway, or unpin "
-                    "first with `hermes sessions unpin <id>`."
+                    "first with `jimmy sessions unpin <id>`."
                     if action == "prune"
-                    else "Unpin first with `hermes sessions unpin <id>` to include them."
+                    else "Unpin first with `jimmy sessions unpin <id>` to include them."
                 )
                 print(
                     f"Note: {_pinned_skipped} pinned session{_suffix} also match "
@@ -1000,7 +1000,7 @@ def cmd_sessions(args, sessions_parser=None):
             print(
                 f"Note: {skipped_open} open session{suffix} also match these "
                 "filters but will be skipped because prune only deletes ended "
-                "sessions. Use `hermes sessions delete <id>` "
+                "sessions. Use `jimmy sessions delete <id>` "
                 "to remove one explicitly."
             )
         verb = "Delete" if action == "prune" else "Archive"
@@ -1046,7 +1046,7 @@ def cmd_sessions(args, sessions_parser=None):
                 return
 
         if action == "prune":
-            sessions_dir = get_hermes_home() / "sessions"
+            sessions_dir = get_jimmy_home() / "sessions"
             count = db.prune_sessions(sessions_dir=sessions_dir, **filters)
             print(f"Pruned {count} session(s).")
         else:
@@ -1133,7 +1133,7 @@ def cmd_sessions(args, sessions_parser=None):
             return
         if not pinned_rows:
             print(
-                "No pinned sessions. Pin one with: hermes sessions pin <session_id>"
+                "No pinned sessions. Pin one with: jimmy sessions pin <session_id>"
             )
             return
         print(f"{'Title':<32} {'Last Active':<13} {'Src':<9} {'ID'}")
@@ -1227,9 +1227,9 @@ def cmd_sessions(args, sessions_parser=None):
             print("Cancelled.")
             return
 
-        # Launch hermes --resume <id> by replacing the current process
+        # Launch jimmy --resume <id> by replacing the current process
         print(f"Resuming session: {selected_id}")
-        from hermes_cli.relaunch import relaunch
+        from jimmy_cli.relaunch import relaunch
 
         relaunch(["--resume", selected_id])
         return  # won't reach here after execvp
@@ -1387,7 +1387,7 @@ def cmd_sessions(args, sessions_parser=None):
         )
         if result.get("vacuumed") is False:
             print("  (VACUUM was skipped or failed — run "
-                  "`hermes sessions optimize` later to reclaim freed space.)")
+                  "`jimmy sessions optimize` later to reclaim freed space.)")
 
     elif action == "repair-routing":
         records = db.find_orphaned_gateway_sessions(

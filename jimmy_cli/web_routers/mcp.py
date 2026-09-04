@@ -2,7 +2,7 @@
 
 Handler bodies are byte-identical.  The OAuth flow registry
 (``_mcp_oauth_flows`` + lock + pending cap) and the worker/helpers stay in
-web_server - reached via the late-binding seam in :mod:`hermes_cli.web_deps`
+web_server - reached via the late-binding seam in :mod:`jimmy_cli.web_deps`
 (``late`` for callables, ``LateState`` for the mutable registry/lock/limit) so
 tests that mutate ``web_server._mcp_oauth_flows`` or
 ``monkeypatch.setattr(web_server, "_run_dashboard_mcp_oauth", ...)`` keep
@@ -18,8 +18,8 @@ from typing import Any, Dict, Optional  # noqa: F401
 from fastapi import APIRouter, HTTPException, Request  # noqa: F401
 from fastapi.responses import HTMLResponse  # noqa: F401
 
-from hermes_cli.web_deps import late, LateState
-from hermes_cli.web_models import (
+from jimmy_cli.web_deps import late, LateState
+from jimmy_cli.web_models import (
     MCPCatalogInstall,
     MCPEnabledToggle,
     MCPServerCreate,
@@ -27,7 +27,7 @@ from hermes_cli.web_models import (
 )
 
 # Same logger the handlers used before extraction (identical logger object).
-_log = logging.getLogger("hermes_cli.web_server")
+_log = logging.getLogger("jimmy_cli.web_server")
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ _profile_cli_args = late("_profile_cli_args")
 _profile_scope = late("_profile_scope")
 _require_token = late("_require_token")
 _run_dashboard_mcp_oauth = late("_run_dashboard_mcp_oauth")
-_spawn_hermes_action = late("_spawn_hermes_action")
+_spawn_jimmy_action = late("_spawn_jimmy_action")
 load_config = late("load_config")
 save_config = late("save_config")
 save_env_value = late("save_env_value")
@@ -60,7 +60,7 @@ _CONFIG_MUTATION_LOCK = LateState("_CONFIG_MUTATION_LOCK")
 
 @router.get("/api/mcp/servers")
 async def list_mcp_servers(profile: Optional[str] = None):
-    from hermes_cli.mcp_config import _get_mcp_servers
+    from jimmy_cli.mcp_config import _get_mcp_servers
 
     def _read():
         with _profile_scope(profile):
@@ -76,7 +76,7 @@ async def list_mcp_servers(profile: Optional[str] = None):
 
 @router.post("/api/mcp/servers")
 async def add_mcp_server(body: MCPServerCreate, profile: Optional[str] = None):
-    from hermes_cli.mcp_config import (
+    from jimmy_cli.mcp_config import (
         _get_mcp_servers,
         _save_bearer_auth_token,
         _save_mcp_server,
@@ -127,7 +127,7 @@ async def replace_mcp_servers(body: MCPServersReplace, profile: Optional[str] = 
     endpoint sets the whole map so removals actually persist.  Storage stays
     the config.yaml ``mcp_servers`` key the CLI/TUI already read.
     """
-    from hermes_cli.mcp_config import _replace_mcp_servers
+    from jimmy_cli.mcp_config import _replace_mcp_servers
 
     def _run():
         with _profile_scope(body.profile or profile):
@@ -142,7 +142,7 @@ async def replace_mcp_servers(body: MCPServersReplace, profile: Optional[str] = 
 
 @router.delete("/api/mcp/servers/{name}")
 async def remove_mcp_server(name: str, profile: Optional[str] = None):
-    from hermes_cli.mcp_config import _remove_mcp_server
+    from jimmy_cli.mcp_config import _remove_mcp_server
 
     def _run():
         with _profile_scope(profile):
@@ -158,7 +158,7 @@ async def remove_mcp_server(name: str, profile: Optional[str] = None):
 @router.post("/api/mcp/servers/{name}/test")
 async def test_mcp_server(name: str, profile: Optional[str] = None):
     """Connect to the server, list its tools, disconnect.  Returns tool list."""
-    from hermes_cli.mcp_config import (
+    from jimmy_cli.mcp_config import (
         _get_mcp_servers,
         _oauth_tokens_present,
         _probe_single_server,
@@ -185,7 +185,7 @@ async def test_mcp_server(name: str, profile: Optional[str] = None):
         # skills lock for its ENTIRE body. Holding that across the probe
         # serialized every other endpoint (config/skills/toolsets all take the
         # same lock), so a slow server made unrelated requests time out at 15s.
-        # The probe touches no skills globals; it only needs the HERMES_HOME
+        # The probe touches no skills globals; it only needs the JIMMY_HOME
         # override for .env interpolation + OAuth token resolution, which the
         # contextvar provides (copied into this to_thread worker; and
         # _run_on_mcp_loop re-wraps it onto the MCP event-loop thread).
@@ -236,18 +236,18 @@ async def test_mcp_server(name: str, profile: Optional[str] = None):
 @router.post("/api/mcp/servers/{name}/auth")
 async def auth_mcp_server(name: str, request: Request, profile: Optional[str] = None):
     """Start MCP OAuth and hand the authorization URL to the dashboard browser."""
-    from hermes_cli.mcp_config import _get_mcp_servers
+    from jimmy_cli.mcp_config import _get_mcp_servers
     from tools.mcp_dashboard_oauth import DashboardOAuthFlow
 
     _require_token(request)
     _gc_mcp_oauth_flows()
-    from hermes_constants import get_hermes_home
+    from jimmy_constants import get_jimmy_home
 
-    process_home = str(get_hermes_home().expanduser().resolve(strict=False))
+    process_home = str(get_jimmy_home().expanduser().resolve(strict=False))
 
     def _read():
         with _profile_scope(profile):
-            return _get_mcp_servers(), str(get_hermes_home().expanduser().resolve(strict=False))
+            return _get_mcp_servers(), str(get_jimmy_home().expanduser().resolve(strict=False))
 
     servers, flow_home = await asyncio.to_thread(_read)
     if name not in servers:
@@ -264,7 +264,7 @@ async def auth_mcp_server(name: str, request: Request, profile: Optional[str] = 
         flow_id=flow_id,
         server_name=name,
         profile=profile,
-        hermes_home=flow_home,
+        jimmy_home=flow_home,
         redirect_uri=(cfg.get("oauth") or {}).get("redirect_uri")
         or _mcp_oauth_callback_url(request, name),
         reconnect_live=flow_home == process_home,
@@ -281,7 +281,7 @@ async def auth_mcp_server(name: str, request: Request, profile: Optional[str] = 
             )
         if any(
             flow.server_name == name
-            and flow.hermes_home == flow_home
+            and flow.jimmy_home == flow_home
             and not flow.worker_done
             for flow in _mcp_oauth_flows.values()
         ):
@@ -358,7 +358,7 @@ async def mcp_oauth_callback(
         None,
     )
     if flow is None:
-        return HTMLResponse("<h1>OAuth flow expired</h1><p>Return to Hermes and try again.</p>", status_code=404)
+        return HTMLResponse("<h1>OAuth flow expired</h1><p>Return to Jimmy and try again.</p>", status_code=404)
     try:
         flow.deliver_callback(code=code, state=state, error=error)
     except ValueError as exc:
@@ -370,8 +370,8 @@ async def mcp_oauth_callback(
             status_code=status_code,
         )
     if error:
-        return HTMLResponse("<h1>Authorization failed</h1><p>Return to Hermes for details.</p>", status_code=400)
-    return HTMLResponse("<h1>Authorization received</h1><p>You can close this tab and return to Hermes.</p>")
+        return HTMLResponse("<h1>Authorization failed</h1><p>Return to Jimmy for details.</p>", status_code=400)
+    return HTMLResponse("<h1>Authorization received</h1><p>You can close this tab and return to Jimmy.</p>")
 
 
 @router.put("/api/mcp/servers/{name}/enabled")
@@ -406,12 +406,12 @@ async def list_mcp_catalog(profile: Optional[str] = None):
 
     Each entry reports whether it's already installed and enabled so the UI
     can show install / enabled state inline.  This is the same catalog
-    `hermes mcp catalog` / `hermes mcp install` read.  ``profile`` scopes
+    `jimmy mcp catalog` / `jimmy mcp install` read.  ``profile`` scopes
     the installed/enabled annotations (the catalog itself is repo-shipped
     and identical for every profile).
     """
     try:
-        from hermes_cli import mcp_catalog
+        from jimmy_cli import mcp_catalog
     except Exception as exc:
         _log.exception("mcp_catalog import failed")
         raise HTTPException(status_code=500, detail=f"Catalog unavailable: {exc}")
@@ -496,7 +496,7 @@ async def install_mcp_catalog_entry(body: MCPCatalogInstall, profile: Optional[s
     Entries that need a git bootstrap (``needs_install``) are installed via
     the CLI action path because the clone can take time.
     """
-    from hermes_cli import mcp_catalog
+    from jimmy_cli import mcp_catalog
 
     name = (body.name or "").strip()
     entry = mcp_catalog.get_entry(name)
@@ -517,14 +517,14 @@ async def install_mcp_catalog_entry(body: MCPCatalogInstall, profile: Optional[s
 
     # Git-bootstrap entries can take a while to clone — run via the background
     # action path so the request returns immediately and the UI can tail logs.
-    # The -p subprocess rebinds HERMES_HOME-derived paths in the child.
+    # The -p subprocess rebinds JIMMY_HOME-derived paths in the child.
     if entry.install is not None:
         # Unique per-entry action name: a shared "mcp-install" would let a
         # re-click (or a second entry) overwrite the tracked process/log while
         # the first clone is still running.
         action = _mcp_install_action_name(name)
         try:
-            _spawn_hermes_action(
+            _spawn_jimmy_action(
                 _profile_cli_args(effective_profile) + ["mcp", "install", name],
                 action,
             )

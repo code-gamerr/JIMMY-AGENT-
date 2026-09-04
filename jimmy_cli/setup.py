@@ -1,5 +1,5 @@
 """
-Interactive setup wizard for Hermes Agent.
+Interactive setup wizard for Jimmy.
 
 Modular wizard with independently-runnable sections:
   1. Model & Provider — choose your AI provider and model
@@ -8,7 +8,7 @@ Modular wizard with independently-runnable sections:
   4. Messaging Platforms — connect Telegram, Discord, etc.
   5. Tools — configure TTS, web search, image generation, etc.
 
-Config files are stored in ~/.hermes/ for easy access.
+Config files are stored in ~/.jimmy/ for easy access.
 """
 
 import importlib.util
@@ -22,13 +22,13 @@ import copy
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from hermes_constants import get_optional_skills_dir
+from jimmy_constants import get_optional_skills_dir
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
-_DOCS_BASE = "https://hermes-agent.nousresearch.com/docs"
+_DOCS_BASE = "https://jimmy-agent.jimmy-agent.com/docs"
 
 
 def _model_config_dict(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -58,7 +58,7 @@ def _supports_same_provider_pool_setup(provider: str) -> bool:
         return False
     if provider == "openrouter":
         return True
-    from hermes_cli.auth import PROVIDER_REGISTRY
+    from jimmy_cli.auth import PROVIDER_REGISTRY
 
     pconfig = PROVIDER_REGISTRY.get(provider)
     if not pconfig:
@@ -134,10 +134,10 @@ def _set_reasoning_effort(config: Dict[str, Any], effort: str) -> None:
 
 
 # Import config helpers
-from hermes_cli.config import (
+from jimmy_cli.config import (
     cfg_get,
     DEFAULT_CONFIG,
-    get_hermes_home,
+    get_jimmy_home,
     get_config_path,
     get_env_path,
     load_config,
@@ -145,11 +145,11 @@ from hermes_cli.config import (
     save_env_value,
     remove_env_value,
     get_env_value,
-    ensure_hermes_home,
+    ensure_jimmy_home,
 )
-# display_hermes_home imported lazily at call sites (stale-module safety during hermes update)
+# display_jimmy_home imported lazily at call sites (stale-module safety during jimmy update)
 
-from hermes_cli.colors import Colors, color
+from jimmy_cli.colors import Colors, color
 
 
 def print_header(title: str):
@@ -158,13 +158,13 @@ def print_header(title: str):
     print(color(f"◆ {title}", Colors.CYAN, Colors.BOLD))
 
 
-from hermes_cli.cli_output import (  # noqa: E402
+from jimmy_cli.cli_output import (  # noqa: E402
     print_error,
     print_info,
     print_success,
     print_warning,
 )
-from hermes_cli.secret_prompt import masked_secret_prompt  # noqa: E402
+from jimmy_cli.secret_prompt import masked_secret_prompt  # noqa: E402
 
 
 def is_interactive_stdin() -> bool:
@@ -187,13 +187,13 @@ def print_noninteractive_setup_guidance(reason: str | None = None) -> None:
         print_info(reason)
     print_info("The interactive wizard cannot be used here.")
     print()
-    print_info("Configure Hermes using environment variables or config commands:")
-    print_info("  hermes config set model.provider custom")
-    print_info("  hermes config set model.base_url http://localhost:8080/v1")
-    print_info("  hermes config set model.default your-model-name")
+    print_info("Configure Jimmy using environment variables or config commands:")
+    print_info("  jimmy config set model.provider custom")
+    print_info("  jimmy config set model.base_url http://localhost:8080/v1")
+    print_info("  jimmy config set model.default your-model-name")
     print()
     print_info("Or set OPENROUTER_API_KEY / OPENAI_API_KEY in your environment.")
-    print_info("Run 'hermes setup' in an interactive terminal to use the full wizard.")
+    print_info("Run 'jimmy setup' in an interactive terminal to use the full wizard.")
     print()
 
 
@@ -208,7 +208,7 @@ def prompt(question: str, default: str = None, password: bool = False) -> str:
         if password:
             value = masked_secret_prompt(color(display, Colors.YELLOW))
         else:
-            from hermes_cli.cli_output import line_input
+            from jimmy_cli.cli_output import line_input
 
             value = line_input(color(display, Colors.YELLOW))
 
@@ -231,7 +231,7 @@ def _sanitize_pasted_input(value: str) -> str:
 
 def _curses_prompt_choice(question: str, choices: list, default: int = 0, description: str | None = None) -> int:
     """Single-select menu using curses. Delegates to curses_radiolist."""
-    from hermes_cli.curses_ui import curses_radiolist
+    from jimmy_cli.curses_ui import curses_radiolist
     return curses_radiolist(question, choices, selected=default, cancel_returns=-1, description=description)
 
 
@@ -283,14 +283,14 @@ def is_noninteractive() -> bool:
     """True when no human is available to answer a prompt.
 
     The dashboard/desktop spawn CLI actions with ``stdin=DEVNULL`` and
-    ``HERMES_NONINTERACTIVE=1`` (see ``hermes_cli/web_server.py``). In that
+    ``JIMMY_NONINTERACTIVE=1`` (see ``jimmy_cli/web_server.py``). In that
     context an ``input()`` raises ``EOFError`` immediately, so a prompt that
     aborts on EOF kills the spawned action — this is what made the desktop
     "restart gateway" fail when the Windows gateway service was not yet
     installed (the start path asks "Install it now?" with no one to answer).
     Honour the explicit env flag here so callers fall back to their default.
     """
-    return os.environ.get("HERMES_NONINTERACTIVE", "").strip().lower() in {
+    return os.environ.get("JIMMY_NONINTERACTIVE", "").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -301,7 +301,7 @@ def is_noninteractive() -> bool:
 def prompt_yes_no(question: str, default: bool = True) -> bool:
     """Prompt for yes/no. Ctrl+C exits, empty input returns default.
 
-    Non-interactive callers (``HERMES_NONINTERACTIVE=1`` or a closed/redirected
+    Non-interactive callers (``JIMMY_NONINTERACTIVE=1`` or a closed/redirected
     stdin) have no one to answer, so fall back to ``default`` instead of
     aborting the whole process.
     """
@@ -354,7 +354,7 @@ def prompt_checklist(title: str, items: list, pre_selected: list = None) -> list
     if pre_selected is None:
         pre_selected = []
 
-    from hermes_cli.curses_ui import curses_checklist
+    from jimmy_cli.curses_ui import curses_checklist
 
     chosen = curses_checklist(
         title,
@@ -390,10 +390,10 @@ def _prompt_api_key(var: dict):
         save_env_value(var["name"], value)
         print_success("  ✓ Saved")
     else:
-        print_warning("  Skipped (configure later with 'hermes setup')")
+        print_warning("  Skipped (configure later with 'jimmy setup')")
 
 
-def _print_setup_summary(config: dict, hermes_home):
+def _print_setup_summary(config: dict, jimmy_home):
     """Print the setup completion summary."""
     # Provider readiness — the one thing setup absolutely must produce.
     # Previously a user could cancel the API-key prompt mid-wizard (Enter →
@@ -401,7 +401,7 @@ def _print_setup_summary(config: dict, hermes_home):
     # and exit "successfully" with NO working model — believing they were set
     # up. Say so loudly instead (consumer-onboarding audit finding #7).
     try:
-        from hermes_cli.auth import resolve_provider
+        from jimmy_cli.auth import resolve_provider
 
         resolve_provider()
         _provider_ready = True
@@ -409,10 +409,10 @@ def _print_setup_summary(config: dict, hermes_home):
         _provider_ready = False
     if not _provider_ready:
         print()
-        print_warning("No inference provider is configured — Hermes cannot chat yet.")
+        print_warning("No inference provider is configured — Jimmy cannot chat yet.")
         print_info("  Finish this one step with either of:")
-        print_info("    hermes model            (pick any provider/model)")
-        print_info("    hermes setup --portal   (Nous Portal OAuth, no API key)")
+        print_info("    jimmy model            (pick any provider/model)")
+        print_info("    jimmy setup --portal   (Nous Portal OAuth, no API key)")
 
     # Tool availability summary
     print()
@@ -431,7 +431,7 @@ def _print_setup_summary(config: dict, hermes_home):
     if _vision_backends:
         tool_status.append(("Vision (image analysis)", True, None))
     else:
-        tool_status.append(("Vision (image analysis)", False, "run 'hermes setup' to configure"))
+        tool_status.append(("Vision (image analysis)", False, "run 'jimmy setup' to configure"))
 
 
     # Web tools (Exa, Parallel, Firecrawl, or Tavily)
@@ -487,7 +487,7 @@ def _print_setup_summary(config: dict, hermes_home):
         _img_backend = None
         try:
             from agent.image_gen_registry import list_providers
-            from hermes_cli.plugins import _ensure_plugins_discovered
+            from jimmy_cli.plugins import _ensure_plugins_discovered
 
             _ensure_plugins_discovered()
             for _p in list_providers():
@@ -506,7 +506,7 @@ def _print_setup_summary(config: dict, hermes_home):
         else:
             tool_status.append(("Image Generation", False, "FAL_KEY or OPENAI_API_KEY"))
 
-    # Video generation — opt-in via `hermes tools` → Video Generation.
+    # Video generation — opt-in via `jimmy tools` → Video Generation.
     # Only show the row when a plugin reports available so we don't badger
     # users who don't care about video gen with a "missing" status line.
     if subscription_features.video_gen.managed_by_nous:
@@ -514,7 +514,7 @@ def _print_setup_summary(config: dict, hermes_home):
     else:
         try:
             from agent.video_gen_registry import list_providers as _list_video_providers
-            from hermes_cli.plugins import _ensure_plugins_discovered as _ensure_plugins
+            from jimmy_cli.plugins import _ensure_plugins_discovered as _ensure_plugins
             _ensure_plugins()
             _video_backend = None
             for _vp in _list_video_providers():
@@ -553,7 +553,7 @@ def _print_setup_summary(config: dict, hermes_home):
         if neutts_ok:
             tool_status.append(("Text-to-Speech (NeuTTS local)", True, None))
         else:
-            tool_status.append(("Text-to-Speech (NeuTTS — not installed)", False, "run 'hermes setup tts'"))
+            tool_status.append(("Text-to-Speech (NeuTTS — not installed)", False, "run 'jimmy setup tts'"))
     elif tts_provider == "kittentts":
         try:
             kittentts_ok = importlib.util.find_spec("kittentts") is not None
@@ -562,7 +562,7 @@ def _print_setup_summary(config: dict, hermes_home):
         if kittentts_ok:
             tool_status.append(("Text-to-Speech (KittenTTS local)", True, None))
         else:
-            tool_status.append(("Text-to-Speech (KittenTTS — not installed)", False, "run 'hermes setup tts'"))
+            tool_status.append(("Text-to-Speech (KittenTTS — not installed)", False, "run 'jimmy setup tts'"))
     else:
         tool_status.append(("Text-to-Speech (Edge TTS)", True, None))
 
@@ -592,7 +592,7 @@ def _print_setup_summary(config: dict, hermes_home):
             tool_status.append(("Speech-to-Text (Local Whisper)", True, None))
         else:
             tool_status.append(
-                ("Speech-to-Text (Local Whisper — not installed)", False, "run 'hermes tools' → Speech-to-Text")
+                ("Speech-to-Text (Local Whisper — not installed)", False, "run 'jimmy tools' → Speech-to-Text")
             )
 
     if subscription_features.modal.managed_by_nous:
@@ -601,16 +601,16 @@ def _print_setup_summary(config: dict, hermes_home):
         if subscription_features.modal.direct_override:
             tool_status.append(("Modal Execution (direct Modal)", True, None))
         else:
-            tool_status.append(("Modal Execution", False, "run 'hermes setup terminal'"))
+            tool_status.append(("Modal Execution", False, "run 'jimmy setup terminal'"))
     # Nous-managed Modal path removed.
 
     # Home Assistant
     if get_env_value("HASS_TOKEN"):
         tool_status.append(("Smart Home (Home Assistant)", True, None))
 
-    # Spotify (OAuth via hermes auth spotify — check auth.json, not env vars)
+    # Spotify (OAuth via jimmy auth spotify — check auth.json, not env vars)
     try:
-        from hermes_cli.auth import get_provider_auth_state
+        from jimmy_cli.auth import get_provider_auth_state
         _spotify_state = get_provider_auth_state("spotify") or {}
         if _spotify_state.get("access_token") or _spotify_state.get("refresh_token"):
             tool_status.append(("Spotify (PKCE OAuth)", True, None))
@@ -652,9 +652,9 @@ def _print_setup_summary(config: dict, hermes_home):
     disabled_tools = [(name, var) for name, avail, var in tool_status if not avail]
     if disabled_tools:
         print_warning(
-            "Some tools are disabled. Run 'hermes setup tools' to configure them,"
+            "Some tools are disabled. Run 'jimmy setup tools' to configure them,"
         )
-        from hermes_constants import display_hermes_home as _dhh
+        from jimmy_constants import display_jimmy_home as _dhh
         print_warning(f"or edit {_dhh()}/.env directly to add the missing API keys.")
         print()
 
@@ -678,13 +678,13 @@ def _print_setup_summary(config: dict, hermes_home):
     print()
 
     # Show file locations prominently
-    from hermes_constants import display_hermes_home as _dhh
+    from jimmy_constants import display_jimmy_home as _dhh
     print(color(f"📁 All your files are in {_dhh()}/:", Colors.CYAN, Colors.BOLD))
     print()
     print(f"   {color('Settings:', Colors.YELLOW)}  {get_config_path()}")
     print(f"   {color('API Keys:', Colors.YELLOW)}  {get_env_path()}")
     print(
-        f"   {color('Data:', Colors.YELLOW)}      {hermes_home}/cron/, sessions/, logs/"
+        f"   {color('Data:', Colors.YELLOW)}      {jimmy_home}/cron/, sessions/, logs/"
     )
     print()
 
@@ -692,17 +692,17 @@ def _print_setup_summary(config: dict, hermes_home):
     print()
     print(color("📝 To edit your configuration:", Colors.CYAN, Colors.BOLD))
     print()
-    print(f"   {color('hermes setup', Colors.GREEN)}          Re-run the full wizard")
-    print(f"   {color('hermes setup model', Colors.GREEN)}    Change model/provider")
-    print(f"   {color('hermes setup terminal', Colors.GREEN)} Change terminal backend")
-    print(f"   {color('hermes setup gateway', Colors.GREEN)}  Configure messaging")
-    print(f"   {color('hermes setup tools', Colors.GREEN)}    Configure tool providers")
+    print(f"   {color('jimmy setup', Colors.GREEN)}          Re-run the full wizard")
+    print(f"   {color('jimmy setup model', Colors.GREEN)}    Change model/provider")
+    print(f"   {color('jimmy setup terminal', Colors.GREEN)} Change terminal backend")
+    print(f"   {color('jimmy setup gateway', Colors.GREEN)}  Configure messaging")
+    print(f"   {color('jimmy setup tools', Colors.GREEN)}    Configure tool providers")
     print()
-    print(f"   {color('hermes config', Colors.GREEN)}         View current settings")
+    print(f"   {color('jimmy config', Colors.GREEN)}         View current settings")
     print(
-        f"   {color('hermes config edit', Colors.GREEN)}    Open config in your editor"
+        f"   {color('jimmy config edit', Colors.GREEN)}    Open config in your editor"
     )
-    print(f"   {color('hermes config set <key> <value>', Colors.GREEN)}")
+    print(f"   {color('jimmy config set <key> <value>', Colors.GREEN)}")
     print("                          Set a specific value")
     print()
     print("   Or edit the files directly:")
@@ -714,9 +714,9 @@ def _print_setup_summary(config: dict, hermes_home):
     print()
     print(color("🚀 Ready to go!", Colors.CYAN, Colors.BOLD))
     print()
-    print(f"   {color('hermes', Colors.GREEN)}              Start chatting")
-    print(f"   {color('hermes gateway', Colors.GREEN)}      Start messaging gateway")
-    print(f"   {color('hermes doctor', Colors.GREEN)}       Check for issues")
+    print(f"   {color('jimmy', Colors.GREEN)}              Start chatting")
+    print(f"   {color('jimmy gateway', Colors.GREEN)}      Start messaging gateway")
+    print(f"   {color('jimmy doctor', Colors.GREEN)}       Check for issues")
     print()
 
 
@@ -859,7 +859,7 @@ def _read_nearest_vercel_project(start: Path | None = None) -> dict[str, str]:
 
 
 # Tool categories and provider config are now in tools_config.py (shared
-# between `hermes tools` and `hermes setup tools`).
+# between `jimmy tools` and `jimmy setup tools`).
 
 
 # =============================================================================
@@ -871,24 +871,24 @@ def _read_nearest_vercel_project(start: Path | None = None) -> dict[str, str]:
 def setup_model_provider(config: dict, *, quick: bool = False):
     """Configure the inference provider and default model.
 
-    Delegates to ``cmd_model()`` (the same flow used by ``hermes model``)
+    Delegates to ``cmd_model()`` (the same flow used by ``jimmy model``)
     for provider selection, credential prompting, and model picking.
     This ensures a single code path for all provider setup — any new
-    provider added to ``hermes model`` is automatically available here.
+    provider added to ``jimmy model`` is automatically available here.
 
     When *quick* is True, skips credential rotation, vision, and TTS
     configuration — used by the streamlined first-time quick setup.
     """
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
 
     print_header("Inference Provider")
     print_info("Choose how to connect to your main chat model.")
     print_info(f"   Guide: {_DOCS_BASE}/integrations/providers")
     print()
 
-    # Delegate to the shared hermes model flow — handles provider picker,
+    # Delegate to the shared jimmy model flow — handles provider picker,
     # credential prompting, model selection, and config persistence.
-    from hermes_cli.main import select_provider_and_model
+    from jimmy_cli.main import select_provider_and_model
     try:
         select_provider_and_model()
     except (SystemExit, KeyboardInterrupt):
@@ -897,7 +897,7 @@ def setup_model_provider(config: dict, *, quick: bool = False):
     except Exception as exc:
         logger.debug("select_provider_and_model error during setup: %s", exc)
         print_warning(f"Provider setup encountered an error: {exc}")
-        print_info("You can try again later with: hermes model")
+        print_info("You can try again later with: jimmy model")
 
     # Re-sync the wizard's config dict from what cmd_model saved to disk.
     # This is critical: cmd_model writes to disk via its own load/save cycle,
@@ -912,8 +912,8 @@ def setup_model_provider(config: dict, *, quick: bool = False):
     # Credential rotation, vision-backend selection, and TTS provider are no
     # longer prompted here. They have safe defaults (rotation off, vision
     # auto-detected from the main provider, TTS = Edge) and are configurable
-    # on demand via `hermes auth add`, `hermes setup` vision, and
-    # `hermes setup tts`. This keeps both quick and full setup thin.
+    # on demand via `jimmy auth add`, `jimmy setup` vision, and
+    # `jimmy setup tts`. This keeps both quick and full setup thin.
 
 
     # Tool Gateway prompt is already shown by _model_flow_nous() above.
@@ -970,7 +970,7 @@ def _install_neutts_deps() -> bool:
 
     # Route through the canonical uv → pip → ensurepip ladder so pip-less
     # venvs (Ubuntu 25.10 `python -m venv`, `uv venv`) work out of the box.
-    from hermes_cli.tools_config import _pip_install
+    from jimmy_cli.tools_config import _pip_install
 
     try:
         result = _pip_install(["-U", "neutts[all]", "--quiet"], timeout=300)
@@ -998,7 +998,7 @@ def _install_kittentts_deps() -> bool:
     print_info("Installing kittentts Python package (~25-80MB model downloaded on first use)...")
     print()
 
-    from hermes_cli.tools_config import _pip_install
+    from jimmy_cli.tools_config import _pip_install
 
     try:
         result = _pip_install(["-U", wheel_url, "soundfile", "--quiet"], timeout=300)
@@ -1019,10 +1019,10 @@ def _xai_oauth_logged_in_for_setup() -> bool:
     """True iff xAI Grok OAuth credentials are already stored locally.
 
     Lets TTS / STT setup skip the API-key prompt for users who logged in
-    through ``hermes model`` -> xAI Grok OAuth (SuperGrok / Premium+).
+    through ``jimmy model`` -> xAI Grok OAuth (SuperGrok / Premium+).
     """
     try:
-        from hermes_cli.auth import get_xai_oauth_auth_status
+        from jimmy_cli.auth import get_xai_oauth_auth_status
 
         return bool(get_xai_oauth_auth_status().get("logged_in"))
     except Exception:
@@ -1040,7 +1040,7 @@ def _run_xai_oauth_login_from_setup() -> bool:
     to whatever the user picked next, e.g. Edge TTS).
     """
     try:
-        from hermes_cli.auth import (
+        from jimmy_cli.auth import (
             _is_remote_session,
             _save_xai_oauth_tokens,
             _xai_oauth_device_code_login,
@@ -1125,7 +1125,7 @@ def _setup_tts_provider(config: dict):
         print_info("OpenAI TTS will use the managed Nous gateway and bill to your subscription.")
         if get_env_value("VOICE_TOOLS_OPENAI_KEY") or get_env_value("OPENAI_API_KEY"):
             print_warning(
-                "Direct OpenAI credentials are still configured and may take precedence until removed from ~/.hermes/.env."
+                "Direct OpenAI credentials are still configured and may take precedence until removed from ~/.jimmy/.env."
             )
 
     if selected == "neutts":
@@ -1177,7 +1177,7 @@ def _setup_tts_provider(config: dict):
 
     elif selected == "xai":
         # Resolution order: existing OAuth tokens (free for SuperGrok subscribers
-        # via the Hermes auth store) > existing XAI_API_KEY > prompt the user.
+        # via the Jimmy auth store) > existing XAI_API_KEY > prompt the user.
         # When neither is configured, offer both options instead of forcing the
         # API-key path — xAI TTS works fine with OAuth bearer tokens too.
         oauth_logged_in = _xai_oauth_logged_in_for_setup()
@@ -1218,10 +1218,10 @@ def _setup_tts_provider(config: dict):
                     save_env_value("XAI_API_KEY", api_key)
                     print_success("xAI TTS API key saved")
                 else:
-                    from hermes_constants import display_hermes_home as _dhh
+                    from jimmy_constants import display_jimmy_home as _dhh
                     print_warning(
                         "No xAI API key provided for TTS. Configure XAI_API_KEY "
-                        f"via hermes setup model or {_dhh()}/.env to use xAI TTS. "
+                        f"via jimmy setup model or {_dhh()}/.env to use xAI TTS. "
                         "Falling back to Edge TTS."
                     )
                     selected = "edge"
@@ -1305,7 +1305,7 @@ def _setup_tts_provider(config: dict):
 
 
 def setup_tts(config: dict):
-    """Standalone TTS setup (for 'hermes setup tts')."""
+    """Standalone TTS setup (for 'jimmy setup tts')."""
     _setup_tts_provider(config)
 
 
@@ -1318,7 +1318,7 @@ def setup_terminal_backend(config: dict):
     """Configure the terminal execution backend."""
     import platform as _platform
     print_header("Terminal Backend")
-    print_info("Choose where Hermes runs shell commands and code.")
+    print_info("Choose where Jimmy runs shell commands and code.")
     print_info("This affects tool execution, file access, and isolation.")
     print_info(f"   Guide: {_DOCS_BASE}/user-guide/configuration#terminal-backend-configuration")
     print()
@@ -1366,7 +1366,7 @@ def setup_terminal_backend(config: dict):
         print_success("Terminal backend: Local")
         print_info("Commands run directly on this machine.")
         # Gateway working directory defaults to home; sudo stays off. Both are
-        # configurable later via `hermes setup terminal` / config.yaml.
+        # configurable later via `jimmy setup terminal` / config.yaml.
         config["terminal"].setdefault("cwd", str(Path.home()))
 
     elif selected_backend == "docker":
@@ -1380,7 +1380,7 @@ def setup_terminal_backend(config: dict):
         else:
             print_info(f"Docker found: {docker_bin}")
 
-        # Image and resource limits use defaults; tune via `hermes setup terminal`.
+        # Image and resource limits use defaults; tune via `jimmy setup terminal`.
         config["terminal"].setdefault(
             "docker_image", "nikolaik/python-nodejs:python3.11-nodejs20"
         )
@@ -1399,12 +1399,12 @@ def setup_terminal_backend(config: dict):
             proxy_cfg.setdefault("enforce_on_docker", True)
             print_success("Egress firewall enabled in config")
             print_info(
-                "Run `hermes egress setup` then `hermes egress start` to mint "
+                "Run `jimmy egress setup` then `jimmy egress start` to mint "
                 "tokens and launch the proxy."
             )
         else:
             print_info(
-                "Skipping egress firewall. You can enable it later with `hermes egress setup`."
+                "Skipping egress firewall. You can enable it later with `jimmy egress setup`."
             )
 
     elif selected_backend == "singularity":
@@ -1420,7 +1420,7 @@ def setup_terminal_backend(config: dict):
         else:
             print_info(f"Found: {sing_bin}")
 
-        # Image and resource limits use defaults; tune via `hermes setup terminal`.
+        # Image and resource limits use defaults; tune via `jimmy setup terminal`.
         config["terminal"].setdefault(
             "singularity_image",
             "docker://nikolaik/python-nodejs:python3.11-nodejs20",
@@ -1437,7 +1437,7 @@ def setup_terminal_backend(config: dict):
             __import__("modal")
         except ImportError:
             print_info("Installing modal SDK...")
-            from hermes_cli.tools_config import _pip_install
+            from jimmy_cli.tools_config import _pip_install
 
             result = _pip_install(["modal"])
             if result.returncode == 0:
@@ -1478,7 +1478,7 @@ def setup_terminal_backend(config: dict):
             __import__("daytona")
         except ImportError:
             print_info("Installing daytona SDK...")
-            from hermes_cli.tools_config import _pip_install
+            from jimmy_cli.tools_config import _pip_install
 
             result = _pip_install(["daytona"])
             if result.returncode == 0:
@@ -1504,7 +1504,7 @@ def setup_terminal_backend(config: dict):
                 save_env_value("DAYTONA_API_KEY", api_key)
                 print_success("    Configured")
 
-        # Image and resource limits use defaults; tune via `hermes setup terminal`.
+        # Image and resource limits use defaults; tune via `jimmy setup terminal`.
         config["terminal"].setdefault(
             "daytona_image", "nikolaik/python-nodejs:python3.11-nodejs20"
         )
@@ -1512,7 +1512,7 @@ def setup_terminal_backend(config: dict):
     elif selected_backend == "vercel_sandbox":
         print_success("Terminal backend: Vercel Sandbox")
         print_info("Cloud microVM sandboxes with snapshot-backed filesystem persistence.")
-        print_info("Requires the optional SDK: pip install 'hermes-agent[vercel]'")
+        print_info("Requires the optional SDK: pip install 'jimmy-agent[vercel]'")
 
         try:
             __import__("vercel")
@@ -1520,12 +1520,12 @@ def setup_terminal_backend(config: dict):
             print_info("Installing vercel SDK...")
             import subprocess
 
-            # Managed uv first: $HERMES_HOME/bin is never on PATH, so a bare
-            # which() misses the uv Hermes installed. Bootstrapping one is
+            # Managed uv first: $JIMMY_HOME/bin is never on PATH, so a bare
+            # which() misses the uv Jimmy installed. Bootstrapping one is
             # welcome here — this is the interactive setup wizard, already
             # mid-install, and the alternative tier is a pip that a `uv venv`
             # venv may not even have.
-            from hermes_cli.managed_uv import ensure_uv
+            from jimmy_cli.managed_uv import ensure_uv
 
             uv_bin = ensure_uv()
             if uv_bin:
@@ -1543,7 +1543,7 @@ def setup_terminal_backend(config: dict):
             if result.returncode == 0:
                 print_success("vercel SDK installed")
             else:
-                print_warning("Install failed — run manually: pip install 'hermes-agent[vercel]'")
+                print_warning("Install failed — run manually: pip install 'jimmy-agent[vercel]'")
                 if result.stderr:
                     print_info(f"  Error: {result.stderr.strip().splitlines()[-1]}")
 
@@ -1618,10 +1618,10 @@ def _apply_default_agent_settings(config: dict):
     """Apply recommended defaults for all agent settings without prompting."""
     config.setdefault("agent", {})["max_turns"] = 150
     # config.yaml is the authoritative source for max_turns; the gateway
-    # bridges it into HERMES_MAX_ITERATIONS at startup. We no longer write
+    # bridges it into JIMMY_MAX_ITERATIONS at startup. We no longer write
     # to .env to avoid the dual-source inconsistency that caused the
     # 60-vs-500 bug (stale .env entry silently shadowing config.yaml).
-    remove_env_value("HERMES_MAX_ITERATIONS")
+    remove_env_value("JIMMY_MAX_ITERATIONS")
 
     config.setdefault("display", {})["tool_progress"] = "all"
 
@@ -1639,7 +1639,7 @@ def _apply_default_agent_settings(config: dict):
     print_info("  Tool progress: all")
     print_info("  Compression threshold: 0.50")
     print_info("  Session reset: never (use /reset or compression)")
-    print_info("  Run `hermes setup agent` later to customize.")
+    print_info("  Run `jimmy setup agent` later to customize.")
 
 
 def setup_agent_settings(config: dict):
@@ -1667,10 +1667,10 @@ def setup_agent_settings(config: dict):
             # Write to config.yaml (authoritative) only. Also clean up any
             # stale .env entry from earlier setup runs — the gateway's
             # bridge in gateway/run.py now unconditionally derives
-            # HERMES_MAX_ITERATIONS from agent.max_turns at startup.
+            # JIMMY_MAX_ITERATIONS from agent.max_turns at startup.
             config.setdefault("agent", {})["max_turns"] = max_iter
             config.pop("max_turns", None)
-            remove_env_value("HERMES_MAX_ITERATIONS")
+            remove_env_value("JIMMY_MAX_ITERATIONS")
             print_success(f"Max iterations set to {max_iter}")
     except ValueError:
         print_warning("Invalid number, keeping current value")
@@ -1683,7 +1683,7 @@ def setup_agent_settings(config: dict):
     print_info("  new     — Show tool name only when it changes (less noise)")
     print_info("  all     — Show every tool call with a short preview")
     print_info("  verbose — Full args, results, and debug logs")
-    print_info("  log     — Silent in chat; write every tool call to ~/.hermes/logs/tool_calls.log (gateway only)")
+    print_info("  log     — Silent in chat; write every tool call to ~/.jimmy/logs/tool_calls.log (gateway only)")
 
     current_mode = cfg_get(config, "display", "tool_progress", default="all")
     mode = prompt("Tool progress mode", current_mode)
@@ -1830,23 +1830,23 @@ def _is_valid_telegram_bot_token(token: str) -> bool:
 def _setup_telegram_auto_result():
     """Attempt automatic Telegram bot creation via managed QR onboarding."""
     try:
-        from hermes_cli.telegram_managed_bot import auto_setup_telegram_bot_result
+        from jimmy_cli.telegram_managed_bot import auto_setup_telegram_bot_result
     except ImportError:
         return None
 
     profile_name: str | None = None
     try:
-        profile_name = _profile_name_from_hermes_home(Path(get_hermes_home()))
+        profile_name = _profile_name_from_jimmy_home(Path(get_jimmy_home()))
     except Exception:
         pass
 
     return auto_setup_telegram_bot_result(profile_name=profile_name)
 
 
-def _profile_name_from_hermes_home(hermes_home) -> str | None:
-    """Return the active profile name when HERMES_HOME is a profile dir."""
-    if hermes_home.parent.name == "profiles":
-        return hermes_home.name
+def _profile_name_from_jimmy_home(jimmy_home) -> str | None:
+    """Return the active profile name when JIMMY_HOME is a profile dir."""
+    if jimmy_home.parent.name == "profiles":
+        return jimmy_home.name
     return None
 
 
@@ -1961,7 +1961,7 @@ def _setup_telegram():
         print_info("⚠️  No allowlist set - anyone who finds your bot can use it!")
 
     print()
-    print_info("📬 Home Channel: where Hermes delivers cron job results,")
+    print_info("📬 Home Channel: where Jimmy delivers cron job results,")
     print_info("   cross-platform messages, and notifications.")
     print_info("   For Telegram DMs, this is your user ID (same as above).")
 
@@ -1999,7 +1999,7 @@ def _setup_bluebubbles():
         if not prompt_yes_no("Reconfigure BlueBubbles?", False):
             return
 
-    print_info("Connects Hermes to iMessage via BlueBubbles — a free, open-source")
+    print_info("Connects Jimmy to iMessage via BlueBubbles — a free, open-source")
     print_info("macOS server that bridges iMessage to any device.")
     print_info("   Requires a Mac running BlueBubbles Server v1.0.0+")
     print_info("   Download: https://bluebubbles.app/")
@@ -2057,7 +2057,7 @@ def _setup_bluebubbles():
 
 def _setup_qqbot():
     """Configure QQ Bot (Official API v2) via gateway setup."""
-    from hermes_cli.gateway import _setup_qqbot as _gateway_setup_qqbot
+    from jimmy_cli.gateway import _setup_qqbot as _gateway_setup_qqbot
     _gateway_setup_qqbot()
 
 
@@ -2075,7 +2075,7 @@ def _setup_webhooks():
     print_warning("   internet. For security, run the gateway in a sandboxed environment")
     print_warning("   (Docker, VM, etc.) to limit blast radius from prompt injection.")
     print()
-    print_info("   Full guide: https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks/")
+    print_info("   Full guide: https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/webhooks/")
     print()
 
     port = prompt("Webhook port (default 8644)")
@@ -2096,24 +2096,24 @@ def _setup_webhooks():
     save_env_value("WEBHOOK_ENABLED", "true")
     print()
     print_success("Webhooks enabled! Next steps:")
-    from hermes_constants import display_hermes_home as _dhh
+    from jimmy_constants import display_jimmy_home as _dhh
     print_info(f"   1. Define webhook routes in {_dhh()}/config.yaml")
     print_info("   2. Point your service (GitHub, GitLab, etc.) at:")
     print_info("      http://your-server:8644/webhooks/<route-name>")
     print()
     print_info("   Route configuration guide:")
-    print_info("   https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks/#configuring-routes")
+    print_info("   https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging/webhooks/#configuring-routes")
     print()
-    print_info("   Open config in your editor:  hermes config edit")
-    print_info("   Open config in your editor:  hermes config edit")
+    print_info("   Open config in your editor:  jimmy config edit")
+    print_info("   Open config in your editor:  jimmy config edit")
 
 
 def setup_gateway(config: dict):
     """Configure messaging platform integrations."""
-    from hermes_cli.gateway import _all_platforms, _platform_status, _configure_platform
+    from jimmy_cli.gateway import _all_platforms, _platform_status, _configure_platform
 
     print_header("Messaging Platforms")
-    print_info("Connect to messaging platforms to chat with Hermes from anywhere.")
+    print_info("Connect to messaging platforms to chat with Jimmy from anywhere.")
     print_info("Toggle with Space, confirm with Enter.")
     print()
 
@@ -2131,7 +2131,7 @@ def setup_gateway(config: dict):
     selected = prompt_checklist("Select platforms to configure:", items, pre_selected)
 
     if not selected:
-        print_info("No platforms selected. Run 'hermes setup gateway' later to configure.")
+        print_info("No platforms selected. Run 'jimmy setup gateway' later to configure.")
     else:
         for idx in selected:
             _configure_platform(platforms[idx])
@@ -2183,18 +2183,18 @@ def setup_gateway(config: dict):
             print_info("   Set one later with /set-home in your chat, or:")
             for plat in missing_home:
                 print_info(
-                    f"     hermes config set {plat.upper()}_HOME_CHANNEL <channel_id>"
+                    f"     jimmy config set {plat.upper()}_HOME_CHANNEL <channel_id>"
                 )
 
     # ── Gateway Service Setup ──
     # Runs UNCONDITIONALLY — even with zero platforms configured. A gateway
     # without platforms is a supported mode (cron scheduler keeps running,
     # and adapters come up automatically once tokens are added later, e.g.
-    # via `hermes import` or `hermes setup gateway`). Gating this on
+    # via `jimmy import` or `jimmy setup gateway`). Gating this on
     # messaging config was the bug that left install-then-import machines
     # with registered cron jobs and restored bot tokens but no process to
     # serve them.
-    from hermes_cli.gateway import (
+    from jimmy_cli.gateway import (
         _is_service_running,
         supports_systemd_services,
         ensure_gateway_service,
@@ -2227,7 +2227,7 @@ def setup_gateway(config: dict):
                 elif _is_macos:
                     launchd_restart()
                 elif _is_windows:
-                    from hermes_cli import gateway_windows
+                    from jimmy_cli import gateway_windows
                     gateway_windows.restart()
             except UserSystemdUnavailableError as e:
                 print_error("  Restart failed — user systemd not reachable:")
@@ -2257,14 +2257,14 @@ def setup_gateway(config: dict):
 def setup_tools(config: dict, first_install: bool = False):
     """Configure tools — delegates to the unified tools_command() in tools_config.py.
 
-    Both `hermes setup tools` and `hermes tools` use the same flow:
+    Both `jimmy setup tools` and `jimmy tools` use the same flow:
     platform selection → toolset toggles → provider/API key configuration.
 
     Args:
         first_install: When True, uses the simplified first-install flow
             (no platform menu, prompts for all unconfigured API keys).
     """
-    from hermes_cli.tools_config import tools_command
+    from jimmy_cli.tools_config import tools_command
 
     tools_command(first_install=first_install, config=config)
 
@@ -2278,7 +2278,7 @@ def setup_telemetry(config: dict):
     """Configure the local, privacy-safe shared-metrics subscriber."""
     print_header("Shared Metrics")
     print_info("Shared metrics contain only bounded counters and histograms.")
-    print_info("Packages stay under this Hermes profile and are not uploaded.")
+    print_info("Packages stay under this Jimmy profile and are not uploaded.")
 
     telemetry = config.get("telemetry")
     if not isinstance(telemetry, dict):
@@ -2309,7 +2309,7 @@ def _model_section_has_credentials(config: dict) -> bool:
     """Return True when any known inference provider has usable credentials.
 
     Sources of truth:
-      * ``PROVIDER_REGISTRY`` in ``hermes_cli.auth`` — lists every supported
+      * ``PROVIDER_REGISTRY`` in ``jimmy_cli.auth`` — lists every supported
         provider along with its ``api_key_env_vars``.
       * ``active_provider`` in the auth store — covers OAuth device-code /
         external-OAuth providers (Nous, Codex, Qwen, Gemini CLI, ...).
@@ -2317,14 +2317,14 @@ def _model_section_has_credentials(config: dict) -> bool:
         ``OPENAI_API_KEY`` / ``OPENROUTER_API_KEY`` values through OpenRouter.
     """
     try:
-        from hermes_cli.auth import get_active_provider
+        from jimmy_cli.auth import get_active_provider
         if get_active_provider():
             return True
     except Exception:
         pass
 
     try:
-        from hermes_cli.auth import PROVIDER_REGISTRY
+        from jimmy_cli.auth import PROVIDER_REGISTRY
     except Exception:
         PROVIDER_REGISTRY = {}  # type: ignore[assignment]
 
@@ -2377,7 +2377,7 @@ def _get_section_config_summary(config: dict, section_key: str) -> Optional[str]
     """Return a short summary if a setup section is already configured, else None.
 
     Used after OpenClaw migration to detect which sections can be skipped.
-    ``get_env_value`` is the module-level import from hermes_cli.config
+    ``get_env_value`` is the module-level import from jimmy_cli.config
     so that test patches on ``setup_mod.get_env_value`` take effect.
     """
     if section_key == "model":
@@ -2399,7 +2399,7 @@ def _get_section_config_summary(config: dict, section_key: str) -> Optional[str]
         return f"max turns: {max_turns}"
 
     elif section_key == "gateway":
-        from hermes_cli.gateway import _all_platforms, _platform_status
+        from jimmy_cli.gateway import _all_platforms, _platform_status
         # Count any non-empty status other than the "not configured" sentinel —
         # platforms like WhatsApp ("enabled, not paired"), Matrix ("configured
         # + E2EE"), and Signal ("partially configured") all indicate the user
@@ -2453,12 +2453,12 @@ _OPENCLAW_SCRIPT = (
     / "migration"
     / "openclaw-migration"
     / "scripts"
-    / "openclaw_to_hermes.py"
+    / "openclaw_to_jimmy.py"
 )
 
 
 def _load_openclaw_migration_module():
-    """Load the openclaw_to_hermes migration script as a module.
+    """Load the openclaw_to_jimmy migration script as a module.
 
     Returns the loaded module, or None if the script can't be loaded.
     """
@@ -2466,7 +2466,7 @@ def _load_openclaw_migration_module():
         return None
 
     spec = importlib.util.spec_from_file_location(
-        "openclaw_to_hermes", _OPENCLAW_SCRIPT
+        "openclaw_to_jimmy", _OPENCLAW_SCRIPT
     )
     if spec is None or spec.loader is None:
         return None
@@ -2486,15 +2486,15 @@ def _load_openclaw_migration_module():
 
 # Item kinds that represent high-impact changes warranting explicit warnings.
 # Gateway tokens/channels can hijack messaging platforms from the old agent.
-# Config values may have different semantics between OpenClaw and Hermes.
+# Config values may have different semantics between OpenClaw and Jimmy.
 # Instruction/context files (.md) can contain incompatible setup procedures.
 _HIGH_IMPACT_KIND_KEYWORDS = {
-    "gateway": "⚠ Gateway/messaging — this will configure Hermes to use your OpenClaw messaging channels",
-    "telegram": "⚠ Telegram — this will point Hermes at your OpenClaw Telegram bot",
-    "slack": "⚠ Slack — this will point Hermes at your OpenClaw Slack workspace",
-    "discord": "⚠ Discord — this will point Hermes at your OpenClaw Discord bot",
-    "whatsapp": "⚠ WhatsApp — this will point Hermes at your OpenClaw WhatsApp connection",
-    "config": "⚠ Config values — OpenClaw settings may not map 1:1 to Hermes equivalents",
+    "gateway": "⚠ Gateway/messaging — this will configure Jimmy to use your OpenClaw messaging channels",
+    "telegram": "⚠ Telegram — this will point Jimmy at your OpenClaw Telegram bot",
+    "slack": "⚠ Slack — this will point Jimmy at your OpenClaw Slack workspace",
+    "discord": "⚠ Discord — this will point Jimmy at your OpenClaw Discord bot",
+    "whatsapp": "⚠ WhatsApp — this will point Jimmy at your OpenClaw WhatsApp connection",
+    "config": "⚠ Config values — OpenClaw settings may not map 1:1 to Jimmy equivalents",
     "soul": "⚠ Instruction file — may contain OpenClaw-specific setup/restart procedures",
     "memory": "⚠ Memory/context file — may reference OpenClaw-specific infrastructure",
     "context": "⚠ Context file — may contain OpenClaw-specific instructions",
@@ -2538,7 +2538,7 @@ def _print_migration_preview(report: dict):
         print()
 
     if conflict_items:
-        print(color("  Would overwrite (conflicts with existing Hermes config):", Colors.YELLOW))
+        print(color("  Would overwrite (conflicts with existing Jimmy config):", Colors.YELLOW))
         for item in conflict_items:
             kind = item.get("kind", "unknown")
             reason = item.get("reason", "already exists")
@@ -2559,13 +2559,13 @@ def _print_migration_preview(report: dict):
         for warning in sorted(warnings_shown):
             print(color(f"    {warning}", Colors.YELLOW))
         print()
-        print(color("  Note: OpenClaw config values may have different semantics in Hermes.", Colors.YELLOW))
-        print(color("  For example, OpenClaw's tool_call_execution: \"auto\" ≠ Hermes's yolo mode.", Colors.YELLOW))
+        print(color("  Note: OpenClaw config values may have different semantics in Jimmy.", Colors.YELLOW))
+        print(color("  For example, OpenClaw's tool_call_execution: \"auto\" ≠ Jimmy's yolo mode.", Colors.YELLOW))
         print(color("  Instruction files (.md) from OpenClaw may contain incompatible procedures.", Colors.YELLOW))
         print()
 
 
-def _offer_openclaw_migration(hermes_home: Path) -> bool:
+def _offer_openclaw_migration(jimmy_home: Path) -> bool:
     """Detect ~/.openclaw and offer to migrate during first-time setup.
 
     Runs a dry-run first to show the user exactly what would be imported,
@@ -2583,12 +2583,12 @@ def _offer_openclaw_migration(hermes_home: Path) -> bool:
     print()
     print_header("OpenClaw Installation Detected")
     print_info(f"Found OpenClaw data at {openclaw_dir}")
-    print_info("Hermes can preview what would be imported before making any changes.")
+    print_info("Jimmy can preview what would be imported before making any changes.")
     print()
 
     if not prompt_yes_no("Would you like to see what can be imported?", default=True):
         print_info(
-            "Skipping migration. You can run it later with: hermes claw migrate --dry-run"
+            "Skipping migration. You can run it later with: jimmy claw migrate --dry-run"
         )
         return False
 
@@ -2613,7 +2613,7 @@ def _offer_openclaw_migration(hermes_home: Path) -> bool:
         selected = mod.resolve_selected_options(None, None, preset="full")
         dry_migrator = mod.Migrator(
             source_root=openclaw_dir.resolve(),
-            target_root=hermes_home.resolve(),
+            target_root=jimmy_home.resolve(),
             execute=False,  # dry-run — no files modified
             workspace_target=None,
             overwrite=True,  # show everything including conflicts
@@ -2646,22 +2646,22 @@ def _offer_openclaw_migration(hermes_home: Path) -> bool:
     # ── Phase 2: Confirm and execute ──
     if not prompt_yes_no("Proceed with migration?", default=False):
         print_info(
-            "Migration cancelled. You can run it later with: hermes claw migrate"
+            "Migration cancelled. You can run it later with: jimmy claw migrate"
         )
         print_info(
             "Use --dry-run to preview again, or --preset minimal for a lighter import."
         )
         return False
 
-    # Execute the migration — overwrite=False so existing Hermes configs are
+    # Execute the migration — overwrite=False so existing Jimmy configs are
     # preserved. The user saw the preview; conflicts are skipped by default.
     try:
         migrator = mod.Migrator(
             source_root=openclaw_dir.resolve(),
-            target_root=hermes_home.resolve(),
+            target_root=jimmy_home.resolve(),
             execute=True,
             workspace_target=None,
-            overwrite=False,  # preserve existing Hermes config
+            overwrite=False,  # preserve existing Jimmy config
             migrate_secrets=True,
             output_dir=None,
             selected_options=selected,
@@ -2684,7 +2684,7 @@ def _offer_openclaw_migration(hermes_home: Path) -> bool:
     if migrated:
         print_success(f"Imported {migrated} item(s) from OpenClaw.")
     if conflicts:
-        print_info(f"Skipped {conflicts} item(s) that already exist in Hermes (use hermes claw migrate --overwrite to force).")
+        print_info(f"Skipped {conflicts} item(s) that already exist in Jimmy (use jimmy claw migrate --overwrite to force).")
     if skipped:
         print_info(f"Skipped {skipped} item(s) (not found or unchanged).")
     if errors:
@@ -2717,8 +2717,8 @@ def _run_portal_one_shot(config: dict) -> None:
     """Nous Portal one-shot setup was removed."""
     print()
     print_warning("Nous Portal / Tool Gateway setup was removed.")
-    print_info("  Configure a model with `hermes model`.")
-    print_info("  Configure tools with `hermes tools`.")
+    print_info("  Configure a model with `jimmy model`.")
+    print_info("  Configure tools with `jimmy tools`.")
 
 
 
@@ -2726,20 +2726,20 @@ def run_setup_wizard(args):
     """Run the interactive setup wizard.
 
     Supports full, quick, and section-specific setup:
-      hermes setup           — full or quick (auto-detected)
-      hermes setup model     — just model/provider
-      hermes setup tts       — just text-to-speech
-      hermes setup terminal  — just terminal backend
-      hermes setup gateway   — just messaging platforms
-      hermes setup tools     — just tool configuration
-      hermes setup telemetry — just local shared metrics
-      hermes setup agent     — just agent settings
+      jimmy setup           — full or quick (auto-detected)
+      jimmy setup model     — just model/provider
+      jimmy setup tts       — just text-to-speech
+      jimmy setup terminal  — just terminal backend
+      jimmy setup gateway   — just messaging platforms
+      jimmy setup tools     — just tool configuration
+      jimmy setup telemetry — just local shared metrics
+      jimmy setup agent     — just agent settings
     """
-    from hermes_cli.config import is_managed, managed_error
+    from jimmy_cli.config import is_managed, managed_error
     if is_managed():
         managed_error("run setup wizard")
         return
-    ensure_hermes_home()
+    ensure_jimmy_home()
 
     reset_requested = bool(getattr(args, "reset", False))
     if reset_requested:
@@ -2750,7 +2750,7 @@ def run_setup_wizard(args):
     quick_requested = bool(getattr(args, "quick", False))
 
     config = load_config()
-    hermes_home = get_hermes_home()
+    jimmy_home = get_jimmy_home()
 
     # Back up existing config before setup modifies it (#3522)
     config_path = get_config_path()
@@ -2813,7 +2813,7 @@ def run_setup_wizard(args):
         return
 
     # Check if this is an existing installation with a provider configured
-    from hermes_cli.auth import get_active_provider
+    from jimmy_cli.auth import get_active_provider
 
     active_provider = get_active_provider()
     is_existing = (
@@ -2866,16 +2866,16 @@ def run_setup_wizard(args):
         # missing items" flow (useful after a partial OpenClaw migration
         # or when a required API key got cleared).
         if quick_requested:
-            _run_quick_setup(config, hermes_home)
+            _run_quick_setup(config, jimmy_home)
             return
 
         print()
         print_header("Reconfigure")
-        print_success("You already have Hermes configured.")
+        print_success("You already have Jimmy configured.")
         print_info("Running the full wizard — each prompt shows your current value.")
         print_info("Press Enter to keep it, or type a new value to change it.")
         print_info("")
-        print_info("Tip: jump straight to a section with 'hermes setup model|terminal|")
+        print_info("Tip: jump straight to a section with 'jimmy setup model|terminal|")
         print_info("     gateway|tools|agent', or fill only missing items with --quick.")
         # Fall through to the "Full Setup — run all sections" block below.
         # --reconfigure is now the default on existing installs; the flag
@@ -2891,12 +2891,12 @@ def run_setup_wizard(args):
             print()
 
         # Offer OpenClaw migration before configuration begins
-        migration_ran = _offer_openclaw_migration(hermes_home)
+        migration_ran = _offer_openclaw_migration(jimmy_home)
         if migration_ran:
             config = load_config()
 
         setup_mode = prompt_choice(
-            "How would you like to set up Hermes?",
+            "How would you like to set up Jimmy?",
             [
                 "Quick Setup (Nous Portal) — free OAuth login, no API keys, model + tools (recommended)",
                 "Full setup — configure every provider, tool & option yourself (bring your own keys)",
@@ -2906,20 +2906,20 @@ def run_setup_wizard(args):
         )
 
         if setup_mode == 0:
-            _run_first_time_quick_setup(config, hermes_home, is_existing)
+            _run_first_time_quick_setup(config, jimmy_home, is_existing)
             return
         if setup_mode == 2:
-            _run_blank_slate_setup(config, hermes_home, is_existing)
+            _run_blank_slate_setup(config, jimmy_home, is_existing)
             return
 
     # ── Full Setup — run all sections ──
     print_header("Configuration Location")
     print_info(f"Config file:  {get_config_path()}")
     print_info(f"Secrets file: {get_env_path()}")
-    print_info(f"Data folder:  {hermes_home}")
+    print_info(f"Data folder:  {jimmy_home}")
     print_info(f"Install dir:  {PROJECT_ROOT}")
     print()
-    print_info("You can edit these files directly or use 'hermes config edit'")
+    print_info("You can edit these files directly or use 'jimmy config edit'")
 
     if migration_ran:
         print()
@@ -2937,7 +2937,7 @@ def run_setup_wizard(args):
 
     # Section 3: Agent Settings — no longer prompted. First installs get the
     # recommended defaults silently; existing installs keep whatever they have.
-    # Tune later with `hermes setup agent`.
+    # Tune later with `jimmy setup agent`.
     if not is_existing:
         _apply_default_agent_settings(config)
 
@@ -2947,7 +2947,7 @@ def run_setup_wizard(args):
     else:
         # Section skipped (migrated config) — still make sure the gateway
         # service exists so cron jobs and migrated platforms actually run.
-        from hermes_cli.gateway import ensure_gateway_service
+        from jimmy_cli.gateway import ensure_gateway_service
         ensure_gateway_service(context="setup")
 
     # Section 5: Tools
@@ -2960,19 +2960,19 @@ def run_setup_wizard(args):
         print_info(f"Previous config backed up to: {_backup_path}")
         print_info("If setup changed a value you customized, restore it with:")
         print_info(f"  cp {_backup_path} {config_path}")
-    _print_setup_summary(config, hermes_home)
+    _print_setup_summary(config, jimmy_home)
 
 
-def _run_first_time_quick_setup(config: dict, hermes_home, is_existing: bool):
+def _run_first_time_quick_setup(config: dict, jimmy_home, is_existing: bool):
     """Streamlined first-time setup via Nous Portal: OAuth, model, terminal & messaging.
 
     Routes straight to the Nous Portal provider — runs the device-code OAuth
     login, picks a Nous model, then configures the terminal backend and (optionally)
     a messaging platform. Applies sensible defaults for everything else (agent
-    settings, tools); the user can customize later via ``hermes setup <section>``
-    or switch providers with ``hermes model``.
+    settings, tools); the user can customize later via ``jimmy setup <section>``
+    or switch providers with ``jimmy model``.
     """
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     # Step 1: Nous Portal — OAuth login + model selection.
     # _model_flow_nous() handles both the logged-out path (device-code OAuth,
@@ -2982,10 +2982,10 @@ def _run_first_time_quick_setup(config: dict, hermes_home, is_existing: bool):
     print_header("Nous Portal")
     print_info("One subscription, 300+ models, plus the Tool Gateway:")
     print_info("  web search, image generation, TTS, browser automation.")
-    print_info("Sign up: https://portal.nousresearch.com/manage-subscription")
+    print_info("Sign up: https://portal.jimmy-agent.com/manage-subscription")
     print()
     try:
-        from hermes_cli.main import _model_flow_nous
+        from jimmy_cli.main import _model_flow_nous
         _model_flow_nous(config)
     except (KeyboardInterrupt, EOFError):
         print()
@@ -2993,7 +2993,7 @@ def _run_first_time_quick_setup(config: dict, hermes_home, is_existing: bool):
     except Exception as exc:
         logger.debug("_model_flow_nous error during quick setup: %s", exc)
         print_warning(f"Nous Portal setup encountered an error: {exc}")
-        print_info("You can try again later with: hermes model")
+        print_info("You can try again later with: jimmy model")
 
     # Re-sync the wizard's config dict from disk — _model_flow_nous (and the
     # underlying login/model save) write via their own load/save cycle, and the
@@ -3016,7 +3016,7 @@ def _run_first_time_quick_setup(config: dict, hermes_home, is_existing: bool):
         "Connect a messaging platform? (Telegram, Discord, etc.)",
         [
             "Set up messaging now (recommended)",
-            "Skip — set up later with 'hermes setup gateway'",
+            "Skip — set up later with 'jimmy setup gateway'",
         ],
         0,
     )
@@ -3027,19 +3027,19 @@ def _run_first_time_quick_setup(config: dict, hermes_home, is_existing: bool):
     else:
         # Messaging skipped — still install/start the gateway service so cron
         # jobs run and platforms come alive as soon as tokens are added later
-        # (e.g. via `hermes import` from another machine).
-        from hermes_cli.gateway import ensure_gateway_service
+        # (e.g. via `jimmy import` from another machine).
+        from jimmy_cli.gateway import ensure_gateway_service
         ensure_gateway_service(context="setup")
 
     print()
     print_success("Setup complete! You're ready to go.")
     print()
-    print_info("  Configure all settings:    hermes setup")
+    print_info("  Configure all settings:    jimmy setup")
     if gateway_choice != 0:
-        print_info("  Connect Telegram/Discord:  hermes setup gateway")
+        print_info("  Connect Telegram/Discord:  jimmy setup gateway")
     print()
 
-    _print_setup_summary(config, hermes_home)
+    _print_setup_summary(config, jimmy_home)
 
 
 def _blank_slate_minimal_toolsets(config: dict):
@@ -3055,7 +3055,7 @@ def _blank_slate_minimal_toolsets(config: dict):
        non-configurable platform-toolset recovery that would otherwise re-add
        toolsets like ``kanban``). We list every known toolset except the two we
        keep, guaranteeing a true blank slate regardless of platform/recovery
-       quirks. The user re-enables any of them later via ``hermes tools`` (which
+       quirks. The user re-enables any of them later via ``jimmy tools`` (which
        rewrites ``platform_toolsets``) or by editing ``agent.disabled_toolsets``.
     """
     keep = {"file", "terminal"}
@@ -3063,7 +3063,7 @@ def _blank_slate_minimal_toolsets(config: dict):
 
     try:
         from toolsets import TOOLSETS
-        from hermes_cli.tools_config import CONFIGURABLE_TOOLSETS, _get_plugin_toolset_keys
+        from jimmy_cli.tools_config import CONFIGURABLE_TOOLSETS, _get_plugin_toolset_keys
 
         all_keys = set()
         all_keys.update(k for k, _, _ in CONFIGURABLE_TOOLSETS)
@@ -3071,7 +3071,7 @@ def _blank_slate_minimal_toolsets(config: dict):
         # Plain (non-composite) TOOLSETS entries — catches recovered toolsets
         # like ``kanban`` that aren't in CONFIGURABLE_TOOLSETS but get re-added.
         for k, tdef in TOOLSETS.items():
-            if k.startswith("hermes-"):
+            if k.startswith("jimmy-"):
                 continue  # platform composites — not user-facing toolsets
             if isinstance(tdef, dict) and tdef.get("includes"):
                 continue  # composite groupings, not leaf toolsets
@@ -3093,8 +3093,8 @@ def _blank_slate_minimal_toolsets(config: dict):
 def _blank_slate_minimize_config(config: dict):
     """Turn OFF the optional config features for a Blank Slate install.
 
-    Everything here is opt-in afterwards via ``hermes setup agent`` /
-    ``hermes config set``. We keep only what's needed to run.
+    Everything here is opt-in afterwards via ``jimmy setup agent`` /
+    ``jimmy config set``. We keep only what's needed to run.
     """
     config.setdefault("agent", {})["max_turns"] = 90
 
@@ -3115,7 +3115,7 @@ def _blank_slate_minimize_config(config: dict):
     config.setdefault("display", {})["tool_progress"] = "all"
 
 
-def _run_blank_slate_setup(config: dict, hermes_home, is_existing: bool):
+def _run_blank_slate_setup(config: dict, jimmy_home, is_existing: bool):
     """Blank Slate setup — start with everything off except the bare minimum.
 
     Forces only the essentials to run an agent (provider + model, the file and
@@ -3173,7 +3173,7 @@ def _run_blank_slate_setup(config: dict, hermes_home, is_existing: bool):
     if path == 0:
         save_config(config)
         # Blank Slate means no bundled skills; record the opt-out so future
-        # `hermes update` runs don't re-inject them.
+        # `jimmy update` runs don't re-inject them.
         try:
             from tools.skills_sync import set_bundled_skills_opt_out
             set_bundled_skills_opt_out(True)
@@ -3182,22 +3182,22 @@ def _run_blank_slate_setup(config: dict, hermes_home, is_existing: bool):
         print()
         print_success("Blank Slate setup complete — minimal agent ready.")
         print_info("Enable anything later, on demand:")
-        print_info("  Enable tools:        hermes tools")
-        print_info("  Seed skills:         hermes skills opt-in --sync")
-        print_info("  Add MCP servers:     hermes mcp add")
-        print_info("  Enable plugins:      hermes plugins")
-        print_info("  Tune agent settings: hermes setup agent")
+        print_info("  Enable tools:        jimmy tools")
+        print_info("  Seed skills:         jimmy skills opt-in --sync")
+        print_info("  Add MCP servers:     jimmy mcp add")
+        print_info("  Enable plugins:      jimmy plugins")
+        print_info("  Tune agent settings: jimmy setup agent")
         print()
-        _print_setup_summary(config, hermes_home)
+        _print_setup_summary(config, jimmy_home)
         return
 
     # ── Walkthrough path — opt in to each capability ──
-    _blank_slate_walkthrough(config, hermes_home)
+    _blank_slate_walkthrough(config, jimmy_home)
 
 
-def _blank_slate_walkthrough(config: dict, hermes_home):
+def _blank_slate_walkthrough(config: dict, jimmy_home):
     """Opt-in walkthrough for Blank Slate: skills, tools, plugins, MCP, gateway."""
-    from hermes_cli.config import load_config
+    from jimmy_cli.config import load_config
 
     # ── Bundled skills — default to NONE, offer to seed all ──
     print()
@@ -3218,8 +3218,8 @@ def _blank_slate_walkthrough(config: dict, hermes_home):
         else:
             set_bundled_skills_opt_out(True)
             print_info("No skills seeded. A .no-bundled-skills marker keeps future")
-            print_info("`hermes update` runs from re-injecting them. Opt back in any")
-            print_info("time with `hermes skills opt-in --sync`.")
+            print_info("`jimmy update` runs from re-injecting them. Opt back in any")
+            print_info("time with `jimmy skills opt-in --sync`.")
     except Exception as exc:
         logger.debug("blank-slate skill handling error: %s", exc)
         print_warning(f"Skill setup step encountered an error: {exc}")
@@ -3232,7 +3232,7 @@ def _blank_slate_walkthrough(config: dict, hermes_home):
     print_info(" the most minimal agent.)")
     if prompt_yes_no("Open the tool selector to enable more tools?", default=False):
         try:
-            from hermes_cli.tools_config import tools_command
+            from jimmy_cli.tools_config import tools_command
             tools_command(first_install=False, config=config)
             # tools_command saves via its own load/save cycle — re-sync.
             _refreshed = load_config()
@@ -3242,23 +3242,23 @@ def _blank_slate_walkthrough(config: dict, hermes_home):
             logger.debug("blank-slate tools_command error: %s", exc)
             print_warning(f"Tool selector encountered an error: {exc}")
     else:
-        print_info("Keeping the minimal toolset. Add tools later with `hermes tools`.")
+        print_info("Keeping the minimal toolset. Add tools later with `jimmy tools`.")
 
     # ── Built-in plugins (off unless chosen) ──
     print()
     print_header("Plugins")
     if prompt_yes_no("Review and enable built-in plugins now?", default=False):
-        print_info("Manage plugins with `hermes plugins list` / `hermes plugins install`.")
+        print_info("Manage plugins with `jimmy plugins list` / `jimmy plugins install`.")
     else:
-        print_info("No plugins enabled. Add later with `hermes plugins`.")
+        print_info("No plugins enabled. Add later with `jimmy plugins`.")
 
     # ── MCP servers (off unless chosen) ──
     print()
     print_header("MCP Servers")
     if prompt_yes_no("Add an MCP server now?", default=False):
-        print_info("Add servers with `hermes mcp add <name> --url ... | --command ...`.")
+        print_info("Add servers with `jimmy mcp add <name> --url ... | --command ...`.")
     else:
-        print_info("No MCP servers configured. Add later with `hermes mcp add`.")
+        print_info("No MCP servers configured. Add later with `jimmy mcp add`.")
 
     # ── Optional messaging gateway ──
     print()
@@ -3269,18 +3269,18 @@ def _blank_slate_walkthrough(config: dict, hermes_home):
 
     print()
     print_success("Blank Slate setup complete — minimal agent ready.")
-    print_info("  Enable more tools:   hermes tools")
-    print_info("  Seed skills:         hermes skills opt-in --sync")
-    print_info("  Add MCP servers:     hermes mcp add")
-    print_info("  Tune agent settings: hermes setup agent")
+    print_info("  Enable more tools:   jimmy tools")
+    print_info("  Seed skills:         jimmy skills opt-in --sync")
+    print_info("  Add MCP servers:     jimmy mcp add")
+    print_info("  Tune agent settings: jimmy setup agent")
     print()
 
-    _print_setup_summary(config, hermes_home)
+    _print_setup_summary(config, jimmy_home)
 
 
-def _run_quick_setup(config: dict, hermes_home):
+def _run_quick_setup(config: dict, jimmy_home):
     """Quick setup — only configure items that are missing."""
-    from hermes_cli.config import (
+    from jimmy_cli.config import (
         get_missing_env_vars,
         get_missing_config_fields,
         check_config_version,
@@ -3309,7 +3309,7 @@ def _run_quick_setup(config: dict, hermes_home):
     if not has_anything_missing:
         print_success("Everything is configured! Nothing to do.")
         print()
-        print_info("Run 'hermes setup' and choose 'Full Setup' to reconfigure,")
+        print_info("Run 'jimmy setup' and choose 'Full Setup' to reconfigure,")
         print_info("or pick a specific section from the menu.")
         return
 
@@ -3371,8 +3371,8 @@ def _run_quick_setup(config: dict, hermes_home):
     if missing_messaging:
         print()
         print_header("Messaging Platforms")
-        print_info("Connect Hermes to messaging apps to chat from anywhere.")
-        print_info("You can configure these later with 'hermes setup gateway'.")
+        print_info("Connect Jimmy to messaging apps to chat from anywhere.")
+        print_info("You can configure these later with 'jimmy setup gateway'.")
 
         # Group by platform (preserving order)
         platform_order = []
@@ -3441,4 +3441,4 @@ def _run_quick_setup(config: dict, hermes_home):
         save_config(config)
 
     # Jump to summary
-    _print_setup_summary(config, hermes_home)
+    _print_setup_summary(config, jimmy_home)

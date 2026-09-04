@@ -3,7 +3,7 @@
 Every consumer of these capabilities sits on a per-request hot path that must
 never block on HTTP, so a process whose in-memory cache is cold answers
 "unknown" — and on that answer the Nous profile drops a "thinking off" disable
-rather than risk a 400. A short-lived process (``hermes -p``, a cron job, a
+rather than risk a 400. A short-lived process (``jimmy -p``, a cron job, a
 freshly booted gateway) is ALWAYS cold, so without a disk copy that fallback is
 the only behavior those runs ever get and the user keeps paying for reasoning
 they turned off.
@@ -16,7 +16,7 @@ import json
 
 import pytest
 
-import hermes_cli.models as models_mod
+import jimmy_cli.models as models_mod
 
 
 _CATALOG = json.dumps({
@@ -145,7 +145,7 @@ def test_staging_portal_does_not_read_productions_mirror(
     )
 
     cold_process()
-    monkeypatch.setenv("NOUS_INFERENCE_BASE_URL", "https://staging.nousresearch.com")
+    monkeypatch.setenv("NOUS_INFERENCE_BASE_URL", "https://staging.jimmy-agent.com")
     monkeypatch.setattr(models_mod, "_urlopen_model_catalog_request", offline)
 
     assert models_mod.nous_model_reasoning_capabilities(
@@ -197,7 +197,7 @@ def test_pricing_fetch_seeds_the_mirror(cold_process, offline, monkeypatch):
         lambda req, *, timeout: _response(_CATALOG),
     )
     models_mod.fetch_models_with_pricing(
-        base_url="https://inference-api.nousresearch.com"
+        base_url="https://inference-api.jimmy-agent.com"
     )
 
     cold_process()

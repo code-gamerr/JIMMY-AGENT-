@@ -1,7 +1,7 @@
 """Credential-pool auth subcommands."""
 
 from __future__ import annotations
-from hermes_cli.cli_output import line_input
+from jimmy_cli.cli_output import line_input
 
 import math
 import sys
@@ -28,10 +28,10 @@ from agent.credential_pool import (
     list_custom_pool_providers,
     load_pool,
 )
-import hermes_cli.auth as auth_mod
-from hermes_cli.auth import PROVIDER_REGISTRY
-from hermes_constants import OPENROUTER_BASE_URL
-from hermes_cli.secret_prompt import masked_secret_prompt
+import jimmy_cli.auth as auth_mod
+from jimmy_cli.auth import PROVIDER_REGISTRY
+from jimmy_constants import OPENROUTER_BASE_URL
+from jimmy_cli.secret_prompt import masked_secret_prompt
 
 
 # Providers that support OAuth login in addition to API keys.
@@ -41,7 +41,7 @@ _OAUTH_CAPABLE_PROVIDERS = {"anthropic", "nous", "openai-codex", "xai-oauth", "q
 def _get_custom_provider_names() -> list:
     """Return list of (display_name, pool_key, provider_key) tuples."""
     try:
-        from hermes_cli.config import get_compatible_custom_providers, load_config
+        from jimmy_cli.config import get_compatible_custom_providers, load_config
 
         config = load_config()
     except Exception:
@@ -185,7 +185,7 @@ def auth_add_command(args) -> None:
     # Matches the Codex device_code re-link pattern that predates this.
     if not provider.startswith(CUSTOM_POOL_PREFIX):
         try:
-            from hermes_cli.auth import (
+            from jimmy_cli.auth import (
                 _load_auth_store,
                 unsuppress_credential_source,
             )
@@ -225,7 +225,7 @@ def auth_add_command(args) -> None:
     if provider == "anthropic":
         from agent import anthropic_adapter as anthropic_mod
 
-        creds = anthropic_mod.run_hermes_oauth_login_pure()
+        creds = anthropic_mod.run_jimmy_oauth_login_pure()
         if not creds:
             raise SystemExit("Anthropic OAuth login did not return credentials.")
         label = (getattr(args, "label", None) or "").strip() or label_from_token(
@@ -238,7 +238,7 @@ def auth_add_command(args) -> None:
             label=label,
             auth_type=AUTH_TYPE_OAUTH,
             priority=0,
-            source=f"{SOURCE_MANUAL}:hermes_pkce",
+            source=f"{SOURCE_MANUAL}:jimmy_pkce",
             access_token=creds["access_token"],
             refresh_token=creds.get("refresh_token"),
             expires_at_ms=creds.get("expires_at_ms"),
@@ -250,9 +250,9 @@ def auth_add_command(args) -> None:
 
     if provider == "nous":
         # Codex-style auto-import: if a shared Nous credential lives at
-        # <hermes-root>/shared/nous_auth.json (written by any previous
+        # <jimmy-root>/shared/nous_auth.json (written by any previous
         # successful login), offer to import it instead of running the
-        # full device-code flow. This makes `hermes --profile <name>
+        # full device-code flow. This makes `jimmy --profile <name>
         # auth add nous --type oauth` a one-tap operation for users who
         # run multiple profiles.
         shared = auth_mod._read_shared_nous_state()
@@ -319,7 +319,7 @@ def auth_add_command(args) -> None:
         # xai-oauth path below) instead of routing through the singleton
         # ``_save_codex_tokens`` save path.
         # The singleton round-trip collapsed every added account into the
-        # latest login: a second ``hermes auth add openai-codex`` overwrote
+        # latest login: a second ``jimmy auth add openai-codex`` overwrote
         # the first account's singleton-mirrored ``device_code`` entry rather
         # than creating an independent one (#39236). ``manual:device_code``
         # entries refresh from their own token pair, so they need no singleton
@@ -359,7 +359,7 @@ def auth_add_command(args) -> None:
         # openai-codex / qwen-oauth / minimax-oauth patterns) instead of
         # routing through the singleton ``_save_xai_oauth_tokens`` save path.
         # The singleton round-trip collapsed every added account into the
-        # latest login: a second ``hermes auth add xai-oauth`` overwrote the
+        # latest login: a second ``jimmy auth add xai-oauth`` overwrote the
         # first account's singleton-mirrored ``device_code`` entry rather than
         # creating an independent one. ``manual:device_code`` entries refresh
         # from their own token pair (``_sync_xai_oauth_entry_from_auth_store``
@@ -432,7 +432,7 @@ def auth_add_command(args) -> None:
         print(f'Added {provider} OAuth credential #{len(pool.entries())}: "{entry.label}"')
         return
 
-    raise SystemExit(f"`hermes auth add {provider}` is not implemented for auth type {requested_type} yet.")
+    raise SystemExit(f"`jimmy auth add {provider}` is not implemented for auth type {requested_type} yet.")
 
 
 def auth_list_command(args) -> None:
@@ -476,14 +476,14 @@ def auth_remove_command(args) -> None:
         raise SystemExit(f'No credential matching "{target}" for provider {provider}.')
     print(f"Removed {provider} credential #{index} ({removed.label})")
 
-    # Unified removal dispatch.  Every credential source Hermes reads from
+    # Unified removal dispatch.  Every credential source Jimmy reads from
     # (env vars, external OAuth files, auth.json blocks, custom config)
     # has a RemovalStep registered in agent.credential_sources.  The step
     # handles its source-specific cleanup and we centralise suppression +
     # user-facing output here so every source behaves identically from
     # the user's perspective.
     from agent.credential_sources import find_removal_step
-    from hermes_cli.auth import suppress_credential_source
+    from jimmy_cli.auth import suppress_credential_source
 
     step = find_removal_step(provider, removed.source)
     if step is None:
@@ -510,7 +510,7 @@ def auth_reset_command(args) -> None:
 def auth_status_command(args) -> None:
     provider = _normalize_provider(getattr(args, "provider", "") or "")
     if not provider:
-        raise SystemExit("Provider is required. Example: `hermes auth status spotify`.")
+        raise SystemExit("Provider is required. Example: `jimmy auth status spotify`.")
     status = auth_mod.get_auth_status(provider)
     if not status.get("logged_in"):
         reason = status.get("error")
@@ -546,7 +546,7 @@ def auth_spotify_command(args) -> None:
 
 
 def _interactive_auth() -> None:
-    """Interactive credential pool management when `hermes auth` is called bare."""
+    """Interactive credential pool management when `jimmy auth` is called bare."""
     # Show current pool status first
     print("Credential Pool Status")
     print("=" * 50)
@@ -576,7 +576,7 @@ def _interactive_auth() -> None:
 
     # Show Azure Foundry Entra ID status
     try:
-        from hermes_cli.config import load_config
+        from jimmy_cli.config import load_config
         _cfg = load_config()
         _model_cfg = _cfg.get("model") if isinstance(_cfg, dict) else None
         if isinstance(_model_cfg, dict):
@@ -765,7 +765,7 @@ def _interactive_strategy() -> None:
         print("Invalid choice.")
         return
 
-    from hermes_cli.config import load_config, save_config
+    from jimmy_cli.config import load_config, save_config
     cfg = load_config()
     pool_strategies = cfg.get("credential_pool_strategies") or {}
     if not isinstance(pool_strategies, dict):

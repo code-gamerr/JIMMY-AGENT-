@@ -1,8 +1,8 @@
 """Auxiliary-task pickers share one provider-inventory substrate.
 
-Every aux picker (``hermes model`` → Configure auxiliary models, the
-``hermes tools`` vision picker, and any future one) must route through
-``hermes_cli.inventory.build_aux_picker_rows()`` so it shows the same
+Every aux picker (``jimmy model`` → Configure auxiliary models, the
+``jimmy tools`` vision picker, and any future one) must route through
+``jimmy_cli.inventory.build_aux_picker_rows()`` so it shows the same
 provider universe as ``/model``.
 
 Two independent contributor PRs fixed the same two call sites for exactly
@@ -51,13 +51,13 @@ CONFIG = {
 
 @pytest.fixture
 def configured_home(tmp_path, monkeypatch):
-    """A HERMES_HOME with one ``providers:`` entry and one legacy
+    """A JIMMY_HOME with one ``providers:`` entry and one legacy
     ``custom_providers:`` entry, both credentialled via env."""
-    home = tmp_path / ".hermes"
+    home = tmp_path / ".jimmy"
     home.mkdir()
     (home / "config.yaml").write_text(yaml.safe_dump(CONFIG))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
     monkeypatch.setenv("MYLLM_KEY", "sk-mine")
     monkeypatch.setenv("LEGACY_KEY", "sk-legacy")
@@ -74,7 +74,7 @@ def test_aux_picker_surfaces_user_defined_providers(configured_home):
     neither ``user_providers`` nor ``custom_providers``, so a user who had
     configured their own endpoint could not route any auxiliary task to it.
     """
-    from hermes_cli.inventory import build_aux_picker_rows
+    from jimmy_cli.inventory import build_aux_picker_rows
 
     slugs = {r["slug"] for r in build_aux_picker_rows()}
 
@@ -90,7 +90,7 @@ def test_aux_picker_requests_exhausted_pool_visibility(configured_home):
     """#66624: a provider whose credential pool is entirely rate-limited
     must stay visible. Rate limits are per-model and the aux picker writes a
     config the user runs later, once the cooldown has cleared."""
-    from hermes_cli import inventory
+    from jimmy_cli import inventory
 
     seen = {}
 
@@ -98,7 +98,7 @@ def test_aux_picker_requests_exhausted_pool_visibility(configured_home):
         seen.update(kwargs)
         return []
 
-    with patch("hermes_cli.model_switch.list_authenticated_providers", _capture):
+    with patch("jimmy_cli.model_switch.list_authenticated_providers", _capture):
         inventory.build_aux_picker_rows()
 
     assert seen.get("for_picker") is True
@@ -123,8 +123,8 @@ def test_aux_pickers_route_through_the_shared_substrate(configured_home):
     of user config the author didn't think about. Both pickers must reach
     the provider list only through ``build_aux_picker_rows``.
     """
-    import hermes_cli.main as main
-    import hermes_cli.tools_config as tools_config
+    import jimmy_cli.main as main
+    import jimmy_cli.tools_config as tools_config
 
     direct_calls = []
     substrate_calls = []
@@ -141,9 +141,9 @@ def test_aux_pickers_route_through_the_shared_substrate(configured_home):
     # provider list. The vision picker returns early on empty rows; the
     # aux-task picker still renders auto/custom/back, so cancel its menu.
     with (
-        patch("hermes_cli.model_switch.list_authenticated_providers", _direct),
-        patch("hermes_cli.inventory.build_aux_picker_rows", _substrate),
-        patch("hermes_cli.main._prompt_provider_choice", return_value=None),
+        patch("jimmy_cli.model_switch.list_authenticated_providers", _direct),
+        patch("jimmy_cli.inventory.build_aux_picker_rows", _substrate),
+        patch("jimmy_cli.main._prompt_provider_choice", return_value=None),
     ):
         main._aux_select_for_task("compression")
         tools_config._configure_vision_provider_model({}, {})
@@ -154,6 +154,6 @@ def test_aux_pickers_route_through_the_shared_substrate(configured_home):
     )
     assert direct_calls == [], (
         "aux pickers must not call list_authenticated_providers directly — "
-        "route through hermes_cli.inventory.build_aux_picker_rows so custom "
+        "route through jimmy_cli.inventory.build_aux_picker_rows so custom "
         "providers, exclusions, and picker visibility stay consistent"
     )

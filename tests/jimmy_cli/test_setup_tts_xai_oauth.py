@@ -12,14 +12,14 @@ def test_run_xai_oauth_login_from_setup_does_not_hijack_active_provider(
 
     Regression: `_run_xai_oauth_login_from_setup` used to call
     `_update_config_for_provider("xai-oauth")` (and token save flipped
-    `active_provider`), so `hermes setup tts` OAuth login hijacked the main
+    `active_provider`), so `jimmy setup tts` OAuth login hijacked the main
     chat provider.
     """
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    jimmy_home = tmp_path / "jimmy"
+    jimmy_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("JIMMY_HOME", str(jimmy_home))
 
-    auth_path = hermes_home / "auth.json"
+    auth_path = jimmy_home / "auth.json"
     auth_path.write_text(
         json.dumps(
             {
@@ -30,7 +30,7 @@ def test_run_xai_oauth_login_from_setup_does_not_hijack_active_provider(
         ),
         encoding="utf-8",
     )
-    config_path = hermes_home / "config.yaml"
+    config_path = jimmy_home / "config.yaml"
     config_path.write_text(
         yaml.safe_dump(
             {
@@ -46,7 +46,7 @@ def test_run_xai_oauth_login_from_setup_does_not_hijack_active_provider(
     )
 
     monkeypatch.setattr(
-        "hermes_cli.auth._xai_oauth_device_code_login",
+        "jimmy_cli.auth._xai_oauth_device_code_login",
         lambda **kwargs: {
             "tokens": {
                 "access_token": "tts-xai-access",
@@ -60,10 +60,10 @@ def test_run_xai_oauth_login_from_setup_does_not_hijack_active_provider(
             "last_refresh": "2026-07-25T12:00:00Z",
         },
     )
-    monkeypatch.setattr("hermes_cli.auth._is_remote_session", lambda: True)
+    monkeypatch.setattr("jimmy_cli.auth._is_remote_session", lambda: True)
 
-    from hermes_cli.auth import is_source_suppressed, suppress_credential_source
-    from hermes_cli.setup import _run_xai_oauth_login_from_setup
+    from jimmy_cli.auth import is_source_suppressed, suppress_credential_source
+    from jimmy_cli.setup import _run_xai_oauth_login_from_setup
 
     suppress_credential_source("xai-oauth", "device_code")
     assert is_source_suppressed("xai-oauth", "device_code") is True

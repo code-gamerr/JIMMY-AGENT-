@@ -359,7 +359,7 @@ class TestBuildApiKwargsNousPortal:
         agent = _make_agent(
             monkeypatch,
             "nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            base_url="https://inference-api.jimmy-agent.com/v1",
             model="gpt-5",
         )
         messages = [{"role": "user", "content": "hi"}]
@@ -371,7 +371,7 @@ class TestBuildApiKwargsNousPortal:
         agent = _make_agent(
             monkeypatch,
             "nous",
-            base_url="https://inference-api.nousresearch.com/v1",
+            base_url="https://inference-api.jimmy-agent.com/v1",
             model="gpt-5",
         )
         messages = [{"role": "user", "content": "hi"}]
@@ -777,7 +777,7 @@ class TestAuxiliaryClientProviderPriority:
         }
         with patch("agent.auxiliary_client._read_nous_auth", return_value=nous_auth), \
              patch("agent.auxiliary_client.OpenAI") as mock, \
-             patch("hermes_cli.models.get_nous_recommended_aux_model", return_value=None):
+             patch("jimmy_cli.models.get_nous_recommended_aux_model", return_value=None):
             client, model = get_text_auxiliary_client()
         assert model == _NOUS_MODEL
 

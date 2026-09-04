@@ -1,4 +1,4 @@
-"""Tests for hermes_cli.gateway_windows."""
+"""Tests for jimmy_cli.gateway_windows."""
 
 import logging
 import subprocess
@@ -7,12 +7,12 @@ from types import SimpleNamespace
 
 import pytest
 
-import hermes_cli.gateway as gateway
-import hermes_cli.gateway_windows as gateway_windows
-import hermes_cli.setup as setup
+import jimmy_cli.gateway as gateway
+import jimmy_cli.gateway_windows as gateway_windows
+import jimmy_cli.setup as setup
 
 
-_BREAKAWAY_MARKER = "_HERMES_GATEWAY_BREAKAWAY"
+_BREAKAWAY_MARKER = "_JIMMY_GATEWAY_BREAKAWAY"
 
 
 
@@ -47,11 +47,11 @@ def test_build_gateway_argv_keeps_venv_console_python_for_uv_venv(monkeypatch, t
     project = tmp_path / "project"
     scripts = project / "venv" / "Scripts"
     site_packages = project / "venv" / "Lib" / "site-packages"
-    hermes_home = tmp_path / "hermes-home"
+    jimmy_home = tmp_path / "jimmy-home"
     base = tmp_path / "uv" / "python" / "cpython-3.11-windows-x86_64-none"
     scripts.mkdir(parents=True)
     site_packages.mkdir(parents=True)
-    hermes_home.mkdir()
+    jimmy_home.mkdir()
     base.mkdir(parents=True)
 
     venv_python = scripts / "python.exe"
@@ -64,17 +64,17 @@ def test_build_gateway_argv_keeps_venv_console_python_for_uv_venv(monkeypatch, t
         encoding="utf-8",
     )
 
-    import hermes_cli.gateway as gateway
+    import jimmy_cli.gateway as gateway
 
     monkeypatch.setattr(gateway, "PROJECT_ROOT", project)
     monkeypatch.setattr(gateway, "get_python_path", lambda: str(venv_python))
-    monkeypatch.setattr(gateway, "_profile_arg", lambda hermes_home: "")
-    monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: str(hermes_home))
+    monkeypatch.setattr(gateway, "_profile_arg", lambda jimmy_home: "")
+    monkeypatch.setattr("jimmy_cli.config.get_jimmy_home", lambda: str(jimmy_home))
 
     argv, cwd, env_overlay = gateway_windows._build_gateway_argv()
 
-    assert argv[:3] == [str(venv_python), "-m", "hermes_cli.main"]
-    assert cwd == str(hermes_home.resolve())
+    assert argv[:3] == [str(venv_python), "-m", "jimmy_cli.main"]
+    assert cwd == str(jimmy_home.resolve())
     assert env_overlay["VIRTUAL_ENV"] == str(project / "venv")
     assert str(project) in env_overlay["PYTHONPATH"].split(gateway_windows.os.pathsep)
 
@@ -82,7 +82,7 @@ def test_build_gateway_argv_keeps_venv_console_python_for_uv_venv(monkeypatch, t
 @pytest.mark.windows_only
 def test_spawn_detached_marks_primary_breakaway_success(monkeypatch, tmp_path, caplog):
     """A successful breakaway spawn reports true without a warning."""
-    argv = ["python.exe", "-m", "hermes_cli.main", "gateway", "run"]
+    argv = ["python.exe", "-m", "jimmy_cli.main", "gateway", "run"]
     cwd = str(tmp_path)
     calls = []
 
@@ -93,9 +93,9 @@ def test_spawn_detached_marks_primary_breakaway_success(monkeypatch, tmp_path, c
     monkeypatch.setattr(
         gateway_windows,
         "_build_gateway_argv",
-        lambda: (argv, cwd, {"HERMES_GATEWAY_DETACHED": "1"}),
+        lambda: (argv, cwd, {"JIMMY_GATEWAY_DETACHED": "1"}),
     )
-    monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr("jimmy_cli.config.get_jimmy_home", lambda: tmp_path)
     monkeypatch.setattr(gateway_windows.subprocess, "Popen", fake_popen)
     caplog.set_level(logging.WARNING, logger=gateway_windows.__name__)
 
@@ -116,7 +116,7 @@ def test_spawn_detached_warns_and_marks_no_breakaway_fallback(
     monkeypatch, tmp_path, caplog
 ):
     """A denied breakaway retries once with private false metadata."""
-    argv = ["python.exe", "-m", "hermes_cli.main", "gateway", "run"]
+    argv = ["python.exe", "-m", "jimmy_cli.main", "gateway", "run"]
     cwd = str(tmp_path)
     calls = []
 
@@ -134,10 +134,10 @@ def test_spawn_detached_warns_and_marks_no_breakaway_fallback(
         lambda: (
             argv,
             cwd,
-            {"HERMES_GATEWAY_DETACHED": "1", "SECRET_SENTINEL": "do-not-log"},
+            {"JIMMY_GATEWAY_DETACHED": "1", "SECRET_SENTINEL": "do-not-log"},
         ),
     )
-    monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr("jimmy_cli.config.get_jimmy_home", lambda: tmp_path)
     monkeypatch.setattr(gateway_windows.subprocess, "Popen", fake_popen)
     caplog.set_level(logging.WARNING, logger=gateway_windows.__name__)
 
@@ -175,29 +175,29 @@ def test_spawn_detached_warns_and_marks_no_breakaway_fallback(
 
 
 class TestStableWindowsGatewayWorkingDir:
-    def test_stable_gateway_working_dir_uses_hermes_home(self, tmp_path, monkeypatch):
-        home = tmp_path / ".hermes"
+    def test_stable_gateway_working_dir_uses_jimmy_home(self, tmp_path, monkeypatch):
+        home = tmp_path / ".jimmy"
         home.mkdir()
-        monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: home)
+        monkeypatch.setattr("jimmy_cli.config.get_jimmy_home", lambda: home)
         assert gateway_windows._stable_gateway_working_dir(tmp_path / "checkout") == str(home.resolve())
 
     def test_stable_gateway_working_dir_falls_back_to_project_root(self, tmp_path, monkeypatch):
-        missing = tmp_path / "missing" / ".hermes"
+        missing = tmp_path / "missing" / ".jimmy"
         project = tmp_path / "checkout"
-        monkeypatch.setattr("hermes_cli.config.get_hermes_home", lambda: missing)
+        monkeypatch.setattr("jimmy_cli.config.get_jimmy_home", lambda: missing)
         assert gateway_windows._stable_gateway_working_dir(project) == str(project)
 
 
 
 
 def _arrange_startup_fallback(monkeypatch, tmp_path, running_pids):
-    script_path = tmp_path / "Hermes_Gateway_alice.cmd"
-    startup_entry = tmp_path / "Startup" / "Hermes_Gateway_alice.cmd"
+    script_path = tmp_path / "Jimmy_Gateway_alice.cmd"
+    startup_entry = tmp_path / "Startup" / "Jimmy_Gateway_alice.cmd"
     calls = []
 
     monkeypatch.setattr(gateway_windows, "_prompt_install_choices", lambda *args, **kwargs: (False, True))
     monkeypatch.setattr(gateway_windows, "_assert_windows", lambda: None)
-    monkeypatch.setattr(gateway_windows, "get_task_name", lambda: "Hermes_Gateway_alice")
+    monkeypatch.setattr(gateway_windows, "get_task_name", lambda: "Jimmy_Gateway_alice")
     monkeypatch.setattr(gateway_windows, "_write_task_script", lambda: script_path)
     monkeypatch.setattr(
         gateway_windows,
@@ -252,7 +252,7 @@ def test_elevated_gateway_command_uses_hidden_console_python(monkeypatch):
         shell32 = FakeShell32()
 
     monkeypatch.setattr(gateway_windows, "_current_profile_cli_args", lambda: ["--profile", "alice"])
-    monkeypatch.setattr(gateway_windows.sys, "executable", r"C:\Hermes\venv\Scripts\python.exe")
+    monkeypatch.setattr(gateway_windows.sys, "executable", r"C:\Jimmy\venv\Scripts\python.exe")
     monkeypatch.setattr(gateway_windows.ctypes, "windll", FakeWindll(), raising=False)
 
     assert gateway_windows._launch_elevated_gateway_command("install", ["--start-now", "--elevated-handoff"])
@@ -260,7 +260,7 @@ def test_elevated_gateway_command_uses_hidden_console_python(monkeypatch):
     assert len(calls) == 1
     _hwnd, verb, executable, params, cwd, show = calls[0]
     assert verb == "runas"
-    assert executable == r"C:\Hermes\venv\Scripts\python.exe"
+    assert executable == r"C:\Jimmy\venv\Scripts\python.exe"
     assert "--profile alice gateway install --start-now --elevated-handoff" in params
     assert show == 0
     assert cwd
@@ -274,7 +274,7 @@ def test_install_scheduled_task_recreates_instead_of_change(monkeypatch, tmp_pat
     external dependency), so no platform fake is needed.
     """
     calls = []
-    script_path = tmp_path / "Hermes_Gateway_alice.cmd"
+    script_path = tmp_path / "Jimmy_Gateway_alice.cmd"
     xml_seen = {}
 
     monkeypatch.setattr(gateway_windows, "_resolve_task_user", lambda: r"DOMAIN\\alice")
@@ -290,11 +290,11 @@ def test_install_scheduled_task_recreates_instead_of_change(monkeypatch, tmp_pat
         raise AssertionError(f"unexpected schtasks args: {args}")
 
     monkeypatch.setattr(gateway_windows, "_exec_schtasks", fake_schtasks)
-    ok, detail = gateway_windows._install_scheduled_task("Hermes_Gateway_alice", script_path)
+    ok, detail = gateway_windows._install_scheduled_task("Jimmy_Gateway_alice", script_path)
 
     assert ok is True
     assert "/Change" not in [arg for call in calls for arg in call]
-    assert calls[0][:4] == ("/Delete", "/F", "/TN", "Hermes_Gateway_alice")
+    assert calls[0][:4] == ("/Delete", "/F", "/TN", "Jimmy_Gateway_alice")
     assert calls[1][0] == "/Create"
     assert "/XML" in calls[1]
     assert "/SC" not in calls[1]
@@ -310,7 +310,7 @@ def test_install_scheduled_task_recreates_instead_of_change(monkeypatch, tmp_pat
     # (issue #45599 fix A: no console -> no logon CTRL_CLOSE_EVENT / 0xC000013A).
     assert "<Command>wscript.exe</Command>" in xml_seen["text"]
     assert "//B //Nologo" in xml_seen["text"]
-    assert "Hermes_Gateway_alice.vbs" in xml_seen["text"]
+    assert "Jimmy_Gateway_alice.vbs" in xml_seen["text"]
     assert "cmd.exe" not in xml_seen["text"]
 
 
@@ -324,17 +324,17 @@ def test_gateway_vbs_script_is_console_less(monkeypatch):
     )
     content = gateway_windows._build_gateway_vbs_script(
         r"C:\venv\Scripts\python.exe",
-        r"C:\Hermes",
-        r"C:\Hermes",
+        r"C:\Jimmy",
+        r"C:\Jimmy",
         "--profile work",
     )
     assert "cmd.exe" not in content.lower()
     assert 'CreateObject("WScript.Shell")' in content
     assert "pythonw.exe" in content
-    assert "hermes_cli.main" in content
+    assert "jimmy_cli.main" in content
     assert "gateway run" in content
     assert ", 0, False" in content  # hidden window, detached/async
-    for var in ("HERMES_HOME", "PYTHONIOENCODING", "HERMES_GATEWAY_DETACHED", "VIRTUAL_ENV", "PYTHONPATH"):
+    for var in ("JIMMY_HOME", "PYTHONIOENCODING", "JIMMY_GATEWAY_DETACHED", "VIRTUAL_ENV", "PYTHONPATH"):
         assert var in content
     assert "--profile" in content and "work" in content
     assert content.endswith("\r\n")
@@ -357,7 +357,7 @@ def test_gateway_vbs_script_is_console_less(monkeypatch):
 #
 # Background: on Windows, asyncio.add_signal_handler raises NotImplementedError,
 # so the gateway's SIGTERM handler (which drains in-flight agents and writes
-# resume_pending=True) never fires when `hermes gateway stop` kills the
+# resume_pending=True) never fires when `jimmy gateway stop` kills the
 # process. The fix: stop() writes the planned_stop_marker first, waits for
 # the gateway's marker-watcher thread to drain + exit cleanly, then escalates
 # to taskkill if drain times out.

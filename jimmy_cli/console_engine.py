@@ -1,7 +1,7 @@
-"""Safe Hermes Console command engine.
+"""Safe Jimmy Console command engine.
 
-This module backs ``hermes console`` and is intentionally narrower than the
-full Hermes CLI. It exposes a curated set of native adapters that can later be
+This module backs ``jimmy console`` and is intentionally narrower than the
+full Jimmy CLI. It exposes a curated set of native adapters that can later be
 shared by the dashboard console websocket without becoming a raw shell.
 """
 
@@ -43,7 +43,7 @@ class ConsoleCommand:
     path: tuple[str, ...]
     usage: str
     summary: str
-    handler: Callable[["HermesConsoleEngine", list[str]], str]
+    handler: Callable[["JimmyConsoleEngine", list[str]], str]
     mutating: bool = False
     confirmation: str = ""
 
@@ -96,8 +96,8 @@ def _strip_console_status_footer(text: str) -> str:
     last = _strip_ansi(lines[-1]).strip()
     prev = _strip_ansi(lines[-2]).strip()
     if not (
-        prev.startswith("Run 'hermes doctor'")
-        and last.startswith("Run 'hermes setup'")
+        prev.startswith("Run 'jimmy doctor'")
+        and last.startswith("Run 'jimmy setup'")
     ):
         return text.rstrip()
 
@@ -121,7 +121,7 @@ def _split_line(line: str) -> list[str]:
         # Windows-safe splitter: plain shlex posix=True eats backslashes, so
         # `sessions export C:\Users\me\out.jsonl` silently became a mangled
         # relative filename in the cwd (#83934).
-        from hermes_cli._subprocess_compat import split_command_line
+        from jimmy_cli._subprocess_compat import split_command_line
 
         return split_command_line(line)
     except ValueError as exc:
@@ -162,7 +162,9 @@ def _format_job(job: dict, action: str) -> str:
 
 
 def _parser_root() -> tuple[_ArgumentParser, argparse._SubParsersAction]:
-    parser = _ArgumentParser(prog="hermes", add_help=False)
+    from jimmy_cli.product import cli_name
+
+    parser = _ArgumentParser(prog=cli_name(), add_help=False)
     subparsers = parser.add_subparsers(dest="_console_command")
     return parser, subparsers
 
@@ -192,7 +194,7 @@ def _clean_summary(text: str | None) -> str:
     summary = " ".join(str(text).split())
     if not summary:
         return ""
-    if summary.startswith("Run `hermes "):
+    if summary.startswith("Run `jimmy "):
         return ""
     return summary
 
@@ -222,7 +224,7 @@ def _noop_console_command(_args: argparse.Namespace) -> None:
 # The CLI surface these helpers reflect is process-static: they import a
 # subcommand module and build a throwaway argparse tree purely to extract help
 # summaries. Nothing about the result changes across engine instances, but the
-# dashboard opens a fresh HermesConsoleEngine per /api/console connection, so
+# dashboard opens a fresh JimmyConsoleEngine per /api/console connection, so
 # without memoization every reconnect re-imports + re-parses the whole surface.
 # Cache by args (all hashable strings); callers only read the returned map.
 @functools.lru_cache(maxsize=None)
@@ -308,7 +310,7 @@ def _dispatch_extracted_subcommand(
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
-    main_module = importlib.import_module("hermes_cli.main")
+    main_module = importlib.import_module("jimmy_cli.main")
     builder = getattr(module, builder_name)
     main_handler = getattr(main_module, main_handler_name)
     builder(subparsers, **{main_handler_name: main_handler})
@@ -353,7 +355,7 @@ def _dispatch_builder_subcommand(
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
-    main_module = importlib.import_module("hermes_cli.main")
+    main_module = importlib.import_module("jimmy_cli.main")
     top_parser = getattr(module, builder_name)(subparsers)
     top_parser.set_defaults(func=getattr(main_module, main_handler_name))
     namespace = parser.parse_args([root, *fixed, *args])
@@ -387,8 +389,8 @@ def _extracted_handler(
     builder_name: str,
     main_handler_name: str,
     namespace_update: Callable[[argparse.Namespace], None] | None = None,
-) -> Callable[["HermesConsoleEngine", list[str]], str]:
-    def handler(_engine: HermesConsoleEngine, args: list[str]) -> str:
+) -> Callable[["JimmyConsoleEngine", list[str]], str]:
+    def handler(_engine: JimmyConsoleEngine, args: list[str]) -> str:
         return _dispatch_extracted_subcommand(
             root=root,
             fixed=fixed,
@@ -409,8 +411,8 @@ def _registered_handler(
     register_name: str,
     handler_name: str | None = None,
     namespace_update: Callable[[argparse.Namespace], None] | None = None,
-) -> Callable[["HermesConsoleEngine", list[str]], str]:
-    def handler(_engine: HermesConsoleEngine, args: list[str]) -> str:
+) -> Callable[["JimmyConsoleEngine", list[str]], str]:
+    def handler(_engine: JimmyConsoleEngine, args: list[str]) -> str:
         return _dispatch_registered_subcommand(
             root=root,
             fixed=fixed,
@@ -431,8 +433,8 @@ def _builder_handler(
     builder_name: str,
     main_handler_name: str,
     namespace_update: Callable[[argparse.Namespace], None] | None = None,
-) -> Callable[["HermesConsoleEngine", list[str]], str]:
-    def handler(_engine: HermesConsoleEngine, args: list[str]) -> str:
+) -> Callable[["JimmyConsoleEngine", list[str]], str]:
+    def handler(_engine: JimmyConsoleEngine, args: list[str]) -> str:
         return _dispatch_builder_subcommand(
             root=root,
             fixed=fixed,
@@ -452,8 +454,8 @@ def _adder_handler(
     module_name: str,
     add_name: str,
     namespace_update: Callable[[argparse.Namespace], None] | None = None,
-) -> Callable[["HermesConsoleEngine", list[str]], str]:
-    def handler(_engine: HermesConsoleEngine, args: list[str]) -> str:
+) -> Callable[["JimmyConsoleEngine", list[str]], str]:
+    def handler(_engine: JimmyConsoleEngine, args: list[str]) -> str:
         return _dispatch_adder_subcommand(
             root=root,
             fixed=fixed,
@@ -467,11 +469,11 @@ def _adder_handler(
 
 
 def _register_command_family(
-    engine: "HermesConsoleEngine",
+    engine: "JimmyConsoleEngine",
     *,
     root: str,
     paths: Iterable[Sequence[str]],
-    handler_factory: Callable[[Sequence[str]], Callable[["HermesConsoleEngine", list[str]], str]],
+    handler_factory: Callable[[Sequence[str]], Callable[["JimmyConsoleEngine", list[str]], str]],
     mutating: Iterable[Sequence[str]] = (),
     summary: str = "",
     summaries: dict[tuple[str, ...], str] | None = None,
@@ -482,19 +484,19 @@ def _register_command_family(
         child_key = tuple(child_path)
         full_path = (root, *tuple(child_path))
         usage = " ".join(full_path)
-        command_summary = summary or (summaries or {}).get(full_path) or f"Run `hermes {usage}`."
+        command_summary = summary or (summaries or {}).get(full_path) or f"Run `jimmy {usage}`."
         engine.register(
             full_path,
             usage,
             command_summary,
             handler_factory(tuple(child_path)),
             mutating=child_key in mutating_paths,
-            confirmation=confirmation or f"Run `hermes {usage}`?",
+            confirmation=confirmation or f"Run `jimmy {usage}`?",
         )
 
 
-class HermesConsoleEngine:
-    """Curated line-command executor for Hermes Console."""
+class JimmyConsoleEngine:
+    """Curated line-command executor for Jimmy Console."""
 
     def __init__(self, *, output_limit: int = 20000):
         self.output_limit = output_limit
@@ -509,15 +511,16 @@ class HermesConsoleEngine:
 
         try:
             tokens = _split_line(raw_line)
-            if tokens and tokens[0] == "hermes":
+            # Users may paste a full invocation (`jimmy status` / `jimmy status`).
+            if tokens and tokens[0] in {"jimmy", "jimmy"}:
                 tokens = tokens[1:]
             if not tokens:
                 return self._help_result()
 
             if _contains_shell_syntax(raw_line, tokens):
                 raise ConsoleCommandError(
-                    "Hermes Console does not run shell syntax. Use one supported "
-                    "Hermes command at a time."
+                    "Jimmy Console does not run shell syntax. Use one supported "
+                    "Jimmy command at a time."
                 )
 
             builtin = self._execute_builtin(tokens)
@@ -549,7 +552,7 @@ class HermesConsoleEngine:
             return f"{command.usage}\n{command.summary}"
 
         lines = [
-            "Hermes Console",
+            "Jimmy Console",
             "",
             "Supported commands:",
         ]
@@ -566,10 +569,10 @@ class HermesConsoleEngine:
         return "\n".join(lines)
 
     def _register_defaults(self) -> None:
-        self.register(("status",), "status", "Show Hermes component status.", _status)
-        self.register(("version",), "version", "Show Hermes version information.", _version)
+        self.register(("status",), "status", "Show Jimmy component status.", _status)
+        self.register(("version",), "version", "Show Jimmy version information.", _version)
         self.register(("doctor",), "doctor", "Run diagnostics without auto-fix.", _doctor)
-        self.register(("logs",), "logs [name] [-n N]", "Show recent Hermes logs.", _logs)
+        self.register(("logs",), "logs [name] [-n N]", "Show recent Jimmy logs.", _logs)
         self.register(("sessions", "list"), "sessions list [--limit N]", "List recent sessions.", _sessions_list)
         self.register(("sessions", "stats"), "sessions stats", "Show session store statistics.", _sessions_stats)
         self.register(("config", "show"), "config show", "Show current configuration.", _config_show)
@@ -580,7 +583,7 @@ class HermesConsoleEngine:
             "Set a configuration value.",
             _config_set,
             mutating=True,
-            confirmation="Update Hermes configuration?",
+            confirmation="Update Jimmy configuration?",
         )
         self.register(("cron", "list"), "cron list [--all]", "List scheduled jobs.", _cron_list)
         self.register(("cron", "status"), "cron status", "Show cron scheduler status.", _cron_status)
@@ -611,81 +614,81 @@ class HermesConsoleEngine:
         self._register_broad_cli_surface()
 
     def _register_broad_cli_surface(self) -> None:
-        """Register non-admin CLI commands that are safe for Hermes Console."""
+        """Register non-admin CLI commands that are safe for Jimmy Console."""
 
         extracted = {
             "dump": (
-                "hermes_cli.subcommands.dump",
+                "jimmy_cli.subcommands.dump",
                 "build_dump_parser",
                 "cmd_dump",
                 [()],
                 set(),
             ),
             "debug": (
-                "hermes_cli.subcommands.debug",
+                "jimmy_cli.subcommands.debug",
                 "build_debug_parser",
                 "cmd_debug",
                 [("share",), ("delete",)],
                 {("share",), ("delete",)},
             ),
             "prompt-size": (
-                "hermes_cli.subcommands.prompt_size",
+                "jimmy_cli.subcommands.prompt_size",
                 "build_prompt_size_parser",
                 "cmd_prompt_size",
                 [()],
                 set(),
             ),
             "insights": (
-                "hermes_cli.subcommands.insights",
+                "jimmy_cli.subcommands.insights",
                 "build_insights_parser",
                 "cmd_insights",
                 [()],
                 set(),
             ),
             "security": (
-                "hermes_cli.subcommands.security",
+                "jimmy_cli.subcommands.security",
                 "build_security_parser",
                 "cmd_security",
                 [("audit",)],
                 set(),
             ),
             "backup": (
-                "hermes_cli.subcommands.backup",
+                "jimmy_cli.subcommands.backup",
                 "build_backup_parser",
                 "cmd_backup",
                 [()],
                 {()},
             ),
             "import": (
-                "hermes_cli.subcommands.import_cmd",
+                "jimmy_cli.subcommands.import_cmd",
                 "build_import_cmd_parser",
                 "cmd_import",
                 [()],
                 {()},
             ),
             "config": (
-                "hermes_cli.subcommands.config",
+                "jimmy_cli.subcommands.config",
                 "build_config_parser",
                 "cmd_config",
                 [("env-path",), ("check",)],
                 set(),
             ),
             "tools": (
-                "hermes_cli.subcommands.tools",
+                "jimmy_cli.subcommands.tools",
                 "build_tools_parser",
                 "cmd_tools",
                 [("list",), ("enable",), ("disable",), ("post-setup",)],
                 {("enable",), ("disable",), ("post-setup",)},
             ),
             "plugins": (
-                "hermes_cli.subcommands.plugins",
+                "jimmy_cli.subcommands.plugins",
                 "build_plugins_parser",
                 "cmd_plugins",
                 [("list",), ("enable",), ("disable",), ("install",), ("update",), ("remove",)],
                 {("enable",), ("disable",), ("install",), ("update",), ("remove",)},
             ),
             "skills": (
-                "hermes_cli.subcommands.skills",
+                "jimmy_cli.subcommands.skills",
                 "build_skills_parser",
                 "cmd_skills",
                 [
@@ -726,7 +729,7 @@ class HermesConsoleEngine:
                 },
             ),
             "mcp": (
-                "hermes_cli.subcommands.mcp",
+                "jimmy_cli.subcommands.mcp",
                 "build_mcp_parser",
                 "cmd_mcp",
                 [
@@ -752,14 +755,14 @@ class HermesConsoleEngine:
                 },
             ),
             "memory": (
-                "hermes_cli.subcommands.memory",
+                "jimmy_cli.subcommands.memory",
                 "build_memory_parser",
                 "cmd_memory",
                 [("status",), ("off",), ("reset",)],
                 {("off",), ("reset",)},
             ),
             "auth": (
-                "hermes_cli.subcommands.auth",
+                "jimmy_cli.subcommands.auth",
                 "build_auth_parser",
                 "cmd_auth",
                 [
@@ -783,35 +786,35 @@ class HermesConsoleEngine:
                 },
             ),
             "pairing": (
-                "hermes_cli.subcommands.pairing",
+                "jimmy_cli.subcommands.pairing",
                 "build_pairing_parser",
                 "cmd_pairing",
                 [("list",), ("approve",), ("revoke",), ("clear-pending",)],
                 {("approve",), ("revoke",), ("clear-pending",)},
             ),
             "webhook": (
-                "hermes_cli.subcommands.webhook",
+                "jimmy_cli.subcommands.webhook",
                 "build_webhook_parser",
                 "cmd_webhook",
                 [("list",), ("subscribe",), ("remove",), ("test",)],
                 {("subscribe",), ("remove",)},
             ),
             "hooks": (
-                "hermes_cli.subcommands.hooks",
+                "jimmy_cli.subcommands.hooks",
                 "build_hooks_parser",
                 "cmd_hooks",
                 [("list",), ("test",), ("doctor",), ("revoke",)],
                 {("test",), ("doctor",), ("revoke",)},
             ),
             "slack": (
-                "hermes_cli.subcommands.slack",
+                "jimmy_cli.subcommands.slack",
                 "build_slack_parser",
                 "cmd_slack",
                 [("manifest",)],
                 set(),
             ),
             "profile": (
-                "hermes_cli.subcommands.profile",
+                "jimmy_cli.subcommands.profile",
                 "build_profile_parser",
                 "cmd_profile",
                 [
@@ -841,7 +844,7 @@ class HermesConsoleEngine:
                 },
             ),
             "cron": (
-                "hermes_cli.subcommands.cron",
+                "jimmy_cli.subcommands.cron",
                 "build_cron_parser",
                 "cmd_cron",
                 [("create",), ("edit",), ("remove",), ("tick",)],
@@ -873,7 +876,7 @@ class HermesConsoleEngine:
             "Update config with new options.",
             _config_migrate,
             mutating=True,
-            confirmation="Update Hermes configuration with missing defaults?",
+            confirmation="Update Jimmy configuration with missing defaults?",
         )
         self.register(
             ("sessions", "export"),
@@ -918,7 +921,7 @@ class HermesConsoleEngine:
             ("send",),
             "send --to <target> <message>",
             "Send a message to a configured platform.",
-            _adder_handler("send", (), "hermes_cli.send_cmd", "register_send_subparser"),
+            _adder_handler("send", (), "jimmy_cli.send_cmd", "register_send_subparser"),
             mutating=True,
             confirmation="Send this message?",
         )
@@ -928,11 +931,11 @@ class HermesConsoleEngine:
             self,
             root="portal",
             paths=portal_paths,
-            summaries=_adder_summaries("hermes_cli.portal_cli", "add_parser"),
+            summaries=_adder_summaries("jimmy_cli.portal_cli", "add_parser"),
             handler_factory=lambda fixed: _adder_handler(
                 "portal",
                 fixed,
-                "hermes_cli.portal_cli",
+                "jimmy_cli.portal_cli",
                 "add_parser",
             ),
         )
@@ -953,7 +956,7 @@ class HermesConsoleEngine:
                 ("restore",),
                 ("bind-board",),
             ],
-            summaries=_builder_summaries("hermes_cli.projects_cmd", "build_parser"),
+            summaries=_builder_summaries("jimmy_cli.projects_cmd", "build_parser"),
             mutating=[
                 ("create",),
                 ("add-folder",),
@@ -968,7 +971,7 @@ class HermesConsoleEngine:
             handler_factory=lambda fixed: _builder_handler(
                 "project",
                 fixed,
-                "hermes_cli.projects_cmd",
+                "jimmy_cli.projects_cmd",
                 "build_parser",
                 "cmd_project",
             ),
@@ -1010,7 +1013,7 @@ class HermesConsoleEngine:
                 ("assignments",),
                 ("context",),
             ],
-            summaries=_builder_summaries("hermes_cli.kanban", "build_parser"),
+            summaries=_builder_summaries("jimmy_cli.kanban", "build_parser"),
             mutating=[
                 ("init",),
                 ("boards", "create"),
@@ -1037,7 +1040,7 @@ class HermesConsoleEngine:
             handler_factory=lambda fixed: _builder_handler(
                 "kanban",
                 fixed,
-                "hermes_cli.kanban",
+                "jimmy_cli.kanban",
                 "build_parser",
                 "cmd_kanban",
             ),
@@ -1045,21 +1048,21 @@ class HermesConsoleEngine:
 
         registered = {
             "bundles": (
-                "hermes_cli.bundles",
+                "jimmy_cli.bundles",
                 "register_cli",
                 "bundles_command",
                 [("list",), ("show",), ("create",), ("delete",), ("reload",)],
                 {("create",), ("delete",), ("reload",)},
             ),
             "checkpoints": (
-                "hermes_cli.checkpoints",
+                "jimmy_cli.checkpoints",
                 "register_cli",
                 None,
                 [("status",), ("list",), ("prune",), ("clear",), ("clear-legacy",)],
                 {("prune",), ("clear",), ("clear-legacy",)},
             ),
             "curator": (
-                "hermes_cli.curator",
+                "jimmy_cli.curator",
                 "register_cli",
                 None,
                 [
@@ -1090,7 +1093,7 @@ class HermesConsoleEngine:
                 },
             ),
             "pets": (
-                "hermes_cli.pets",
+                "jimmy_cli.pets",
                 "register_cli",
                 None,
                 [("list",), ("install",), ("select",), ("show",), ("off",), ("scale",), ("remove",), ("doctor",)],
@@ -1120,7 +1123,7 @@ class HermesConsoleEngine:
         path: Iterable[str],
         usage: str,
         summary: str,
-        handler: Callable[["HermesConsoleEngine", list[str]], str],
+        handler: Callable[["JimmyConsoleEngine", list[str]], str],
         *,
         mutating: bool = False,
         confirmation: str = "",
@@ -1168,12 +1171,12 @@ class HermesConsoleEngine:
         probe = " ".join(tokens[:2]) if len(tokens) > 1 else tokens[0]
         suggestions = difflib.get_close_matches(probe, available, n=3, cutoff=0.45)
         suffix = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
-        raise ConsoleCommandError(f"Unsupported Hermes Console command: {probe}.{suffix}")
+        raise ConsoleCommandError(f"Unsupported Jimmy Console command: {probe}.{suffix}")
 
     def _rejection_for(self, tokens: Sequence[str]) -> str:
         first = tokens[0]
         if first.startswith("-"):
-            return f"{first} is not available in Hermes Console."
+            return f"{first} is not available in Jimmy Console."
         blocked_top = {
             "acp",
             "chat",
@@ -1199,30 +1202,30 @@ class HermesConsoleEngine:
             "whatsapp-cloud",
         }
         if first in blocked_top:
-            return f"`hermes {first}` is not available in Hermes Console."
+            return f"`jimmy {first}` is not available in Jimmy Console."
         blocked_pairs = {
-            ("config", "edit"): "`config edit` opens an editor and is not available in Hermes Console.",
-            ("mcp", "serve"): "`mcp serve` starts a server and is not available in Hermes Console.",
-            ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Hermes Console.",
-            ("skills", "config"): "`skills config` is interactive and is not available in Hermes Console.",
-            ("skills", "publish"): "`skills publish` is not available in Hermes Console.",
-            ("portal", "login"): "`portal login` is interactive and is not available in Hermes Console.",
-            ("portal", "open"): "`portal open` opens a browser and is not available in Hermes Console.",
-            ("kanban", "tail"): "`kanban tail` streams output and is not available in Hermes Console.",
-            ("kanban", "watch"): "`kanban watch` streams output and is not available in Hermes Console.",
-            ("kanban", "daemon"): "`kanban daemon` starts a service and is not available in Hermes Console.",
-            ("kanban", "dispatcher"): "`kanban dispatcher` starts a worker and is not available in Hermes Console.",
-            ("kanban", "swarm"): "`kanban swarm` starts agent work and is not available in Hermes Console.",
-            ("kanban", "decompose"): "`kanban decompose` starts agent work and is not available in Hermes Console.",
-            ("kanban", "specify"): "`kanban specify` starts agent work and is not available in Hermes Console.",
-            ("kanban", "gc"): "`kanban gc` is not available in Hermes Console.",
+            ("config", "edit"): "`config edit` opens an editor and is not available in Jimmy Console.",
+            ("mcp", "serve"): "`mcp serve` starts a server and is not available in Jimmy Console.",
+            ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Jimmy Console.",
+            ("skills", "config"): "`skills config` is interactive and is not available in Jimmy Console.",
+            ("skills", "publish"): "`skills publish` is not available in Jimmy Console.",
+            ("portal", "login"): "`portal login` is interactive and is not available in Jimmy Console.",
+            ("portal", "open"): "`portal open` opens a browser and is not available in Jimmy Console.",
+            ("kanban", "tail"): "`kanban tail` streams output and is not available in Jimmy Console.",
+            ("kanban", "watch"): "`kanban watch` streams output and is not available in Jimmy Console.",
+            ("kanban", "daemon"): "`kanban daemon` starts a service and is not available in Jimmy Console.",
+            ("kanban", "dispatcher"): "`kanban dispatcher` starts a worker and is not available in Jimmy Console.",
+            ("kanban", "swarm"): "`kanban swarm` starts agent work and is not available in Jimmy Console.",
+            ("kanban", "decompose"): "`kanban decompose` starts agent work and is not available in Jimmy Console.",
+            ("kanban", "specify"): "`kanban specify` starts agent work and is not available in Jimmy Console.",
+            ("kanban", "gc"): "`kanban gc` is not available in Jimmy Console.",
         }
         if len(tokens) >= 2:
             pair = (tokens[0], tokens[1])
             if pair in blocked_pairs:
                 return blocked_pairs[pair]
         if tuple(tokens[:2]) in {("sessions", "delete"), ("sessions", "prune")}:
-            return "`sessions delete` and `sessions prune` are not available in Hermes Console."
+            return "`sessions delete` and `sessions prune` are not available in Jimmy Console."
         return ""
 
     def _help_result(self) -> ConsoleResult:
@@ -1259,7 +1262,7 @@ def _apply_confirmed_defaults(args: argparse.Namespace) -> None:
     if getattr(args, "auth_action", None) == "add":
         auth_type = getattr(args, "auth_type", None)
         if auth_type in {"api-key", "api_key"} and not getattr(args, "api_key", None):
-            raise ConsoleCommandError("auth add --type api-key requires --api-key in Hermes Console.")
+            raise ConsoleCommandError("auth add --type api-key requires --api-key in Jimmy Console.")
     if getattr(args, "import_name", None) is not None:
         # profile import has no prompt flag; leave it alone.
         return
@@ -1274,35 +1277,35 @@ def _apply_confirmed_defaults(args: argparse.Namespace) -> None:
         setattr(args, "yes", True)
 
 
-def _version(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _version(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "version")
-    from hermes_cli._startup_fast import print_fast_version_info
+    from jimmy_cli._startup_fast import print_fast_version_info
 
     return _capture_output(lambda: print_fast_version_info(check_updates=True))
 
 
-def _status(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _status(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "status")
     from types import SimpleNamespace
 
-    from hermes_cli.status import show_status
+    from jimmy_cli.status import show_status
 
     output = _capture_output(lambda: show_status(SimpleNamespace(all=False, deep=False)))
     return _strip_console_status_footer(output)
 
 
-def _doctor(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _doctor(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "doctor")
     from types import SimpleNamespace
 
-    from hermes_cli.doctor import run_doctor
+    from jimmy_cli.doctor import run_doctor
 
     return _capture_output(lambda: run_doctor(SimpleNamespace(fix=False, ack=None)))
 
 
-def _logs(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _logs(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     if "-f" in args or "--follow" in args:
-        raise ConsoleCommandError("`logs -f` is not available in Hermes Console.")
+        raise ConsoleCommandError("`logs -f` is not available in Jimmy Console.")
     parser = _ArgumentParser(prog="logs", add_help=False)
     parser.add_argument("log_name", nargs="?", default="agent")
     parser.add_argument("-n", "--lines", type=int, default=50)
@@ -1314,7 +1317,7 @@ def _logs(_engine: HermesConsoleEngine, args: list[str]) -> str:
     if ns.lines < 1 or ns.lines > 500:
         raise ConsoleCommandError("logs --lines must be between 1 and 500")
 
-    from hermes_cli.logs import list_logs, tail_log
+    from jimmy_cli.logs import list_logs, tail_log
 
     if ns.log_name == "list":
         return _capture_output(list_logs)
@@ -1331,14 +1334,14 @@ def _logs(_engine: HermesConsoleEngine, args: list[str]) -> str:
     )
 
 
-def _sessions_list(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_list(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     parser = _ArgumentParser(prog="sessions list", add_help=False)
     parser.add_argument("--limit", type=int, default=20)
     ns = parser.parse_args(args)
     if ns.limit < 1 or ns.limit > 200:
         raise ConsoleCommandError("sessions list --limit must be between 1 and 200")
 
-    from hermes_state import SessionDB
+    from jimmy_state import SessionDB
 
     db = SessionDB()
     try:
@@ -1352,9 +1355,9 @@ def _sessions_list(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _format_sessions(sessions)
 
 
-def _sessions_stats(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_stats(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "sessions stats")
-    from hermes_state import SessionDB
+    from jimmy_state import SessionDB
 
     db = SessionDB()
     try:
@@ -1375,35 +1378,35 @@ def _sessions_stats(_engine: HermesConsoleEngine, args: list[str]) -> str:
         db.close()
 
 
-def _config_show(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _config_show(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "config show")
-    from hermes_cli.config import show_config
+    from jimmy_cli.config import show_config
 
     return _capture_output(show_config)
 
 
-def _config_path(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _config_path(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "config path")
-    from hermes_cli.config import get_config_path
+    from jimmy_cli.config import get_config_path
 
     return str(get_config_path())
 
 
-def _config_set(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _config_set(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     if len(args) < 2:
         raise ConsoleCommandError("Usage: config set <key> <value>")
     key = args[0]
     value = " ".join(args[1:])
-    from hermes_cli.config import set_config_value
+    from jimmy_cli.config import set_config_value
 
     return _capture_output(lambda: set_config_value(key, value))
 
 
-def _config_migrate(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _config_migrate(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "config migrate")
 
     def _run() -> None:
-        from hermes_cli.config import migrate_config
+        from jimmy_cli.config import migrate_config
 
         results = migrate_config(interactive=False, quiet=False)
         if results.get("env_added") or results.get("config_added"):
@@ -1417,7 +1420,7 @@ def _config_migrate(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _capture_output(_run)
 
 
-def _sessions_export(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_export(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     parser = _ArgumentParser(prog="sessions export", add_help=False)
     parser.add_argument("output")
     parser.add_argument("--source")
@@ -1425,7 +1428,7 @@ def _sessions_export(_engine: HermesConsoleEngine, args: list[str]) -> str:
     ns = parser.parse_args(args)
 
     def _run() -> None:
-        from hermes_state import (
+        from jimmy_state import (
             SessionDB,
             SessionExportTooLargeError,
             resolved_max_export_messages,
@@ -1485,14 +1488,14 @@ def _sessions_export(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _capture_output(_run)
 
 
-def _sessions_rename(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_rename(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     parser = _ArgumentParser(prog="sessions rename", add_help=False)
     parser.add_argument("session_id")
     parser.add_argument("title", nargs="+")
     ns = parser.parse_args(args)
 
     def _run() -> None:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         try:
@@ -1509,11 +1512,11 @@ def _sessions_rename(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _capture_output(_run)
 
 
-def _sessions_optimize(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_optimize(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "sessions optimize")
 
     def _run() -> None:
-        from hermes_state import SessionDB
+        from jimmy_state import SessionDB
 
         db = SessionDB()
         try:
@@ -1525,14 +1528,14 @@ def _sessions_optimize(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _capture_output(_run)
 
 
-def _sessions_repair(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _sessions_repair(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     parser = _ArgumentParser(prog="sessions repair", add_help=False)
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--no-backup", action="store_true")
     ns = parser.parse_args(args)
 
     def _run() -> None:
-        from hermes_state import DEFAULT_DB_PATH, _db_opens_cleanly, repair_state_db_schema
+        from jimmy_state import DEFAULT_DB_PATH, _db_opens_cleanly, repair_state_db_schema
 
         db_path = DEFAULT_DB_PATH
         if not db_path.exists():
@@ -1557,41 +1560,41 @@ def _sessions_repair(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _capture_output(_run)
 
 
-def _profile_status(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _profile_status(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "profile")
     return _dispatch_extracted_subcommand(
         root="profile",
         fixed=(),
         args=(),
-        module_name="hermes_cli.subcommands.profile",
+        module_name="jimmy_cli.subcommands.profile",
         builder_name="build_profile_parser",
         main_handler_name="cmd_profile",
     )
 
 
-def _cron_list(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _cron_list(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     parser = _ArgumentParser(prog="cron list", add_help=False)
     parser.add_argument("--all", action="store_true")
     ns = parser.parse_args(args)
-    from hermes_cli.cron import cron_list
+    from jimmy_cli.cron import cron_list
 
     return _capture_output(lambda: cron_list(show_all=ns.all))
 
 
-def _cron_status(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _cron_status(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     _expect_no_args(args, "cron status")
-    from hermes_cli.cron import cron_status
+    from jimmy_cli.cron import cron_status
 
     return _capture_output(cron_status)
 
 
-def _cron_pause(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _cron_pause(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     if len(args) != 1:
         raise ConsoleCommandError("Usage: cron pause <job>")
     from cron.jobs import AmbiguousJobReference, pause_job
 
     try:
-        job = pause_job(args[0], reason="paused from hermes console")
+        job = pause_job(args[0], reason="paused from jimmy console")
     except AmbiguousJobReference as exc:
         raise ConsoleCommandError(str(exc)) from exc
     if not job:
@@ -1599,7 +1602,7 @@ def _cron_pause(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _format_job(job, "Paused")
 
 
-def _cron_resume(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _cron_resume(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     if len(args) != 1:
         raise ConsoleCommandError("Usage: cron resume <job>")
     from cron.jobs import AmbiguousJobReference, resume_job
@@ -1613,7 +1616,7 @@ def _cron_resume(_engine: HermesConsoleEngine, args: list[str]) -> str:
     return _format_job(job, "Resumed")
 
 
-def _cron_run(_engine: HermesConsoleEngine, args: list[str]) -> str:
+def _cron_run(_engine: JimmyConsoleEngine, args: list[str]) -> str:
     if len(args) != 1:
         raise ConsoleCommandError("Usage: cron run <job>")
     from cron.jobs import AmbiguousJobReference, trigger_job
@@ -1634,7 +1637,7 @@ def run_console_repl(
     stderr=None,
     interactive: bool | None = None,
 ) -> int:
-    """Run the local ``hermes console`` REPL."""
+    """Run the local ``jimmy console`` REPL."""
 
     stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
@@ -1642,13 +1645,13 @@ def run_console_repl(
     if interactive is None:
         interactive = bool(getattr(stdin, "isatty", lambda: False)())
 
-    engine = HermesConsoleEngine()
+    engine = JimmyConsoleEngine()
     if interactive:
-        print("Hermes Console. Type `help` for commands, `exit` to quit.", file=stdout)
+        print("Jimmy Console. Type `help` for commands, `exit` to quit.", file=stdout)
 
     while True:
         if interactive:
-            print("hermes> ", end="", file=stdout, flush=True)
+            print("jimmy> ", end="", file=stdout, flush=True)
         line = stdin.readline()
         if line == "":
             if interactive:

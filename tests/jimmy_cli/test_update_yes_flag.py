@@ -1,4 +1,4 @@
-"""Tests for `hermes update --yes / -y` — assume yes for interactive prompts.
+"""Tests for `jimmy update --yes / -y` — assume yes for interactive prompts.
 
 Covers:
   1. argparse parses the flag
@@ -12,7 +12,7 @@ import subprocess
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from hermes_cli.main import cmd_update
+from jimmy_cli.main import cmd_update
 
 
 def _make_run_side_effect(
@@ -35,7 +35,7 @@ def _make_run_side_effect(
             )
         # `git status --porcelain` for dirty-tree detection during autostash.
         if "status" in joined and "--porcelain" in joined:
-            out = " M hermes_cli/main.py\n" if dirty else ""
+            out = " M jimmy_cli/main.py\n" if dirty else ""
             return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
         # `git stash list` — return a stash ref when dirty (so _stash_local_changes
         # gets something to return). _stash_local_changes_if_needed is what we
@@ -50,11 +50,11 @@ def _make_run_side_effect(
 class TestUpdateYesConfigMigration:
     """--yes auto-answers the config-migration prompt and skips API-key prompts."""
 
-    @patch("hermes_cli.update_cmd._reload_config_modules")
-    @patch("hermes_cli.update_cmd._run_migrate_config_fresh")
-    @patch("hermes_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
-    @patch("hermes_cli.config.get_missing_config_fields", return_value=[])
-    @patch("hermes_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
+    @patch("jimmy_cli.update_cmd._reload_config_modules")
+    @patch("jimmy_cli.update_cmd._run_migrate_config_fresh")
+    @patch("jimmy_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
+    @patch("jimmy_cli.config.get_missing_config_fields", return_value=[])
+    @patch("jimmy_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
     @patch("shutil.which", return_value=None)
     @patch("subprocess.run")
     def test_yes_auto_migrates_without_input(
@@ -91,11 +91,11 @@ class TestUpdateYesConfigMigration:
         # The "Would you like to configure them now?" prompt text never appears.
         assert "Would you like to configure them now?" not in out
 
-    @patch("hermes_cli.update_cmd._reload_config_modules")
-    @patch("hermes_cli.update_cmd._run_migrate_config_fresh")
-    @patch("hermes_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
-    @patch("hermes_cli.config.get_missing_config_fields", return_value=[])
-    @patch("hermes_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
+    @patch("jimmy_cli.update_cmd._reload_config_modules")
+    @patch("jimmy_cli.update_cmd._run_migrate_config_fresh")
+    @patch("jimmy_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
+    @patch("jimmy_cli.config.get_missing_config_fields", return_value=[])
+    @patch("jimmy_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
     @patch("shutil.which", return_value=None)
     @patch("subprocess.run")
     def test_no_yes_flag_still_prompts_in_tty(
@@ -118,9 +118,9 @@ class TestUpdateYesConfigMigration:
         args = SimpleNamespace(yes=False)
 
         # Patch ``sys.stdin.isatty`` and ``sys.stdout.isatty`` directly on the
-        # real ``sys`` module instead of replacing ``hermes_cli.main.sys`` with
+        # real ``sys`` module instead of replacing ``jimmy_cli.main.sys`` with
         # a MagicMock. The MagicMock approach was flaky under ``pytest-xdist``
-        # — a sibling test that imported ``hermes_cli.main`` first could leave
+        # — a sibling test that imported ``jimmy_cli.main`` first could leave
         # a different ``sys`` reference resolved inside the function and the
         # mock would never be consulted, with CI then taking the
         # "Non-interactive session" branch instead of prompting.
@@ -148,14 +148,14 @@ class TestUnicodeDecodeErrorInUpdatePrompts:
     interactive update prompts call input() directly -- the config-
     migration prompt, the stash-restore prompt, and the upstream-remote
     prompt -- and each must fail safe (skip, don't crash) rather than let
-    the exception escape and crash `hermes update` mid-flight.
+    the exception escape and crash `jimmy update` mid-flight.
     """
 
-    @patch("hermes_cli.update_cmd._reload_config_modules")
-    @patch("hermes_cli.update_cmd._run_migrate_config_fresh")
-    @patch("hermes_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
-    @patch("hermes_cli.config.get_missing_config_fields", return_value=[])
-    @patch("hermes_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
+    @patch("jimmy_cli.update_cmd._reload_config_modules")
+    @patch("jimmy_cli.update_cmd._run_migrate_config_fresh")
+    @patch("jimmy_cli.update_cmd._run_config_check_fresh", return_value=(1, 2))
+    @patch("jimmy_cli.config.get_missing_config_fields", return_value=[])
+    @patch("jimmy_cli.config.get_missing_env_vars", return_value=["NEW_KEY"])
     @patch("shutil.which", return_value=None)
     @patch("subprocess.run")
     def test_unicode_decode_error_in_tty_skips_and_prints_hint(
@@ -186,11 +186,11 @@ class TestUnicodeDecodeErrorInUpdatePrompts:
             cmd_update(args)  # must not raise
 
         out = capsys.readouterr().out
-        assert "hermes config migrate" in out
+        assert "jimmy config migrate" in out
         mock_migrate.assert_not_called()
 
     def test_stash_restore_unicode_decode_error_falls_through_to_skip(self, tmp_path, capsys):
-        from hermes_cli.update_cmd import _restore_stashed_changes
+        from jimmy_cli.update_cmd import _restore_stashed_changes
 
         with patch(
             "builtins.input",
@@ -208,7 +208,7 @@ class TestUnicodeDecodeErrorInUpdatePrompts:
     def test_stash_restore_eof_error_still_falls_through_to_skip(self, tmp_path):
         """Sanity: this fix must not regress the pre-existing EOFError case,
         which the raw input() path had no guard for at all before this fix."""
-        from hermes_cli.update_cmd import _restore_stashed_changes
+        from jimmy_cli.update_cmd import _restore_stashed_changes
 
         with patch("builtins.input", side_effect=EOFError()):
             result = _restore_stashed_changes(
@@ -220,14 +220,14 @@ class TestUnicodeDecodeErrorInUpdatePrompts:
     def test_upstream_remote_prompt_unicode_decode_error_falls_through_to_skip(
         self, tmp_path
     ):
-        from hermes_cli.update_cmd import _sync_with_upstream_if_needed
+        from jimmy_cli.update_cmd import _sync_with_upstream_if_needed
 
         with patch(
-            "hermes_cli.update_cmd._has_upstream_remote", return_value=False
+            "jimmy_cli.update_cmd._has_upstream_remote", return_value=False
         ), patch(
-            "hermes_cli.update_cmd._should_skip_upstream_prompt", return_value=False
+            "jimmy_cli.update_cmd._should_skip_upstream_prompt", return_value=False
         ), patch(
-            "hermes_cli.update_cmd._add_upstream_remote"
+            "jimmy_cli.update_cmd._add_upstream_remote"
         ) as mock_add, patch(
             "builtins.input",
             side_effect=UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid byte"),

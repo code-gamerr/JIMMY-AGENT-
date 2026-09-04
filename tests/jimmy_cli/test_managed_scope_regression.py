@@ -10,15 +10,15 @@ import pytest
 
 
 @pytest.fixture
-def hermes_home(tmp_path, monkeypatch):
-    home = tmp_path / "hermes_home"
+def jimmy_home(tmp_path, monkeypatch):
+    home = tmp_path / "jimmy_home"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("JIMMY_HOME", str(home))
     # No managed dir: point the override at a guaranteed-absent path so a real
-    # /etc/hermes on the dev/CI box can't influence the test.
-    monkeypatch.setenv("HERMES_MANAGED_DIR", str(tmp_path / "no_such_managed_dir"))
+    # /etc/jimmy on the dev/CI box can't influence the test.
+    monkeypatch.setenv("JIMMY_MANAGED_DIR", str(tmp_path / "no_such_managed_dir"))
     # Clear caches so each test re-reads from disk.
-    import hermes_cli.config as cfg
+    import jimmy_cli.config as cfg
 
     cfg._LOAD_CONFIG_CACHE.clear()
     cfg._RAW_CONFIG_CACHE.clear()
@@ -28,17 +28,17 @@ def hermes_home(tmp_path, monkeypatch):
 
 def _write_user_config(home, body: str):
     (home / "config.yaml").write_text(textwrap.dedent(body), encoding="utf-8")
-    import hermes_cli.config as cfg
+    import jimmy_cli.config as cfg
 
     cfg._LOAD_CONFIG_CACHE.clear()
     cfg._RAW_CONFIG_CACHE.clear()
 
 
-def test_user_config_overrides_default(hermes_home, monkeypatch):
-    from hermes_cli.config import load_config, cfg_get
+def test_user_config_overrides_default(jimmy_home, monkeypatch):
+    from jimmy_cli.config import load_config, cfg_get
 
     _write_user_config(
-        hermes_home,
+        jimmy_home,
         """
         model:
           default: user/model-x
@@ -48,12 +48,12 @@ def test_user_config_overrides_default(hermes_home, monkeypatch):
     assert cfg_get(cfg, "model", "default") == "user/model-x"
 
 
-def test_env_expansion_in_user_config(hermes_home, monkeypatch):
-    from hermes_cli.config import load_config, cfg_get
+def test_env_expansion_in_user_config(jimmy_home, monkeypatch):
+    from jimmy_cli.config import load_config, cfg_get
 
     monkeypatch.setenv("MY_BASE", "https://example.test")
     _write_user_config(
-        hermes_home,
+        jimmy_home,
         """
         providers:
           custom:
@@ -65,13 +65,13 @@ def test_env_expansion_in_user_config(hermes_home, monkeypatch):
 
 
 def test_user_env_overrides_shell(tmp_path, monkeypatch):
-    from hermes_cli.env_loader import load_hermes_dotenv
+    from jimmy_cli.env_loader import load_jimmy_dotenv
 
     home = tmp_path / "home"
     home.mkdir()
     (home / ".env").write_text("FOO_TOKEN=from_user_env\n", encoding="utf-8")
     monkeypatch.setenv("FOO_TOKEN", "from_shell")
-    load_hermes_dotenv(hermes_home=str(home))
+    load_jimmy_dotenv(jimmy_home=str(home))
     assert os.environ["FOO_TOKEN"] == "from_user_env"
 
 

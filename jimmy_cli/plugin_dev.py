@@ -1,4 +1,4 @@
-"""Runtime-backed validation behind ``hermes plugins doctor``.
+"""Runtime-backed validation behind ``jimmy plugins doctor``.
 
 The Doctor originated in #46456 / contributor PR #46457 by 峯岸 亮
 (@zapabob).  This core command keeps that contribution's manifest/import/
@@ -21,7 +21,7 @@ from types import SimpleNamespace
 from typing import Any, Literal
 from unittest.mock import patch
 
-from hermes_constants import get_hermes_home
+from jimmy_constants import get_jimmy_home
 
 
 class _DoctorLoadError(RuntimeError):
@@ -37,10 +37,10 @@ def _doctor_runtime(plugin_path: Path):
     """Load one plugin through the real runtime and restore global state.
 
     This is deliberately private Doctor machinery, not a standalone plugin
-    test framework. Registration code executes under a temporary HERMES_HOME
+    test framework. Registration code executes under a temporary JIMMY_HOME
     with outbound socket connects blocked.
     """
-    temporary_home = tempfile.TemporaryDirectory(prefix="hermes-plugin-doctor-")
+    temporary_home = tempfile.TemporaryDirectory(prefix="jimmy-plugin-doctor-")
     stack = ExitStack()
     home = Path(temporary_home.name)
     bundled = home / "bundled-plugins"
@@ -58,9 +58,9 @@ def _doctor_runtime(plugin_path: Path):
         patch.dict(
             os.environ,
             {
-                "HERMES_HOME": str(home),
-                "HERMES_BUNDLED_PLUGINS": str(bundled),
-                "HERMES_ENABLE_PROJECT_PLUGINS": "0",
+                "JIMMY_HOME": str(home),
+                "JIMMY_BUNDLED_PLUGINS": str(bundled),
+                "JIMMY_ENABLE_PROJECT_PLUGINS": "0",
             },
             clear=False,
         )
@@ -69,7 +69,7 @@ def _doctor_runtime(plugin_path: Path):
     stack.enter_context(patch.object(socket.socket, "connect", _deny_network))
     stack.enter_context(patch.object(socket.socket, "connect_ex", _deny_network))
 
-    from hermes_cli.plugins import PluginManager
+    from jimmy_cli.plugins import PluginManager
     from tools.registry import registry
 
     entries_before = {entry.name: entry for entry in registry._snapshot_entries()}
@@ -77,14 +77,14 @@ def _doctor_runtime(plugin_path: Path):
     modules_before = {
         name
         for name in sys.modules
-        if name == "hermes_plugins" or name.startswith("hermes_plugins.")
+        if name == "jimmy_plugins" or name.startswith("jimmy_plugins.")
     }
     manager = PluginManager()
     try:
         manifests = manager._scan_directory(plugins_root, source="user")
         if not manifests:
             raise _DoctorLoadError(
-                f"Hermes discovery found no valid plugin manifest under {copied}"
+                f"Jimmy discovery found no valid plugin manifest under {copied}"
             )
         if len(manifests) != 1:
             raise _DoctorLoadError(
@@ -126,7 +126,7 @@ def _doctor_runtime(plugin_path: Path):
         for name in list(sys.modules):
             if (
                 name not in modules_before
-                and (name == "hermes_plugins" or name.startswith("hermes_plugins."))
+                and (name == "jimmy_plugins" or name.startswith("jimmy_plugins."))
             ):
                 sys.modules.pop(name, None)
         stack.close()
@@ -186,10 +186,10 @@ def resolve_plugin_path(target: str | os.PathLike[str] | None = None) -> Path:
         return direct.resolve()
 
     candidates: list[Path] = []
-    user_root = get_hermes_home() / "plugins"
+    user_root = get_jimmy_home() / "plugins"
     candidates.append(user_root / raw)
     try:
-        from hermes_cli.plugins import get_bundled_plugins_dir
+        from jimmy_cli.plugins import get_bundled_plugins_dir
 
         bundled = get_bundled_plugins_dir()
         candidates.extend(
@@ -201,7 +201,7 @@ def resolve_plugin_path(target: str | os.PathLike[str] | None = None) -> Path:
         )
     except Exception:
         pass
-    candidates.append(Path.cwd() / ".hermes" / "plugins" / raw)
+    candidates.append(Path.cwd() / ".jimmy" / "plugins" / raw)
     for candidate in candidates:
         if candidate.is_dir():
             return candidate.resolve()
@@ -223,12 +223,12 @@ def _check_manifest_v2(report: "DoctorReport", manifest: Any) -> None:
     import importlib.metadata
     import re as _re
 
-    from hermes_cli.plugins import SUPPORTED_MANIFEST_VERSION
+    from jimmy_cli.plugins import SUPPORTED_MANIFEST_VERSION
 
     mv = getattr(manifest, "manifest_version", 1)
     if mv > SUPPORTED_MANIFEST_VERSION:
         report.warning(
-            f"manifest_version {mv} is newer than this Hermes supports "
+            f"manifest_version {mv} is newer than this Jimmy supports "
             f"({SUPPORTED_MANIFEST_VERSION}); unknown fields are ignored"
         )
 
@@ -272,14 +272,14 @@ def _check_manifest_v2(report: "DoctorReport", manifest: Any) -> None:
         report.warning(
             "declared python_dependencies not installed: "
             + ", ".join(missing)
-            + " — Hermes never auto-installs plugin dependencies; "
+            + " — Jimmy never auto-installs plugin dependencies; "
             + "install manually: pip install "
             + " ".join(f"'{m}'" for m in missing)
         )
 
     schema = getattr(manifest, "config_schema", {}) or {}
     if schema:
-        from hermes_cli.plugins import _CONFIG_SCHEMA_TYPES
+        from jimmy_cli.plugins import _CONFIG_SCHEMA_TYPES
 
         for skey, spec in schema.items():
             if not isinstance(spec, dict):
@@ -292,7 +292,7 @@ def _check_manifest_v2(report: "DoctorReport", manifest: Any) -> None:
 
 
 def doctor_plugin(target: str | os.PathLike[str] | None = None) -> DoctorReport:
-    """Validate one plugin through Hermes' real scanner and registration path."""
+    """Validate one plugin through Jimmy' real scanner and registration path."""
     try:
         path = resolve_plugin_path(target)
     except FileNotFoundError as exc:
@@ -307,7 +307,7 @@ def doctor_plugin(target: str | os.PathLike[str] | None = None) -> DoctorReport:
             report.registered_tools = host.registered_tools
             report.registered_hooks = host.registered_hooks
 
-            from hermes_cli.plugins import VALID_HOOKS
+            from jimmy_cli.plugins import VALID_HOOKS
 
             declared_hooks = host.manifest.provides_hooks
             declared_tools = host.manifest.provides_tools

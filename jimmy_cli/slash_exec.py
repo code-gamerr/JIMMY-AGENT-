@@ -1,7 +1,7 @@
 """Registry-owned slash command execution (thin slice).
 
 Shared, surface-independent executors for informational slash commands.
-``CommandDef.execute`` (hermes_cli/commands.py) names a key in
+``CommandDef.execute`` (jimmy_cli/commands.py) names a key in
 :data:`EXECUTORS`; each surface (CLI REPL, gateway, TUI slash worker via the
 CLI) resolves that key through :func:`run_execute` and applies only its own
 decoration (Rich markup, emoji/markdown, ``_telegramize_command_mentions``)
@@ -9,10 +9,10 @@ to the canonical :class:`CommandReply`.
 
 Invariant: an executor's output depends only on ``ctx.args`` / ``ctx.options``
 — never on ``ctx.surface`` — so the core text is identical across surfaces
-for a fixed context (enforced by tests/hermes_cli/test_commands_execute.py).
+for a fixed context (enforced by tests/jimmy_cli/test_commands_execute.py).
 
 Import discipline: this module imports nothing heavy at module level and
-``hermes_cli.commands`` does NOT import this module (the ``execute`` field is
+``jimmy_cli.commands`` does NOT import this module (the ``execute`` field is
 a plain string), so the gateway can keep importing ``commands.py`` without
 prompt_toolkit and without cycles.
 """
@@ -68,14 +68,14 @@ class CommandReply:
 
 def _exec_version(ctx: CommandContext) -> CommandReply:
     """Core /version text — the banner version label."""
-    from hermes_cli.banner import format_banner_version_label
+    from jimmy_cli.banner import format_banner_version_label
 
     return CommandReply(format_banner_version_label())
 
 
 def _exec_egress(ctx: CommandContext) -> CommandReply:
     """Core /egress text — Docker egress proxy status."""
-    from hermes_cli.proxy_cli import format_status_text
+    from jimmy_cli.proxy_cli import format_status_text
 
     return CommandReply(format_status_text())
 
@@ -92,19 +92,19 @@ def _exec_profile(ctx: CommandContext) -> CommandReply:
     home_display = str(ctx.options.get("home_display") or "").strip()
 
     if not profile_name:
-        from hermes_cli.profiles import get_active_profile_name
+        from jimmy_cli.profiles import get_active_profile_name
 
         profile_name = get_active_profile_name()
     if not home_display:
-        from hermes_constants import display_hermes_home
+        from jimmy_constants import display_jimmy_home
 
-        home_display = display_hermes_home()
+        home_display = display_jimmy_home()
 
     # Presentation-only display name (profile.yaml). `data.profile` stays
     # the canonical id — consumers route on it; only the text gets the label.
     label = profile_name
     try:
-        from hermes_cli.profiles import (
+        from jimmy_cli.profiles import (
             format_profile_label,
             get_profile_dir,
             read_profile_meta,
@@ -136,7 +136,7 @@ def _exec_bundles(ctx: CommandContext) -> CommandReply:
     if not bundles:
         return CommandReply(
             "No skill bundles installed.\n"
-            "Create one with: hermes bundles create <name> --skill <s1> --skill <s2>\n"
+            "Create one with: jimmy bundles create <name> --skill <s1> --skill <s2>\n"
             f"Directory: {bundles_dir}",
             data={"bundles": [], "dir": bundles_dir},
         )
@@ -158,7 +158,7 @@ def _exec_bundles(ctx: CommandContext) -> CommandReply:
 def _exec_help(ctx: CommandContext) -> CommandReply:
     """Core gateway /help body (pre platform mention decoration)."""
     from agent.i18n import t
-    from hermes_cli.commands import gateway_help_lines
+    from jimmy_cli.commands import gateway_help_lines
 
     lines = [
         t("gateway.help.header"),
@@ -187,7 +187,7 @@ def _exec_commands(ctx: CommandContext) -> CommandReply:
     everything else 20) — for a fixed context the text is surface-invariant.
     """
     from agent.i18n import t
-    from hermes_cli.commands import gateway_help_lines
+    from jimmy_cli.commands import gateway_help_lines
 
     raw_args = (ctx.args or "").strip()
     if raw_args:
@@ -278,7 +278,7 @@ def execute_command(name: str, ctx: CommandContext) -> CommandReply:
     Raises ``LookupError`` when the command is unknown or not migrated —
     call sites use this only for commands they know carry ``execute``.
     """
-    from hermes_cli.commands import resolve_command
+    from jimmy_cli.commands import resolve_command
 
     cmd_def = resolve_command(name)
     reply = run_execute(cmd_def, ctx) if cmd_def is not None else None

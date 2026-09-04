@@ -3,13 +3,13 @@
 ``PYTEST_CURRENT_TEST`` / ``PYTEST_VERSION`` are pytest's vars: tests that
 spawn children and rebuild the child environment routinely strip them so the
 child "looks like a real CLI" — which used to disarm the live-DB guard in the
-child at the same moment the child lost the ``HERMES_HOME`` redirect. That
+child at the same moment the child lost the ``JIMMY_HOME`` redirect. That
 pairing is exactly how fixture rows (dm:123 / chat-1 / wx-chat) landed in a
 developer's production state.db.
 
-``HERMES_TEST_ISOLATION`` is Hermes's own marker: the hermetic conftest
+``JIMMY_TEST_ISOLATION`` is Jimmy's own marker: the hermetic conftest
 exports it (value = the isolation root) before any test module imports, it
-inherits into children by default, and ``hermes_state`` honors it as a
+inherits into children by default, and ``jimmy_state`` honors it as a
 test-context signal. These tests pin all three properties.
 """
 
@@ -19,14 +19,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-import hermes_state
+import jimmy_state
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _CHILD_PROBE = r"""
 import json, os, sys
 sys.path.insert(0, {repo!r})
-import hermes_state as hs
+import jimmy_state as hs
 fired = False
 try:
     hs._ensure_test_isolation(hs._real_platform_state_root() / "state.db")
@@ -67,8 +67,8 @@ def _minimal_env(**extra) -> dict:
 
 def test_conftest_exports_the_marker():
     """The hermetic conftest must export the marker before tests run."""
-    assert os.environ.get("HERMES_TEST_ISOLATION"), (
-        "HERMES_TEST_ISOLATION must be exported by tests/conftest.py so "
+    assert os.environ.get("JIMMY_TEST_ISOLATION"), (
+        "JIMMY_TEST_ISOLATION must be exported by tests/conftest.py so "
         "subprocess children inherit a test-context signal that survives "
         "PYTEST_* scrubbing"
     )
@@ -77,8 +77,8 @@ def test_conftest_exports_the_marker():
 def test_marker_alone_reports_test_context(monkeypatch):
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("PYTEST_VERSION", raising=False)
-    monkeypatch.setenv("HERMES_TEST_ISOLATION", "/tmp/some-isolation-root")
-    assert hermes_state._running_under_pytest() is True
+    monkeypatch.setenv("JIMMY_TEST_ISOLATION", "/tmp/some-isolation-root")
+    assert jimmy_state._running_under_pytest() is True
 
 
 def test_no_signals_reports_production(monkeypatch):
@@ -86,15 +86,15 @@ def test_no_signals_reports_production(monkeypatch):
     off the env (ancestry may still arm it in a real child — not this seam)."""
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("PYTEST_VERSION", raising=False)
-    monkeypatch.delenv("HERMES_TEST_ISOLATION", raising=False)
-    assert hermes_state._running_under_pytest() is False
+    monkeypatch.delenv("JIMMY_TEST_ISOLATION", raising=False)
+    assert jimmy_state._running_under_pytest() is False
 
 
 def test_child_with_rebuilt_env_keeping_marker_refuses_production_db():
     """THE regression: a child whose env was rebuilt from scratch (PYTEST_*
-    stripped, HERMES_HOME lost) but which keeps the marker must still refuse
+    stripped, JIMMY_HOME lost) but which keeps the marker must still refuse
     to open the production state.db."""
-    env = _minimal_env(HERMES_TEST_ISOLATION="/tmp/pytest-isolation-root")
+    env = _minimal_env(JIMMY_TEST_ISOLATION="/tmp/pytest-isolation-root")
     result = _spawn_probe(env)
     assert result["armed"] is True
     assert result["fired"] is True, (
@@ -105,10 +105,10 @@ def test_child_with_rebuilt_env_keeping_marker_refuses_production_db():
 
 def test_child_bypass_env_disarms_guard_even_with_marker():
     """The sanctioned escape hatch for children that genuinely need a real
-    DB: HERMES_STATE_DB_GUARD_BYPASS=1, not marker-stripping."""
+    DB: JIMMY_STATE_DB_GUARD_BYPASS=1, not marker-stripping."""
     env = _minimal_env(
-        HERMES_TEST_ISOLATION="/tmp/pytest-isolation-root",
-        HERMES_STATE_DB_GUARD_BYPASS="1",
+        JIMMY_TEST_ISOLATION="/tmp/pytest-isolation-root",
+        JIMMY_STATE_DB_GUARD_BYPASS="1",
     )
     result = _spawn_probe(env)
     assert result["fired"] is False

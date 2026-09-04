@@ -147,7 +147,7 @@ class TestChatCompletionsBasic:
         assert transport.convert_messages(msgs) is msgs
 
     def test_convert_messages_strips_internal_scaffolding_markers(self, transport):
-        """Hermes-internal ``_``-prefixed markers must never reach the wire.
+        """Jimmy-internal ``_``-prefixed markers must never reach the wire.
 
         The empty-response recovery path appends synthetic messages tagged
         with ``_empty_recovery_synthetic``; permissive providers ignore the
@@ -629,11 +629,11 @@ class TestChatCompletionsGeminiNativeExtraBodyStrip:
 
     def test_tags_preserved_on_nous_endpoint(self, transport):
         kw = transport.build_kwargs(
-            "hermes-3-405b",
+            "jimmy-3-405b",
             [{"role": "user", "content": "hi"}],
             None,
             provider_profile=self._nous_profile(),
-            base_url="https://inference.nousresearch.com/v1",
+            base_url="https://inference.jimmy-agent.com/v1",
             session_id="s1",
             max_tokens=None,
         )
