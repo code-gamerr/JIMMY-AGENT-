@@ -232,3 +232,8 @@ native/fts5_cjk/*.so
 .azure/*.log
 .azure/azure-skills-pull/
 
+
+# Profile export archives produced by 'jimmy profiles export' - runtime data,
+# not source. A root default.tar.gz was committed by accident.
+/default.tar.gz
+*.profile.tar.gz
