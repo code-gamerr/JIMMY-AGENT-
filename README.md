@@ -2,147 +2,90 @@
   <img src="assets/banner.png" alt="Jimmy" width="100%">
 </p>
 
-# Jimmy ☤
+# Jimmy
+
+**The self-improving personal AI agent.** Same core across CLI, messaging gateway (Telegram, Discord, Slack, and more), TUI, and Electron desktop. It learns across sessions (memory + skills), delegates to subagents, runs scheduled jobs, and drives a real terminal and browser.
+
 <p align="center">
-  <a href="https://jimmy-agent.jimmy-agent.com/">Jimmy</a> | <a href="https://jimmy-agent.jimmy-agent.com/">Jimmy Desktop</a>
-</p>
-<p align="center">
-  <a href="https://jimmy-agent.jimmy-agent.com/docs/"><img src="https://img.shields.io/badge/Docs-jimmy--agent.jimmy-agent.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/Jimmy"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/Jimmy/jimmy-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://jimmy-agent.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Jimmy"></a>
+  <a href="https://github.com/code-gamerr/JIMMY-AGENT-/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/code-gamerr/JIMMY-AGENT-"><img src="https://img.shields.io/badge/GitHub-code--gamerr%2FJIMMY--AGENT--black?style=for-the-badge&logo=github" alt="GitHub"></a>
   <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-中文-red?style=for-the-badge" alt="中文"></a>
   <a href="README.ur-pk.md"><img src="https://img.shields.io/badge/Lang-اردو-green?style=for-the-badge" alt="اردو"></a>
   <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Español-orange?style=for-the-badge" alt="Español"></a>
 </p>
 
-**The self-improving AI agent built by [Jimmy](https://jimmy-agent.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
-
-Use any model you want — [Nous Portal](https://portal.jimmy-agent.com), OpenRouter, OpenAI, your own endpoint, and [many others](https://jimmy-agent.jimmy-agent.com/docs/integrations/providers). Switch with `jimmy model` — no code changes, no lock-in.
+Use any model you want — Azure Foundry, OpenRouter, OpenAI, local endpoints, and many others. Switch with `jimmy model` — no code changes, no lock-in.
 
 <table>
 <tr><td><b>A real terminal interface</b></td><td>Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output.</td></tr>
 <tr><td><b>Lives where you do</b></td><td>Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity.</td></tr>
-<tr><td><b>A closed learning loop</b></td><td>Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization for cross-session recall. <a href="https://github.com/plastic-labs/honcho">Honcho</a> dialectic user modeling. Compatible with the <a href="https://agentskills.io">agentskills.io</a> open standard.</td></tr>
-<tr><td><b>Scheduled automations</b></td><td>Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, running unattended.</td></tr>
+<tr><td><b>A closed learning loop</b></td><td>Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search for cross-session recall. Compatible with the <a href="https://agentskills.io">agentskills.io</a> open standard.</td></tr>
+<tr><td><b>Scheduled automations</b></td><td>Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — in natural language, running unattended.</td></tr>
 <tr><td><b>Delegates and parallelizes</b></td><td>Spawn isolated subagents for parallel workstreams. Write Python scripts that call tools via RPC, collapsing multi-step pipelines into zero-context-cost turns.</td></tr>
-<tr><td><b>Runs anywhere, not just your laptop</b></td><td>Seven terminal backends — local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox. Daytona and Modal offer serverless persistence — your agent's environment hibernates when idle and wakes on demand, costing nearly nothing between sessions. Run it on a $5 VPS or a GPU cluster.</td></tr>
-<tr><td><b>Research-ready</b></td><td>Batch trajectory generation, trajectory compression for training the next generation of tool-calling models.</td></tr>
+<tr><td><b>Runs anywhere</b></td><td>Local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox backends. Run it on a $5 VPS or a GPU cluster.</td></tr>
 </table>
 
 ---
 
 ## Quick Install
 
-### Linux, macOS, WSL2, Termux
+### From this repo (recommended)
 
 ```bash
-curl -fsSL https://jimmy-agent.jimmy-agent.com/install.sh | bash
+git clone https://github.com/code-gamerr/JIMMY-AGENT-.git
+cd JIMMY-AGENT-
+./setup-jimmy.sh          # Linux / macOS / WSL2 / Termux
+# or on Windows PowerShell:
+#   .\scripts\install.ps1
 ```
 
-### Windows (native, PowerShell)
+### One-liner (scripts in-repo)
 
-> **Heads up:** Native Windows runs Jimmy without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS one-liner above works there too. Found a bug? Please [file issues](https://github.com/Jimmy/jimmy-agent/issues).
-
-Run this in PowerShell:
+```bash
+# Linux, macOS, WSL2, Termux
+curl -fsSL https://raw.githubusercontent.com/code-gamerr/JIMMY-AGENT-/main/scripts/install.sh | bash
+```
 
 ```powershell
-iex (irm https://jimmy-agent.jimmy-agent.com/install.ps1)
+# Windows (native PowerShell)
+irm https://raw.githubusercontent.com/code-gamerr/JIMMY-AGENT-/main/scripts/install.ps1 | iex
 ```
-
-The installer handles everything: uv, Python 3.11, Node.js, ripgrep, ffmpeg, **and a portable Git Bash** (MinGit, unpacked to `%LOCALAPPDATA%\jimmy\git` — no admin required, completely isolated from any system Git install). Jimmy uses this bundled Git Bash to run shell commands.
-
-If you already have Git installed, the installer detects it and uses that instead. Otherwise a ~45MB MinGit download is all you need — it won't touch or interfere with any system Git.
-
-> **Android / Termux:** The tested manual path is documented in the [Termux guide](https://jimmy-agent.jimmy-agent.com/docs/getting-started/termux). On Termux, Jimmy installs a curated `.[termux]` extra because the full `.[all]` extra currently pulls Android-incompatible voice dependencies.
->
-> **Windows:** Native Windows is fully supported — the PowerShell one-liner above installs everything. If you'd rather use WSL2, the Linux command works there too. Native Windows install lives under `%LOCALAPPDATA%\jimmy`; WSL2 installs under `~/.jimmy` as on Linux.
 
 After installation:
 
 ```bash
-source ~/.bashrc    # reload shell (or: source ~/.zshrc)
-jimmy              # start chatting!
+jimmy              # start chatting
+jimmy model        # choose provider + model
+jimmy setup        # full setup wizard
+jimmy gateway      # Telegram / Discord / Slack / …
+jimmy doctor       # diagnose issues
 ```
 
-### Troubleshooting
+Config lives in `~/.jimmy/` (or `%LOCALAPPDATA%\jimmy` on native Windows). Secrets go in `.env`; everything else in `config.yaml`.
 
-#### Windows Defender or antivirus flags `uv.exe` as malware
-
-If your antivirus (Bitdefender, Windows Defender, etc.) quarantines `uv.exe` from the Jimmy `bin` folder (`%LOCALAPPDATA%\jimmy\bin\uv.exe`), this is a **false positive**. The file is Astral's `uv` — the Rust Python package manager Jimmy bundles to manage its Python environment. ML-based antivirus engines commonly flag unsigned Rust binaries that download and install packages.
-
-**To verify your copy is authentic:**
-
-```powershell
-# Install GitHub CLI if needed
-winget install --id GitHub.cli
-
-# Login to GitHub
-gh auth login
-
-# Run verification
-$uv = "$env:LOCALAPPDATA\jimmy\bin\uv.exe"
-$ver = (& $uv --version).Split(' ')[1]
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$zip = "$env:TEMP\uv.zip"
-Invoke-WebRequest "https://github.com/astral-sh/uv/releases/download/$ver/uv-x86_64-pc-windows-msvc.zip" -OutFile $zip -UseBasicParsing
-gh attestation verify $zip --repo astral-sh/uv
-Expand-Archive $zip "$env:TEMP\uv_x" -Force
-(Get-FileHash "$env:TEMP\uv_x\uv.exe").Hash -eq (Get-FileHash $uv).Hash
-```
-
-If attestation says "Verification succeeded" and the last line prints `True`, you're good.
-
-**To whitelist Jimmy:**
-- **Windows Defender:** Run PowerShell as Admin → `Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\jimmy\bin"`
-- **Bitdefender:** Add an exception in the Bitdefender console (Protection > Antivirus > Settings > Manage Exceptions)
-- Whitelist the **folder**, not the file hash — Jimmy updates `uv` and the hash changes every version
-
-For more context, see the upstream Astral reports: [astral-sh/uv#13553](https://github.com/astral-sh/uv/issues/13553), [astral-sh/uv#15011](https://github.com/astral-sh/uv/issues/15011), [astral-sh/uv#10079](https://github.com/astral-sh/uv/issues/10079).
+> Legacy installs that still use `HERMES_HOME` / `~/.hermes` keep working — Jimmy reads those as a compatibility fallback when `JIMMY_HOME` is unset.
 
 ---
 
 ## Getting Started
 
 ```bash
-jimmy              # Interactive CLI — start a conversation
-jimmy model        # Choose your LLM provider and model
-jimmy tools        # Configure which tools are enabled
+jimmy              # Interactive CLI
+jimmy model        # Choose LLM provider and model
+jimmy tools        # Configure enabled tools
 jimmy config set   # Set individual config values
 jimmy config get   # Print individual config values
-jimmy gateway      # Start the messaging gateway (Telegram, Discord, etc.)
-jimmy setup        # Run the full setup wizard (configures everything at once)
-jimmy claw migrate # Migrate from OpenClaw (if coming from OpenClaw)
+jimmy gateway      # Messaging gateway
+jimmy setup        # Full setup wizard
+jimmy claw migrate # Migrate from OpenClaw
 jimmy update       # Update to the latest version
-jimmy doctor       # Diagnose any issues
+jimmy doctor       # Diagnose issues
+jimmy prompt-size  # Measure system-prompt + tool-schema token cost
 ```
-
-📖 **[Full documentation →](https://jimmy-agent.jimmy-agent.com/docs/)**
-
----
-
-## Skip the API-key collection — Nous Portal
-
-Jimmy works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, **[Nous Portal](https://portal.jimmy-agent.com)** covers all of them under one subscription:
-
-- **300+ models** — pick any of them with `/model <name>`
-- **Tool Gateway** — web search (Firecrawl), image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts.
-
-One command from a fresh install:
-
-```bash
-jimmy setup --portal
-```
-
-That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with `jimmy portal info`. Full details on the [Tool Gateway docs page](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/tool-gateway).
-
-You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing.
 
 ---
 
 ## CLI vs Messaging Quick Reference
-
-Jimmy has two entry points: start the terminal UI with `jimmy`, or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces.
 
 | Action                         | CLI                                           | Messaging platforms                                                              |
 | ------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -156,41 +99,21 @@ Jimmy has two entry points: start the terminal UI with `jimmy`, or run the gatew
 | Interrupt current work         | `Ctrl+C` or send a new message                | `/stop` or send a new message                                                    |
 | Platform-specific status       | `/platforms`                                  | `/status`, `/sethome`                                                            |
 
-For the full command lists, see the [CLI guide](https://jimmy-agent.jimmy-agent.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging).
-
 ---
 
 ## Documentation
 
-All documentation lives at **[jimmy-agent.jimmy-agent.com/docs](https://jimmy-agent.jimmy-agent.com/docs/)**:
-
-| Section                                                                                             | What's Covered                                             |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Quickstart](https://jimmy-agent.jimmy-agent.com/docs/getting-started/quickstart)                 | Install → setup → first conversation in 2 minutes          |
-| [CLI Usage](https://jimmy-agent.jimmy-agent.com/docs/user-guide/cli)                              | Commands, keybindings, personalities, sessions             |
-| [Configuration](https://jimmy-agent.jimmy-agent.com/docs/user-guide/configuration)                | Config file, providers, models, all options                |
-| [Messaging Gateway](https://jimmy-agent.jimmy-agent.com/docs/user-guide/messaging)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](https://jimmy-agent.jimmy-agent.com/docs/user-guide/security)                          | Command approval, DM pairing, container isolation          |
-| [Tools & Toolsets](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/tools)            | 40+ tools, toolset system, terminal backends               |
-| [Skills System](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/skills)              | Procedural memory, Skills Hub, creating skills             |
-| [Memory](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/memory)                     | Persistent memory, user profiles, best practices           |
-| [MCP Integration](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/mcp)               | Connect any MCP server for extended capabilities           |
-| [Cron Scheduling](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/cron)              | Scheduled tasks with platform delivery                     |
-| [Context Files](https://jimmy-agent.jimmy-agent.com/docs/user-guide/features/context-files)       | Project context that shapes every conversation             |
-| [Architecture](https://jimmy-agent.jimmy-agent.com/docs/developer-guide/architecture)             | Project structure, agent loop, key classes                 |
-| [Contributing](https://jimmy-agent.jimmy-agent.com/docs/developer-guide/contributing)             | Development setup, PR process, code style                  |
-| [CLI Reference](https://jimmy-agent.jimmy-agent.com/docs/reference/cli-commands)                  | All commands and flags                                     |
-| [Environment Variables](https://jimmy-agent.jimmy-agent.com/docs/reference/environment-variables) | Complete env var reference                                 |
+| Doc | What's covered |
+| --- | -------------- |
+| [AGENTS.md](AGENTS.md) | Short contributor guide for AI coding assistants (kept lean for prompt size) |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Full development / architecture guide |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution process |
+| [website/](website/) | In-repo docs site source |
+| [docs/optimizer/ARCHITECTURE.md](docs/optimizer/ARCHITECTURE.md) | Harness optimizer design |
 
 ---
 
 ## Migrating from OpenClaw
-
-If you're coming from OpenClaw, Jimmy can automatically import your settings, memories, skills, and API keys.
-
-**During first-time setup:** The setup wizard (`jimmy setup`) automatically detects `~/.openclaw` and offers to migrate before configuration begins.
-
-**Anytime after install:**
 
 ```bash
 jimmy claw migrate              # Interactive migration (full preset)
@@ -199,66 +122,39 @@ jimmy claw migrate --preset user-data   # Migrate without secrets
 jimmy claw migrate --overwrite  # Overwrite existing conflicts
 ```
 
-What gets imported:
+What gets imported: `SOUL.md`, memories, user skills, command allowlist, messaging settings, allowlisted API keys, TTS assets, and optional workspace `AGENTS.md`.
 
-- **SOUL.md** — persona file
-- **Memories** — MEMORY.md and USER.md entries
-- **Skills** — user-created skills → `~/.jimmy/skills/openclaw-imports/`
-- **Command allowlist** — approval patterns
-- **Messaging settings** — platform configs, allowed users, working directory
-- **API keys** — allowlisted secrets (Telegram, OpenRouter, OpenAI, Anthropic, ElevenLabs)
-- **TTS assets** — workspace audio files
-- **Workspace instructions** — AGENTS.md (with `--workspace-target`)
-
-See `jimmy claw migrate --help` for all options, or use the `openclaw-migration` skill for an interactive agent-guided migration with dry-run previews.
+See `jimmy claw migrate --help`, or use the `openclaw-migration` skill for an agent-guided migration.
 
 ---
 
 ## Contributing
 
-We welcome contributions! See the [Contributing Guide](https://jimmy-agent.jimmy-agent.com/docs/developer-guide/contributing) for development setup, code style, and PR process.
-
-Quick start for contributors — use the standard installer, then work from the
-full git checkout it creates at `$JIMMY_HOME/jimmy-agent` (usually
-`~/.jimmy/jimmy-agent`). This matches the layout used by `jimmy update`, the
-managed venv, lazy dependencies, gateway, and docs tooling.
-
 ```bash
-curl -fsSL https://jimmy-agent.jimmy-agent.com/install.sh | bash
-cd "${JIMMY_HOME:-$HOME/.jimmy}/jimmy-agent"
-uv pip install -e ".[all,dev]"
+git clone https://github.com/code-gamerr/JIMMY-AGENT-.git
+cd JIMMY-AGENT-
+./setup-jimmy.sh
+# or:
+#   uv venv ~/.jimmy/venvs/jimmy-dev --python 3.11
+#   source ~/.jimmy/venvs/jimmy-dev/bin/activate
+#   uv pip install -e ".[all,dev]"
 scripts/run_tests.sh
 ```
 
-Manual clone fallback (for throwaway clones/CI where you intentionally do not
-want the managed install layout):
+Create the venv **outside** the cloned source tree when possible — a relative-path wipe against the checkout can destroy a venv living inside it.
 
-Create the venv outside the cloned source tree — a venv inside the directory
-the agent operates from can be wiped by a relative-path command the agent runs
-against its own checkout, destroying the running runtime mid-session.
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv venv ~/.jimmy/venvs/jimmy-dev --python 3.11
-source ~/.jimmy/venvs/jimmy-dev/bin/activate
-uv pip install -e ".[all,dev]"
-scripts/run_tests.sh
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
 ---
 
 ## Community
 
-- 💬 [Discord](https://discord.gg/Jimmy)
+- 🐛 [Issues](https://github.com/code-gamerr/JIMMY-AGENT-/issues)
 - 📚 [Skills Hub](https://agentskills.io)
-- 🐛 [Issues](https://github.com/Jimmy/jimmy-agent/issues)
-- 🔌 [computer-use-linux](https://github.com/avifenesh/computer-use-linux) — Linux desktop-control MCP server for Jimmy and other MCP hosts, with AT-SPI accessibility trees, Wayland/X11 input, screenshots, and compositor window targeting.
-- 🔌 [JimmyClaw](https://github.com/AaronWong1999/jimmyclaw) — Community WeChat bridge: Run Jimmy and OpenClaw on the same WeChat account.
+- 🔌 [computer-use-linux](https://github.com/avifenesh/computer-use-linux) — Linux desktop-control MCP server
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-Built by [Jimmy](https://jimmy-agent.com).
