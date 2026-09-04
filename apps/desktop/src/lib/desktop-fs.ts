@@ -1,9 +1,4 @@
-import type {
-  JimmyConnection,
-  JimmyReadDirResult,
-  JimmyReadFileTextResult,
-  JimmySelectPathsOptions
-} from '@/global'
+import type { JimmyConnection, JimmyReadDirResult, JimmyReadFileTextResult, JimmySelectPathsOptions } from '@/global'
 import { $connection } from '@/store/session'
 
 export interface DesktopFsRemotePicker {

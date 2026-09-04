@@ -41,8 +41,7 @@ export const useJimmyConfigRecord = (profile?: ProfileScope) =>
 // write the suffixed per-profile cache instead — keeps the selector's optimistic
 // write-through landing on the same key its query reads.
 export const setJimmyConfigCache = writeCache<JimmyConfigRecord>(JIMMY_CONFIG_KEY)
-export const jimmyConfigCacheWriter = (profile?: ProfileScope) =>
-  writeCache<JimmyConfigRecord>(jimmyConfigKey(profile))
+export const jimmyConfigCacheWriter = (profile?: ProfileScope) => writeCache<JimmyConfigRecord>(jimmyConfigKey(profile))
 
 export const invalidateJimmyConfig = (profile?: ProfileScope) =>
   queryClient.invalidateQueries({ queryKey: jimmyConfigKey(profile) })

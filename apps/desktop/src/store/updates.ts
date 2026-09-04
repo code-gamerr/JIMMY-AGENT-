@@ -14,8 +14,8 @@ import type {
   DesktopUpdateStatus,
   DesktopVersionInfo
 } from '@/global'
-import { checkJimmyUpdate, getActionStatus, updateJimmy } from '@/jimmy'
 import { translateNow } from '@/i18n'
+import { checkJimmyUpdate, getActionStatus, updateJimmy } from '@/jimmy'
 import { persistString, storedString } from '@/lib/storage'
 import { $connectionsRegistry, refreshConnectionsRegistry } from '@/store/connections'
 import { dismissNotification, notify } from '@/store/notifications'

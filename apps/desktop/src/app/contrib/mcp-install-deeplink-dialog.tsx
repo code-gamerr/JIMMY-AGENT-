@@ -12,8 +12,8 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { getJimmyConfigRecord, saveMcpServers } from '@/jimmy'
 import { useI18n } from '@/i18n'
+import { getJimmyConfigRecord, saveMcpServers } from '@/jimmy'
 import { AlertTriangle } from '@/lib/icons'
 import { MCP_DEEPLINK_NAME_RE } from '@/lib/mcp-deeplink'
 import { getServers } from '@/lib/mcp-servers'

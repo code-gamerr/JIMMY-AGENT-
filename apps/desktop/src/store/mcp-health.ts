@@ -12,8 +12,8 @@
  * the other just learned.
  */
 
-import { getJimmyConfigRecord, type McpTestResult, testMcpServer } from '@/jimmy'
 import { translateNow } from '@/i18n'
+import { getJimmyConfigRecord, type McpTestResult, testMcpServer } from '@/jimmy'
 import { classifyProbe, freshProbe, probeCache, probeKey } from '@/lib/mcp-probe-cache'
 import { notify } from '@/store/notifications'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'

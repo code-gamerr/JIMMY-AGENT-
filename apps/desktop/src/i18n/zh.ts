@@ -1189,8 +1189,7 @@ export const zh: Translations = {
       disableTool: tool => `禁用 ${tool}`,
       noOutput: '暂无输出。',
       deepLinkTitle: '添加 MCP 服务器？',
-      deepLinkDescription:
-        '一个链接请求将此 MCP 服务器添加到 Jimmy。请检查下方的完整配置——它来自该链接，而非 Jimmy。',
+      deepLinkDescription: '一个链接请求将此 MCP 服务器添加到 Jimmy。请检查下方的完整配置——它来自该链接，而非 Jimmy。',
       deepLinkStdioWarning: '此服务器会使用下方所示命令在你的电脑上运行本地进程。仅在信任其来源时继续。',
       deepLinkConfirm: '添加服务器',
       deepLinkNameInvalid: '名称须为 1-64 个字母、数字、点、连字符或下划线。',
@@ -2675,8 +2674,7 @@ export const zh: Translations = {
     copy: '复制',
     copied: '已复制',
     done: '完成',
-    applyingBody:
-      'Jimmy 更新器会在自己的窗口中接管，并在完成后自动重新打开 Jimmy。更新期间请不要自行重新打开 Jimmy。',
+    applyingBody: 'Jimmy 更新器会在自己的窗口中接管，并在完成后自动重新打开 Jimmy。更新期间请不要自行重新打开 Jimmy。',
     applyingBodyBackend: '远程后端正在应用更新并将重启。恢复后 Jimmy 会自动重新连接。',
     applyingClose: '此窗口会在更新期间关闭，随后 Jimmy 会自动重新打开。',
     errorTitle: '更新未完成',

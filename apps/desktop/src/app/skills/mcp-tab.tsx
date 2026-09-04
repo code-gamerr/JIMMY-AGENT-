@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch'
 import { TextTab } from '@/components/ui/text-tab'
 import { Textarea } from '@/components/ui/textarea'
 import { Tip } from '@/components/ui/tooltip'
+import { type Translations, useI18n } from '@/i18n'
 import {
   authMcpServer,
   getActionStatus,
@@ -23,8 +24,8 @@ import {
   getMcpCatalog,
   getMcpOAuthFlow,
   getUsageAnalytics,
-  type JimmyGateway,
   installMcpCatalogEntry,
+  type JimmyGateway,
   type McpCatalogEntry,
   type McpTestResult,
   type ProfileScope,
@@ -32,7 +33,6 @@ import {
   saveMcpServers,
   testMcpServer
 } from '@/jimmy'
-import { type Translations, useI18n } from '@/i18n'
 import { compactNumber } from '@/lib/format'
 import { brandFor } from '@/lib/mcp-brands'
 import { estimateServerTokens, serverUsageCount } from '@/lib/mcp-cost'

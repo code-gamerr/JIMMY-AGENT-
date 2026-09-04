@@ -8,8 +8,8 @@ import {
 } from '@/app/right-sidebar/terminal/terminal-font'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { saveJimmyConfig } from '@/jimmy'
 import { useI18n } from '@/i18n'
+import { saveJimmyConfig } from '@/jimmy'
 import { notifyError } from '@/store/notifications'
 import type { JimmyConfigRecord } from '@/types/jimmy'
 

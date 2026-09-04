@@ -14,8 +14,8 @@ import './kanban.css'
 import {
   cn,
   Codicon,
-  type JimmyPlugin,
   host,
+  type JimmyPlugin,
   type KeybindContribution,
   KEYBINDS_AREA,
   PALETTE_AREA,

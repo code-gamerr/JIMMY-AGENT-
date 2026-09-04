@@ -120,9 +120,7 @@ test('buildDesktopBackendEnv extends PYTHONPATH and backend PATH together', () =
 
   assert.equal(env.PYTHONPATH, '/repo/jimmy-agent:/existing/pythonpath')
   assert.ok(
-    env.PATH.startsWith(
-      '/Users/test/.jimmy/node/bin:/Users/test/.jimmy/node:/Users/test/.jimmy/jimmy-agent/venv/bin:'
-    )
+    env.PATH.startsWith('/Users/test/.jimmy/node/bin:/Users/test/.jimmy/node:/Users/test/.jimmy/jimmy-agent/venv/bin:')
   )
   assert.ok(env.PATH.includes('/opt/homebrew/bin'))
 })
