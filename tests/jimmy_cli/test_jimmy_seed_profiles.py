@@ -85,6 +85,8 @@ def test_seed_creates_four_isolated_homes(jimmy_seed_env, monkeypatch):
         cfg = yaml.safe_load((path / "config.yaml").read_text(encoding="utf-8"))
         assert cfg["model"]["provider"] == "azure-foundry"
         assert cfg["model"]["default"] == "gpt-5.6-sol"
+        assert cfg["model"]["api_mode"] == "codex_responses"
+        assert cfg["agent"]["reasoning_effort"] == "none"
         assert cfg["agent"]["max_turns"] == 75
         assert cfg["agent"]["coding_context"] == "focus"
         assert cfg["agent"]["api_max_retries"] >= 8

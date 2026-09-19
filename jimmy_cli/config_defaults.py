@@ -54,6 +54,36 @@ DEFAULT_CONFIG = {
         # implicit provider stale timeouts are capped to the remaining
         # budget. CLI one-shot equivalent: `jimmy chat --run-budget N`.
         "run_budget_seconds": None,
+        # Per-run cumulative token budget (DeerFlow-inspired). Opt-in.
+        # When enabled, Jimmy warns at warn_fraction of `total` tokens and
+        # strips further tool_calls at hard_stop_fraction so the turn ends
+        # with a final answer. Delivery uses the same cache-safe tool-result
+        # channel as run_budget_seconds.
+        #   token_budget:
+        #     enabled: true
+        #     total: 200000
+        #     warn_fraction: 0.8
+        #     hard_stop_fraction: 1.0
+        "token_budget": {
+            "enabled": False,
+            "total": 200000,
+            "warn_fraction": 0.8,
+            "hard_stop_fraction": 1.0,
+        },
+        # Opt-in plan mode (DeerFlow TodoMiddleware premature-exit parity).
+        # When true, a tool-less final answer is blocked while the todo store
+        # still has pending/in_progress items (bounded rematches).
+        "plan_mode": False,
+        # CRITICAL SkillScan at skill install time (DeerFlow skillscan parity).
+        # Complements tools.skills_guard; set enabled: false to skip.
+        "skill_scan": {
+            "enabled": True,
+        },
+        # Hard ceiling for client-supplied max_iterations / recursion_limit
+        # (DeerFlow max_recursion_limit parity). API / gateway callers cannot
+        # request more iterations than this; invalid or oversized values clamp
+        # down. Default 1000 matches DeerFlow.
+        "max_recursion_limit": 1000,
         # Inactivity timeout for gateway agent execution (seconds).
         # The agent can run indefinitely as long as it's actively calling
         # tools or receiving API responses.  Only fires when the agent has
@@ -569,6 +599,25 @@ DEFAULT_CONFIG = {
             "rewrite_loopback_urls": False,
             "loopback_host_alias": "host.docker.internal",
         },
+    },
+
+    # Per-turn cheap/strong model routing from the user prompt (heuristic).
+    # When enabled, each turn picks cheap_model or strong_model without an
+    # extra LLM call. Same Azure/OpenAI endpoint can host both deployments —
+    # only the model id changes. Opt-in: switching models mid-session uses a
+    # per-model cache prefix (expected cost tradeoff).
+    #
+    # Example for Azure Foundry deployments gpt-6-astra + gpt-5-mini:
+    #   smart_model_routing:
+    #     enabled: true
+    #     cheap_model: gpt-5-mini
+    #     strong_model: gpt-6-astra
+    "smart_model_routing": {
+        "enabled": False,
+        "cheap_model": "gpt-5-mini",
+        "strong_model": "gpt-6-astra",
+        # Prompts longer than this (and not matching cheap greetings) go strong.
+        "cheap_max_chars": 400,
     },
 
     # Filesystem checkpoints — automatic snapshots before destructive file ops.
@@ -2495,6 +2544,15 @@ DEFAULT_CONFIG = {
         # jobs from silently inheriting a paid default. Set to false only when
         # jobs should deliberately track changing global inference defaults.
         "model_drift_guard": True,
+        # Multi-instance fire-claim lease (DeerFlow scheduler.multi_instance
+        # parity). File-backed by default; share JIMMY_HOME (or a network FS)
+        # across replicas. claim_ttl_seconds bounds how long a crashed owner's
+        # fire_claim blocks re-dispatch; heartbeats refresh within that window.
+        "multi_instance": {
+            "enabled": False,
+            "fire_claim_ttl_seconds": 300,
+            "require_shared_home": True,
+        },
         # Default inference model for cron jobs (Axis A — WHAT model an
         # agent job runs on). Resolution at fire time: per-job user pin >
         # cron.model > global model.default. When set, unpinned jobs follow
@@ -4171,6 +4229,30 @@ OPTIONAL_ENV_VARS = {
         "tools": ["web_search", "web_extract"],
         "password": True,
         "category": "tool",
+    },
+    "INFOQUEST_API_KEY": {
+        "description": "BytePlus InfoQuest API key for web search and page fetch",
+        "prompt": "InfoQuest API key",
+        "url": "https://docs.byteplus.com/en/docs/InfoQuest/What_is_Info_Quest",
+        "tools": ["web_search", "web_extract"],
+        "password": True,
+        "category": "tool",
+    },
+    "E2B_API_KEY": {
+        "description": "E2B API key for cloud sandbox terminal backend (TERMINAL_ENV=e2b)",
+        "prompt": "E2B API key",
+        "url": "https://e2b.dev",
+        "tools": ["terminal"],
+        "password": True,
+        "category": "tool",
+    },
+    "E2B_TEMPLATE": {
+        "description": "Optional E2B sandbox template id/name",
+        "prompt": "E2B template (optional)",
+        "url": "https://e2b.dev",
+        "password": False,
+        "category": "tool",
+        "advanced": True,
     },
     "KEENABLE_API_KEY": {
         "description": "Keenable API key for fast independent-index web search and page fetch (optional — keyless free tier works without it)",

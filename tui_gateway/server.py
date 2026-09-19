@@ -5533,6 +5533,21 @@ def _get_usage(agent) -> dict:
             usage["context_max"] = ctx_max
             usage["context_percent"] = max(0, min(100, round(last_prompt / ctx_max * 100)))
         usage["compressions"] = getattr(comp, "compression_count", 0) or 0
+    # Per-run token budget gauge (DeerFlow-inspired). Opt-in via agent.token_budget.
+    try:
+        tb = getattr(agent, "token_budget", None)
+        if isinstance(tb, dict) and tb.get("enabled") and tb.get("total"):
+            budget_total = int(tb["total"])
+            used = int(getattr(agent, "session_total_tokens", 0) or 0)
+            if budget_total > 0:
+                usage["token_budget_enabled"] = True
+                usage["token_budget_used"] = used
+                usage["token_budget_total"] = budget_total
+                usage["token_budget_percent"] = max(
+                    0, min(100, round(100.0 * used / budget_total))
+                )
+    except Exception:
+        pass
     # Live count of background/async subagents still running (delegate_task
     # batches + background single delegations). Mirrors the classic CLI status
     # bar's ⛓ indicator; sourced from the same async_delegation registry.

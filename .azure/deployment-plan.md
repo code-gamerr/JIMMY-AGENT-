@@ -31,7 +31,7 @@ Generated: 2026-08-21
 | Component | Type | Technology | Path |
 |-----------|------|------------|------|
 | Jimmy dashboard + agent | API + UI | Python FastAPI + React (web/) | repo root / Dockerfile |
-| Azure OpenAI | External model | azure-foundry / gpt-5.6-sol | existing resource |
+| Azure OpenAI | External model | azure-foundry / gpt-6-astra | existing resource (rg-medscan) |
 | Multi-user basic auth | Auth | plugins/dashboard_auth/basic | plugins/dashboard_auth/basic |
 
 ---

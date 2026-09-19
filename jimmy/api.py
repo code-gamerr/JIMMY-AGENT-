@@ -41,6 +41,7 @@ def get_token() -> str:
 class SubmitBody(BaseModel):
     user_request: str = Field(min_length=1, max_length=20000)
     agent: str | None = Field(default="auto")
+    telegram_chat_id: str | None = Field(default=None, max_length=64)
 
 
 def _extract_token(request: Request, authorization: str | None, x_jimmy_token: str | None) -> str | None:
@@ -59,6 +60,22 @@ def create_app(engine: TaskEngine | None = None) -> FastAPI:
         set_engine(engine)
     get_token()
     app = FastAPI(title="Jimmy Command Center", docs_url=None, redoc_url=None)
+
+    @app.middleware("http")
+    async def cors_gate(request: Request, call_next):
+        if request.method == "OPTIONS":
+            return JSONResponse(
+                {},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "authorization, x-jimmy-token, content-type",
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                },
+            )
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "authorization, x-jimmy-token, content-type"
+        return response
 
     @app.middleware("http")
     async def auth_gate(request: Request, call_next):
@@ -94,7 +111,11 @@ def create_app(engine: TaskEngine | None = None) -> FastAPI:
 
     @app.post("/api/jimmy/tasks")
     def submit(body: SubmitBody):
-        task = get_engine().submit(body.user_request, agent=body.agent)
+        task = get_engine().submit(
+            body.user_request,
+            agent=body.agent,
+            telegram_chat_id=body.telegram_chat_id,
+        )
         return {"success": True, "data": task.to_dict(), "error": None}
 
     @app.get("/api/jimmy/tasks/{task_id}")
@@ -103,7 +124,15 @@ def create_app(engine: TaskEngine | None = None) -> FastAPI:
         if not task:
             raise HTTPException(404, "task not found")
         events = [e.to_dict() for e in get_engine().store.list_events(task_id)]
-        return {"success": True, "data": {"task": task.to_dict(), "events": events}, "error": None}
+        return {
+            "success": True,
+            "data": {
+                "task": task.to_dict(),
+                "events": events,
+                "narration": get_engine().narration(task_id),
+            },
+            "error": None,
+        }
 
     @app.post("/api/jimmy/tasks/{task_id}/cancel")
     def cancel(task_id: str):

@@ -46,22 +46,14 @@ afterEach(() => {
 })
 
 describe('onboarding Picker', () => {
-  it('features Nous Portal and hides other providers behind a disclosure', () => {
+  it('does not offer Nous Portal on first run', () => {
     setProviders([makeOAuthProvider('anthropic', 'Anthropic Claude'), makeOAuthProvider('nous', 'Nous Portal')])
     render(<Picker ctx={ctx} />)
 
-    expect(screen.getByText('Nous Portal')).toBeTruthy()
-    expect(screen.getByText('Recommended')).toBeTruthy()
-    // Fireworks stays behind the disclosure with the other alternatives; only
-    // Nous Portal is visible before the user expands the list.
-    expect(screen.queryByText('Fireworks AI')).toBeNull()
-    expect(screen.queryByText('Anthropic API Key')).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Other providers' }))
-
+    expect(screen.queryByText('Nous Portal')).toBeNull()
+    expect(screen.queryByText('Recommended')).toBeNull()
     expect(screen.getByText('Fireworks AI')).toBeTruthy()
     expect(screen.getByText('Anthropic API Key')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy()
   })
 
   it('shows Fireworks first in the expanded list, ahead of other OAuth providers', () => {
@@ -71,7 +63,6 @@ describe('onboarding Picker', () => {
       makeOAuthProvider('nous', 'Nous Portal')
     ])
     render(<Picker ctx={ctx} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Other providers' }))
 
     const labels = screen
       .getAllByRole('button')
@@ -79,8 +70,8 @@ describe('onboarding Picker', () => {
       .filter(text => /Nous Portal|Fireworks AI|ChatGPT or Codex|MiniMax|OpenRouter/.test(text))
 
     const indexOf = (needle: string) => labels.findIndex(text => text.includes(needle))
-    expect(indexOf('Nous Portal')).toBeGreaterThanOrEqual(0)
-    expect(indexOf('Fireworks AI')).toBeGreaterThan(indexOf('Nous Portal'))
+    expect(indexOf('Nous Portal')).toBe(-1)
+    expect(indexOf('Fireworks AI')).toBeGreaterThanOrEqual(0)
     expect(indexOf('ChatGPT or Codex')).toBeGreaterThan(indexOf('Fireworks AI'))
     expect(indexOf('MiniMax')).toBeGreaterThan(indexOf('ChatGPT or Codex'))
   })

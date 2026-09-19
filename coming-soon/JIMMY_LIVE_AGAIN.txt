@@ -1,0 +1,3 @@
+Jimmy is live again.
+
+The maintenance auto-reply is off. Normal chats should work on Telegram, CLI, and desktop.

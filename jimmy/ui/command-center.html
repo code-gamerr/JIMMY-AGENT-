@@ -68,6 +68,23 @@
     .steps li { margin: 4px 0; color: var(--muted); }
     .steps li.done { color: var(--green); }
     .steps li.current { color: var(--accent); }
+    .mission {
+      border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+      background: #0d1117; margin-bottom: 12px;
+    }
+    .mission h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.12em; }
+    .headline { color: var(--accent); margin-bottom: 10px; }
+    .card {
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+      margin: 8px 0; display: grid; gap: 2px;
+    }
+    .card .who { font-weight: 700; }
+    .card .cap { color: var(--muted); font-size: 12px; }
+    .state { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+    .state.assigned, .state.completed { color: var(--green); }
+    .state.active, .state.assigning, .state.waiting { color: var(--blue); }
+    .state.failed { color: var(--red); }
+    .plan-ready { color: var(--green); margin-top: 8px; font-size: 13px; }
     .agent { margin-bottom: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
     .agent .ok { color: var(--green); }
     .agent .bad { color: var(--red); }
@@ -182,12 +199,44 @@
       ).join('\n\n') || 'No stored experiences yet.';
     }
 
+    function stateLabel(status) {
+      return ({
+        assigning: 'ASSIGNING',
+        assigned: 'ASSIGNED ✓',
+        waiting: 'WAITING',
+        active: 'ACTIVE',
+        completed: 'COMPLETED ✓',
+        failed: 'FAILED'
+      })[status] || 'NOT STARTED';
+    }
+
+    function renderMission(narration) {
+      if (!narration) return '';
+      const cards = (narration.cards || []).map(card => `
+        <div class="card" data-agent="${escapeHtml(card.agent_id)}" data-status="${escapeHtml(card.status)}">
+          <div class="who">${escapeHtml(card.label)}</div>
+          <div class="cap">${escapeHtml(card.description)}</div>
+          <div class="state ${escapeHtml(card.status)}">${stateLabel(card.status)}</div>
+        </div>`).join('');
+      const ready = narration.phase === 'assigned' || narration.phase === 'starting'
+        ? `<div class="plan-ready">✓ All tasks assigned<br>🚀 ${escapeHtml(narration.phase === 'starting' ? 'Execution starting' : 'Required agents ready')}</div>`
+        : '';
+      return `
+        <div class="mission" data-slot="orchestrator-activity">
+          <h3>ORCHESTRATOR</h3>
+          <div class="headline">${escapeHtml(narration.headline || '')}</div>
+          ${cards}
+          ${ready}
+        </div>`;
+    }
+
     function renderDetail(payload) {
       const t = payload.task;
       const steps = (t.plan_steps || []).map(s =>
         `<li class="${s.done ? 'done' : ''}">${s.done ? '✓' : '○'} ${s.label}</li>`
       ).join('');
       document.getElementById('detail').innerHTML = `
+        ${renderMission(payload.narration)}
         <div><strong>TASK #${t.task_id}</strong></div>
         <div>Task: ${escapeHtml(t.user_request)}</div>
         <div>Agent: ${t.selected_agent || '—'}</div>

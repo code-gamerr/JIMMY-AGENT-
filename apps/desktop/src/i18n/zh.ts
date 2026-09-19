@@ -1735,6 +1735,7 @@ export const zh: Translations = {
     search: '搜索消息平台…',
     loading: '正在加载消息平台…',
     loadFailed: '消息平台加载失败',
+    noPublicIpBanner: '无需公网 IP。Telegram 使用长轮询，Slack 使用 Socket Mode，Discord 使用 Gateway WebSocket — 在此绑定令牌后 Jimmy 会主动出站连接。',
     states: {
       connected: '已连接',
       connecting: '连接中',
@@ -2997,6 +2998,7 @@ export const zh: Translations = {
         empty: '暂无上下文数据',
         loading: '正在加载明细…',
         percentFull: percent => `已用 ${percent}%`,
+        runBudgetTitle: '运行 token 预算',
         title: '上下文用量',
         tokenSummary: (used, max) => `${used} / ${max} Tokens`
       },
@@ -3285,10 +3287,15 @@ export const zh: Translations = {
       continueLabel: '继续',
       confirmAndContinueLabel: '确认并继续',
       answeredBadge: '已回答',
+      waitingHint: 'Jimmy 正在等待你的回答后继续。',
       questionProgress: (answered, total) => `已回答 ${answered}/${total}`,
       lateAnswer: (question, choice) => `关于"${question}" — 我的回答: ${choice}`,
       lateAnswerTip: '将此回答起草为后续消息',
       lateAnswerHint: '此问题已不再等待回答。选择一个选项会将其起草为后续消息。'
+    },
+    presentFiles: {
+      defaultTitle: '已展示的文件',
+      bundle: '产物'
     },
     mcpSetup: {
       installTitle: server => `添加 ${server} MCP 服务器？`,
@@ -3373,8 +3380,9 @@ export const zh: Translations = {
         execute_code: { done: '已运行代码', pending: '正在编写脚本', pendingAction: '正在编写脚本' },
         image_generate: { done: '已生成图片', pending: '正在生成图片', pendingAction: '正在生成' },
         list_files: { done: '已列出文件', pending: '正在列出文件', pendingAction: '正在列出' },
-        memory: { done: '已保存到记忆', pending: '正在保存到记忆', pendingAction: '正在保存' },
+        memory: { done: '已写入记忆', pending: '正在写入记忆', pendingAction: '正在写入' },
         patch: { done: '已修补文件', pending: '正在修补文件', pendingAction: '正在修补' },
+        present_files: { done: '已展示文件', pending: '正在展示文件', pendingAction: '正在展示' },
         read_file: { done: '已读取文件', pending: '正在读取文件', pendingAction: '正在读取' },
         search_files: { done: '已搜索文件', pending: '正在搜索文件', pendingAction: '正在搜索' },
         session_search_recall: { done: '已搜索会话历史', pending: '正在搜索会话历史', pendingAction: '正在搜索' },

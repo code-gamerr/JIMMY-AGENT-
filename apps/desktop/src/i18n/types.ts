@@ -22,6 +22,7 @@ export type ToolTitleKey =
   | 'list_files'
   | 'memory'
   | 'patch'
+  | 'present_files'
   | 'read_file'
   | 'search_files'
   | 'session_search_recall'
@@ -1370,6 +1371,7 @@ export interface Translations {
     search: string
     loading: string
     loadFailed: string
+    noPublicIpBanner: string
     states: Record<string, string>
     unknown: string
     hintPendingRestart: string
@@ -2406,6 +2408,7 @@ export interface Translations {
         empty: string
         loading: string
         percentFull: (percent: number) => string
+        runBudgetTitle: string
         title: string
         tokenSummary: (used: string, max: string) => string
       }
@@ -2690,10 +2693,15 @@ export interface Translations {
       continueLabel: string
       confirmAndContinueLabel: string
       answeredBadge: string
+      waitingHint: string
       questionProgress: (answered: number, total: number) => string
       lateAnswer: (question: string, choice: string) => string
       lateAnswerTip: string
       lateAnswerHint: string
+    }
+    presentFiles: {
+      defaultTitle: string
+      bundle: string
     }
     mcpSetup: {
       installTitle: (server: string) => string

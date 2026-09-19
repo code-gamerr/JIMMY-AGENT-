@@ -8,20 +8,15 @@ https://ca-jimmy-yd6h7x5ni6ki4.braveriver-d2909cea.eastus.azurecontainerapps.io/
 
 Login: https://ca-jimmy-yd6h7x5ni6ki4.braveriver-d2909cea.eastus.azurecontainerapps.io/login
 
-## Maintenance (2026-09-03)
+## Maintenance status
 
-Planned ~42 hour window (ECC install + related work). Full Jimmy gateway is
-offline; revision `ca-jimmy-yd6h7x5ni6ki4--maintbots` runs a lightweight
-Telegram auto-replier + HTTP maintenance page instead.
+**Ended 2026-09-15.** Live revision is `ca-jimmy-yd6h7x5ni6ki4--online` (image
+entrypoint / full Jimmy). The `--maintbots` command override was cleared.
 
-- Any Telegram message (e.g. “hi”) to jimmy1/2/3 bots gets a cool maintenance reply.
-- Script: `.azure/jimmy_maintenance_bots.py` (also on Azure Files share `jimmy-data`).
-- Dashboard URL serves a short “polishing up” page on `:9119`.
-- jimmy4: no Telegram bot token configured.
-
-To bring full Jimmy back online: redeploy from `azure-build/` (preferred), or
-clear the maintenance `command` override / remount and activate a normal
-gateway revision. Do **not** leave `--maintbots` as the live command after
+If you need a maintenance window again: deploy with
+`command: [python, -u, /mnt/maint/jimmy_maintenance_bots.py]`
+(see `ca-jimmy-maint-deploy.yaml`), then clear `--command` / activate a normal
+revision when done. Do **not** leave `--maintbots` as the live command after
 maintenance.
 
 ## Local CLI (Jimmy, not Jimmy)

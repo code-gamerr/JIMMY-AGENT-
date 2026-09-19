@@ -1,0 +1,7 @@
+name: web-infoquest
+version: 1.0.0
+description: "BytePlus InfoQuest web search + page fetch. Set INFOQUEST_API_KEY — https://docs.byteplus.com/en/docs/InfoQuest/What_is_Info_Quest"
+author: Jimmy
+kind: backend
+provides_web_providers:
+  - infoquest

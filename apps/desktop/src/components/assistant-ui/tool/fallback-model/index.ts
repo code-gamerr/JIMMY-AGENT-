@@ -181,6 +181,10 @@ const TOOL_META: Record<ToolTitleKey, ToolMetaSpec> = {
     icon: 'file-media',
     tone: 'image'
   },
+  present_files: {
+    icon: 'files',
+    tone: 'file'
+  },
   list_files: {
     icon: 'files',
     tone: 'file'

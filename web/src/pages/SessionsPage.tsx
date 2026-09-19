@@ -391,6 +391,23 @@ function MessageBubble({
   const highlightTerms =
     isHit && highlight ? highlight.split(/\s+/).filter(Boolean) : undefined;
 
+  const presentFiles =
+    msg.role === "tool" && msg.tool_name === "present_files" && msg.content
+      ? (() => {
+          try {
+            const parsed = JSON.parse(msg.content) as {
+              ok?: boolean
+              title?: string
+              presented?: Array<{ name?: string; presented_path?: string }>
+            }
+            if (!parsed?.ok || !parsed.presented?.length) return null
+            return parsed
+          } catch {
+            return null
+          }
+        })()
+      : null
+
   return (
     <div
       className={`${style.bg} p-3 ${isHit ? "ring-1 ring-warning/40" : ""}`}
@@ -409,14 +426,27 @@ function MessageBubble({
           </span>
         )}
       </div>
-      {msg.content &&
+      {presentFiles ? (
+        <div className="text-sm text-foreground" data-slot="present-files">
+          <p className="font-medium mb-1">{presentFiles.title || "Presented files"}</p>
+          <ul className="list-disc pl-4 space-y-0.5">
+            {presentFiles.presented!.map((file, idx) => (
+              <li key={`${file.name || "file"}-${idx}`}>
+                <span className="font-mono text-xs">{file.name || file.presented_path}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        msg.content &&
         (msg.role === "system" ? (
           <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
             {msg.content}
           </div>
         ) : (
           <Markdown content={msg.content} highlightTerms={highlightTerms} />
-        ))}
+        ))
+      )}
       {msg.tool_calls && msg.tool_calls.length > 0 && (
         <div className="mt-1">
           {msg.tool_calls.map((tc) => (

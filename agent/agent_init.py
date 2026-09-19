@@ -1943,6 +1943,19 @@ def init_agent(
             _agent_section.get("run_budget_seconds")
         )
 
+    # Per-run token budget (DeerFlow-inspired). Dict or empty → feature off.
+    _tb = _agent_section.get("token_budget")
+    agent.token_budget = dict(_tb) if isinstance(_tb, dict) else {
+        "enabled": False,
+        "total": 200000,
+        "warn_fraction": 0.8,
+        "hard_stop_fraction": 1.0,
+    }
+
+    # Plan-mode premature-exit guard (DeerFlow TodoMiddleware parity).
+    agent.plan_mode = bool(_agent_section.get("plan_mode", False))
+    agent._plan_mode_nudges = 0
+
     # Empty-response retry guard config (NS-503): additive
     # ``agent.empty_response_guard`` subsection. Resolution is tolerant —
     # a malformed section falls back to the schema defaults (guard on,

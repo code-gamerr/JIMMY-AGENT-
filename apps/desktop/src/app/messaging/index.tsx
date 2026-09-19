@@ -11,6 +11,7 @@ import { ErrorBanner } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tip } from '@/components/ui/tooltip'
+import { type Translations, useI18n } from '@/i18n'
 import {
   approvePairing,
   getMessagingPlatforms,
@@ -21,7 +22,6 @@ import {
   revokePairing,
   updateMessagingPlatform
 } from '@/jimmy'
-import { type Translations, useI18n } from '@/i18n'
 import { openExternalLink } from '@/lib/external-link'
 import { ExternalLink, Save, Trash2 } from '@/lib/icons'
 import { normalize } from '@/lib/text'
@@ -437,6 +437,12 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           {/* Which profile's gateway this page configures (hidden for
               single-profile users). */}
           <SettingsProfileScope className="border-b border-(--ui-stroke-secondary) px-3 py-2" />
+          <p
+            className="border-b border-(--ui-stroke-secondary) px-3 py-2 text-[0.75rem] text-muted-foreground"
+            data-slot="messaging-no-public-ip"
+          >
+            {m.noPublicIpBanner}
+          </p>
           <div className="min-h-0 flex-1">
             <MasterDetail>
               <ListColumn>

@@ -440,6 +440,14 @@ if [ "${JIMMY_SEED_PROFILES:-}" = "1" ] || [ -n "${JIMMY1_PASSWORD:-}" ]; then
         echo "[stage2] Warning: jimmy_seed_profiles failed — continuing"
 fi
 
+# Optional Azure Files post-seed hotfix (e.g. gpt-6-astra → Responses API).
+# Keeps host-specific patches off the image; no-op when the file is absent.
+if [ -f /mnt/maint/post-seed.sh ]; then
+    echo "[stage2] Running /mnt/maint/post-seed.sh"
+    sh /mnt/maint/post-seed.sh || \
+        echo "[stage2] Warning: post-seed.sh failed — continuing"
+fi
+
 # --- Ensure a gateway api_server key exists (loopback control plane) ---
 # The gateway's aiohttp api_server refuses to start without a strong
 # API_SERVER_KEY (>=16 chars; startup guard in gateway/platforms/api_server.py).

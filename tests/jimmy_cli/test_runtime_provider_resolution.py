@@ -1030,15 +1030,19 @@ class TestAzureFoundryResolution:
         }
 
 
-    def test_azure_foundry_missing_base_url_raises(self, monkeypatch):
+    def test_azure_foundry_uses_code_endpoint_when_config_has_no_base_url(self, monkeypatch):
+        """Key in .env plus the plugin endpoint is enough — no extra base_url."""
         monkeypatch.setenv("AZURE_FOUNDRY_API_KEY", "az-key")
         monkeypatch.delenv("AZURE_FOUNDRY_BASE_URL", raising=False)
+        monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
         monkeypatch.setattr(rp, "resolve_provider", lambda *a, **k: "azure-foundry")
-        monkeypatch.setattr(rp, "_get_model_config", lambda: {})
+        monkeypatch.setattr(rp, "_get_model_config", lambda: {"provider": "azure-foundry"})
         monkeypatch.setattr(rp, "load_pool", lambda provider: None)
 
-        with pytest.raises(rp.AuthError, match="base URL"):
-            rp.resolve_runtime_provider(requested="azure-foundry")
+        resolved = rp.resolve_runtime_provider(requested="azure-foundry")
+
+        assert resolved["api_key"] == "az-key"
+        assert resolved["base_url"].startswith("https://medmxlabs-openai.openai.azure.com")
 
 
     # -- Model-family api_mode inference -------------------------------------

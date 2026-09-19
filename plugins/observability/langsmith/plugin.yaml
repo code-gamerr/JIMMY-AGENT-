@@ -1,0 +1,16 @@
+name: langsmith
+version: "1.0.0"
+description: >
+  Optional LangSmith / LangChain tracing for Jimmy (DeerFlow parity).
+  Opt-in via `jimmy plugins enable observability/langsmith`.
+author: Jimmy
+requires_env:
+  - LANGSMITH_API_KEY
+optional_env:
+  - LANGSMITH_PROJECT
+  - LANGSMITH_ENDPOINT
+  - LANGCHAIN_TRACING_V2
+hooks:
+  - pre_llm_call
+  - post_llm_call
+  - on_session_end

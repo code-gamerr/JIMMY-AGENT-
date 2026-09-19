@@ -1,0 +1,25 @@
+name: github-platform
+label: GitHub
+kind: platform
+version: 1.0.0
+description: >
+  GitHub Issues/PR comment agent channel (DeerFlow parity).
+  Uses Jimmy's webhook adapter with a curated GitHub event → agent →
+  github_comment delivery recipe. Set GITHUB_WEBHOOK_SECRET and configure
+  the webhook URL to your Jimmy gateway webhook endpoint.
+author: Jimmy (adapted from DeerFlow GitHub channel patterns)
+requires_env:
+  - name: GITHUB_WEBHOOK_SECRET
+    description: "HMAC secret configured on the GitHub webhook"
+    prompt: "GitHub webhook secret"
+    url: "https://docs.github.com/en/webhooks"
+    password: true
+optional_env:
+  - name: GITHUB_TOKEN
+    description: "Token with issues:write / pull_requests:write to post replies"
+    prompt: "GitHub token (PAT or GitHub App installation token)"
+    password: true
+  - name: GITHUB_WEBHOOK_PATH
+    description: "Webhook route path (default /webhooks/github)"
+    prompt: "Webhook path"
+    password: false

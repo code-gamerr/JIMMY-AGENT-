@@ -45,12 +45,19 @@ def _azure_model_block() -> dict[str, Any]:
     model = (
         os.environ.get("AZURE_OPENAI_DEPLOYMENT")
         or os.environ.get("JIMMY_MODEL")
-        or "gpt-5.6-sol"
+        or "gpt-6-astra"
     )
+    # gpt-6-astra rejects tools+reasoning on /chat/completions (HTTP 400);
+    # Responses API is required. Keep chat_completions only for classic chat
+    # models (gpt-4o, etc.) if someone overrides AZURE_OPENAI_DEPLOYMENT.
+    api_mode = "chat_completions"
+    slug = str(model).strip().lower()
+    if slug.startswith(("gpt-6", "gpt-5", "o1", "o3", "o4", "codex")):
+        api_mode = "codex_responses"
     block: dict[str, Any] = {
         "default": model,
         "provider": "azure-foundry",
-        "api_mode": "chat_completions",
+        "api_mode": api_mode,
     }
     if endpoint:
         if not endpoint.endswith("/openai/v1"):
@@ -262,6 +269,10 @@ def _apply_jimmy_agent_limits(
     agent["coding_context"] = "focus"
     # Survive Azure OpenAI RPM bursts (4 users + tool loops).
     agent["api_max_retries"] = max(int(agent.get("api_max_retries") or 0), 8)
+    # gpt-6-astra rejects tools + non-none reasoning on /chat/completions.
+    # Seed prefers Responses API for gpt-5+/gpt-6; this is a safe fallback.
+    if not str(agent.get("reasoning_effort") or "").strip():
+        agent["reasoning_effort"] = "none"
     disabled = {
         str(x)
         for x in (agent.get("disabled_toolsets") or [])

@@ -506,6 +506,7 @@ from cron.jobs import (
     use_cron_store,
 )
 from cron.executions import create_execution, finish_execution, mark_execution_running
+from cron.lease_config import fire_claim_kwargs
 
 # Sentinel: when a cron agent has nothing new to report, it can start its
 # response with this marker to suppress delivery.  Output is still saved
@@ -7128,7 +7129,9 @@ def tick(
             # Acquire the durable claim only when this worker actually starts,
             # not while it may wait behind other work in an executor queue.
             # This prevents a queued lease from expiring before execution.
-            claimed = claim_job_for_fire(job["id"], return_job=True)
+            claimed = claim_job_for_fire(
+                job["id"], return_job=True, **fire_claim_kwargs()
+            )
             if not claimed:
                 finish_execution(
                     job["execution_id"],

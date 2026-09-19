@@ -2929,6 +2929,13 @@ class APIServerAdapter(BasePlatformAdapter):
         enabled_toolsets = sorted(_get_platform_tools(user_config, "api_server"))
 
         max_iterations = _current_max_iterations()
+        try:
+            from jimmy_cli.config import clamp_max_iterations
+
+            # DeerFlow-style ceiling: never honor unbounded / oversized client caps.
+            max_iterations = clamp_max_iterations(max_iterations)
+        except Exception:
+            pass
 
         # Load fallback provider chain so the API server platform has the
         # same fallback behaviour as Telegram/Discord/Slack (fixes #4954).

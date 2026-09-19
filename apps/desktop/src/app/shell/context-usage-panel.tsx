@@ -65,6 +65,23 @@ export function ContextUsagePanel({ breakdown, loading, usage }: ContextUsagePan
       {loading && !categories.length && <p className="text-[0.6875rem] text-muted-foreground">{copy.loading}</p>}
 
       {!loading && !categories.length && <p className="text-[0.6875rem] text-muted-foreground">{copy.empty}</p>}
+
+      {usage.token_budget_enabled && (usage.token_budget_total ?? 0) > 0 ? (
+        <div className="mt-1 border-t border-border/60 pt-2" data-slot="token-budget-gauge">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-medium text-foreground">{copy.runBudgetTitle}</p>
+            <span className="text-[0.6875rem] text-muted-foreground">
+              {copy.tokenSummary(
+                `~${compactNumber(usage.token_budget_used ?? 0)}`,
+                compactNumber(usage.token_budget_total ?? 0)
+              )}
+            </span>
+          </div>
+          <p className="mt-1 text-[0.6875rem] text-foreground">
+            {copy.percentFull(Math.max(0, Math.min(100, Math.round(usage.token_budget_percent ?? 0))))}
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }

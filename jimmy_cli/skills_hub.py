@@ -711,6 +711,35 @@ def do_install(identifier: str, category: str = "", force: bool = False,
         cache_dir=HUB_DIR / "scan-cache",
     )
     c.print(format_scan_report(result))
+
+    # DeerFlow-inspired CRITICAL SkillScan (static). Blocks on secrets /
+    # reverse-shell / cloud-metadata patterns even if skills_guard is caution.
+    try:
+        from tools.skillscan_static import (
+            StaticScanBlockedError,
+            enforce_static_scan,
+            format_static_findings,
+        )
+        from jimmy_cli.config import load_config
+
+        enforce_static_scan(q_path, config=load_config())
+    except StaticScanBlockedError as blocked:
+        c.print(f"\n[bold red]SkillScan blocked:[/]\n{format_static_findings(blocked.findings)}")
+        shutil.rmtree(q_path, ignore_errors=True)
+        from tools.skills_hub import append_audit_log
+        append_audit_log(
+            "BLOCKED",
+            bundle.name,
+            bundle.source,
+            bundle.trust_level,
+            "skillscan_critical",
+            f"{len(blocked.findings)}_critical",
+        )
+        return
+    except Exception as scan_exc:
+        # Fail open only for scanner bugs; log loudly.
+        c.print(f"[dim]SkillScan skipped ({scan_exc})[/]")
+
     freshness = "fresh" if scan_provenance["fresh"] else "cached"
     c.print(
         f"[dim]Scan provenance: {freshness}; scanner "

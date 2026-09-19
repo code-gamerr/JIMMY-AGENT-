@@ -181,9 +181,10 @@ class CronScheduler(ABC):
         """
         from cron.executions import create_execution, finish_execution
         from cron.jobs import claim_job_for_fire
+        from cron.lease_config import fire_claim_kwargs
 
         execution = create_execution(job_id, source=self.name)
-        claim_kwargs = {"return_job": True}
+        claim_kwargs = {"return_job": True, **fire_claim_kwargs()}
         if force:
             claim_kwargs["force"] = True
         try:

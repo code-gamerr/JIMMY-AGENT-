@@ -18,7 +18,8 @@ from jimmy.models import (
     new_task_id,
     utcnow,
 )
-from jimmy.planner import plan_request
+from jimmy.narration import should_refresh
+from jimmy.planner import assignment_briefs, plan_request
 from jimmy.security import agent_allowed, audit, load_permissions
 from jimmy.store import OrchestratorStore
 
@@ -36,6 +37,7 @@ class TaskEngine:
         self.bus = bus or EventBus()
         self.adapters = adapters or build_adapters()
         self._cancels: dict[str, threading.Event] = {}
+        self._telegram: dict[str, object] = {}
         self._lock = threading.Lock()
 
     def emit(self, event: TaskEvent) -> None:
@@ -60,8 +62,17 @@ class TaskEngine:
             if err:
                 errors = errors + (err,)
         self.store.save_task(task.evolve(logs=logs[-500:], files_changed=files, errors=errors[-50:]))
+        narrator = self._telegram.get(event.task_id)
+        if narrator is not None and should_refresh(event.type):
+            narrator.on_event(event)
 
-    def submit(self, user_request: str, agent: str | None = None) -> TaskRecord:
+    def submit(
+        self,
+        user_request: str,
+        agent: str | None = None,
+        *,
+        telegram_chat_id: str | None = None,
+    ) -> TaskRecord:
         task = TaskRecord(
             task_id=new_task_id(),
             user_request=user_request.strip(),
@@ -70,12 +81,18 @@ class TaskEngine:
             current_step="queued",
         )
         self.store.save_task(task)
+        if telegram_chat_id:
+            from jimmy.telegram_status import TelegramStatusNarrator
+
+            self._telegram[task.task_id] = TelegramStatusNarrator(
+                telegram_chat_id, task_id=task.task_id
+            )
         self.emit(
             TaskEvent(
                 type=EventType.TASK_CREATED.value,
                 task_id=task.task_id,
                 ts=utcnow(),
-                payload={"user_request": task.user_request},
+                payload={"user_request": task.user_request, "status": "Understanding your request..."},
             )
         )
         audit("task.created", {"task_id": task.task_id, "agent": agent})
@@ -143,7 +160,15 @@ class TaskEngine:
                 type=EventType.TASK_PLANNING.value,
                 task_id=task.task_id,
                 ts=utcnow(),
-                payload={"user_request": task.user_request},
+                payload={"status": "Understanding your request...", "user_request": task.user_request},
+            )
+        )
+        self.emit(
+            TaskEvent(
+                type=EventType.TASK_PLANNING.value,
+                task_id=task.task_id,
+                ts=utcnow(),
+                payload={"status": "Building execution plan..."},
             )
         )
         prior = self.store.search_experiences(task.user_request, limit=5)
@@ -153,28 +178,84 @@ class TaskEngine:
             experiences=prior,
         )
         workers = tuple(plan.workers) or (plan.agent,)
+        briefs = assignment_briefs(workers)
+        self.emit(
+            TaskEvent(
+                type=EventType.TASK_DECOMPOSED.value,
+                task_id=task.task_id,
+                ts=utcnow(),
+                payload={
+                    "execution_id": task.task_id,
+                    "status": "Execution plan ready.",
+                    "breakdown": [brief["description"] for brief in briefs],
+                    "assignments": list(briefs),
+                },
+            )
+        )
+
         perms = load_permissions()
-        for worker_id in workers:
+        for brief in briefs:
+            worker_id = brief["agent_id"]
             if worker_id not in self.adapters:
                 raise RuntimeError(f"unknown worker {worker_id}")
             if not agent_allowed(worker_id, perms):
                 raise PermissionError(f"agent {worker_id} is not permitted")
+            assigned = {
+                "execution_id": task.task_id,
+                "task_id": task.task_id,
+                "agent_id": worker_id,
+                "label": brief["label"],
+                "capability": brief["capability"],
+                "description": brief["description"],
+                "status": "assigned",
+                "index": brief["index"],
+                "total": brief["total"],
+            }
+            self.emit(
+                TaskEvent(
+                    type=EventType.TASK_ASSIGNED.value,
+                    task_id=task.task_id,
+                    ts=utcnow(),
+                    payload={**assigned, "status": "assigning"},
+                )
+            )
             ok, reason = self.adapters[worker_id].validate_task(
                 task.evolve(selected_agent=worker_id)
             )
             if not ok:
                 raise RuntimeError(f"{worker_id}: {reason}")
+            self.emit(
+                TaskEvent(
+                    type=EventType.TASK_ASSIGNMENT_CONFIRMED.value,
+                    task_id=task.task_id,
+                    ts=utcnow(),
+                    payload={**assigned, "status": "assigned"},
+                )
+            )
 
         primary = plan.agent
         adapter = self.adapters[primary]
         task = task.evolve(
             status=TaskStatus.ROUTING,
             selected_agent=primary,
-            current_step="routing",
+            current_step="assigned",
             plan_steps=plan.steps,
             experience_ids=plan.reused_experience_ids,
         )
         self.store.save_task(task)
+        self.emit(
+            TaskEvent(
+                type=EventType.TASK_ASSIGNMENTS_COMPLETE.value,
+                task_id=task.task_id,
+                ts=utcnow(),
+                payload={
+                    "execution_id": task.task_id,
+                    "status": "All tasks assigned.",
+                    "workers": list(workers),
+                    "count": len(briefs),
+                },
+            )
+        )
         self.emit(
             TaskEvent(
                 type=EventType.TASK_ROUTED.value,
@@ -201,6 +282,18 @@ class TaskEngine:
         self.store.save_task(task)
         self.emit(
             TaskEvent(
+                type=EventType.TASK_EXECUTION_STARTING.value,
+                task_id=task.task_id,
+                ts=utcnow(),
+                payload={
+                    "status": "Starting execution...",
+                    "workers": list(workers),
+                    "parallel": False,
+                },
+            )
+        )
+        self.emit(
+            TaskEvent(
                 type=EventType.TASK_STARTED.value,
                 task_id=task.task_id,
                 ts=utcnow(),
@@ -217,27 +310,80 @@ class TaskEngine:
         all_errors: list[str] = []
         summaries: list[str] = []
         success = True
-        for worker_id in workers:
+        previous_brief: dict | None = None
+        for brief in briefs:
             if cancel.is_set():
                 self.cancel(task.task_id)
                 return
+            worker_id = brief["agent_id"]
             worker = self.adapters[worker_id]
+            if previous_brief is not None:
+                self.emit(
+                    TaskEvent(
+                        type=EventType.TASK_HANDOFF.value,
+                        task_id=task.task_id,
+                        ts=utcnow(),
+                        payload={
+                            "status": "Routing result...",
+                            "from_agent": previous_brief["agent_id"],
+                            "from_label": previous_brief["label"],
+                            "to_agent": worker_id,
+                            "to_label": brief["label"],
+                        },
+                    )
+                )
+            elif len(briefs) > 1:
+                later = briefs[1]
+                self.emit(
+                    TaskEvent(
+                        type=EventType.TASK_WAITING.value,
+                        task_id=task.task_id,
+                        ts=utcnow(),
+                        payload={
+                            "agent_id": later["agent_id"],
+                            "label": later["label"],
+                            "status": (
+                                f"Waiting for {brief['label']} result "
+                                f"before starting {later['label']}..."
+                            ),
+                        },
+                    )
+                )
             self.emit(
                 TaskEvent(
-                    type=EventType.COMMAND_OUTPUT.value,
+                    type=EventType.TASK_AGENT_ACTIVATED.value,
                     task_id=task.task_id,
                     ts=utcnow(),
                     payload={
-                        "stream": "stdout",
-                        "chunk": f"assigning worker={worker_id}",
-                        "command": ["assign", worker_id],
-                        "cwd": worker.get_status().workspace,
+                        "agent_id": worker_id,
+                        "label": brief["label"],
+                        "capability": brief["capability"],
+                        "description": brief["description"],
+                        "status": f"{brief['label']} activated",
                     },
                 )
             )
             result = worker.execute_task(
                 task.evolve(selected_agent=worker_id), self.emit, cancel
             )
+            self.emit(
+                TaskEvent(
+                    type=EventType.TASK_AGENT_COMPLETED.value,
+                    task_id=task.task_id,
+                    ts=utcnow(),
+                    payload={
+                        "agent_id": worker_id,
+                        "label": brief["label"],
+                        "success": result.success,
+                        "status": (
+                            f"{brief['label']} completed"
+                            if result.success
+                            else f"{brief['label']} failed"
+                        ),
+                    },
+                )
+            )
+            previous_brief = brief
             all_commands.extend(result.commands)
             all_files.extend(result.files_changed)
             all_errors.extend(result.errors)
@@ -307,6 +453,11 @@ class TaskEngine:
             "task.finished",
             {"task_id": task.task_id, "success": success, "agent": primary, "workers": list(workers)},
         )
+
+    def narration(self, task_id: str) -> dict:
+        from jimmy.narration import project
+
+        return project(self.store.list_events(task_id))
 
     def agent_statuses(self) -> list[dict]:
         out = []

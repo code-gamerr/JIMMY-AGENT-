@@ -1487,7 +1487,7 @@ def _safe_getcwd() -> str:
 # cwd looks when it leaks toward a Linux container's ``-w`` flag.
 _HOST_CWD_PREFIXES = ("/Users/", "/home/", "C:\\", "C:/")
 
-_CONTAINER_BACKENDS = frozenset({"docker", "singularity", "modal", "daytona", "vercel_sandbox"})
+_CONTAINER_BACKENDS = frozenset({"docker", "singularity", "modal", "daytona", "e2b", "vercel_sandbox"})
 
 
 def _is_unusable_container_cwd(cwd: str) -> bool:
@@ -1573,7 +1573,7 @@ def _get_env_config() -> Dict[str, Any]:
     env_type = os.getenv("TERMINAL_ENV", "local")
     
     mount_docker_cwd = os.getenv("TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE", "false").lower() in {"true", "1", "yes"}
-    container_backend = env_type in {"docker", "singularity", "modal", "daytona", "vercel_sandbox"}
+    container_backend = env_type in {"docker", "singularity", "modal", "daytona", "e2b", "vercel_sandbox"}
     docker_backend = env_type == "docker"
 
     # Docker/container-only env vars may be bridged from config.yaml even when
@@ -1759,7 +1759,7 @@ def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
     
     Args:
         env_type: One of "local", "docker", "singularity", "modal",
-            "daytona", "vercel_sandbox", "ssh"
+            "daytona", "e2b", "vercel_sandbox", "ssh"
         image: Docker/Singularity/Modal image name (ignored for local/ssh/vercel)
         cwd: Working directory
         timeout: Default command timeout
@@ -1888,6 +1888,15 @@ def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
             persistent_filesystem=persistent, task_id=task_id,
         )
 
+    elif env_type == "e2b":
+        from tools.environments.e2b import E2BEnvironment as _E2BEnvironment
+        return _E2BEnvironment(
+            image=image,
+            cwd=cwd or "/home/user",
+            timeout=timeout,
+            template=cc.get("e2b_template") or os.getenv("E2B_TEMPLATE"),
+        )
+
     elif env_type == "vercel_sandbox":
         from tools.environments.vercel_sandbox import (
             VercelSandboxEnvironment as _VercelSandboxEnvironment,
@@ -1918,7 +1927,7 @@ def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
     else:
         raise ValueError(
             f"Unknown environment type: {env_type}. Use 'local', 'docker', "
-            f"'singularity', 'modal', 'daytona', 'vercel_sandbox', or 'ssh'"
+            f"'singularity', 'modal', 'daytona', 'e2b', 'vercel_sandbox', or 'ssh'"
         )
 
 
@@ -3744,10 +3753,24 @@ def check_terminal_requirements() -> bool:
             from agent.secret_scope import get_secret
             return get_secret("DAYTONA_API_KEY") is not None
 
+        elif env_type == "e2b":
+            import importlib.util
+            from agent.secret_scope import get_secret
+            if get_secret("E2B_API_KEY") is None and not os.getenv("E2B_API_KEY"):
+                logger.error("E2B_API_KEY is required for e2b terminal backend")
+                return False
+            if importlib.util.find_spec("e2b_code_interpreter") is None:
+                logger.error(
+                    "e2b-code-interpreter is required for e2b backend: "
+                    "pip install e2b-code-interpreter"
+                )
+                return False
+            return True
+
         else:
             logger.error(
                 "Unknown TERMINAL_ENV '%s'. Use one of: local, docker, singularity, "
-                "modal, daytona, vercel_sandbox, ssh.",
+                "modal, daytona, e2b, vercel_sandbox, ssh.",
                 env_type,
             )
             return False
@@ -3790,7 +3813,7 @@ if __name__ == "__main__":
     print(
         "  TERMINAL_ENV: "
         f"{os.getenv('TERMINAL_ENV', 'local')} "
-        "(local/docker/singularity/modal/daytona/vercel_sandbox/ssh)"
+        "(local/docker/singularity/modal/daytona/e2b/vercel_sandbox/ssh)"
     )
     print(f"  TERMINAL_DOCKER_IMAGE: {os.getenv('TERMINAL_DOCKER_IMAGE', default_img)}")
     print(f"  TERMINAL_SINGULARITY_IMAGE: {os.getenv('TERMINAL_SINGULARITY_IMAGE', f'docker://{default_img}')}")

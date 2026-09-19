@@ -1545,6 +1545,8 @@ export const en: Translations = {
     search: 'Search messaging...',
     loading: 'Loading messaging platforms...',
     loadFailed: 'Messaging platforms failed to load',
+    noPublicIpBanner:
+      'No public IP required. Telegram uses long polling, Slack uses Socket Mode, and Discord uses the Gateway WebSocket — bind tokens here and Jimmy connects outbound.',
     states: {
       connected: 'Connected',
       connecting: 'Connecting',
@@ -2828,6 +2830,7 @@ export const en: Translations = {
         empty: 'No context data yet',
         loading: 'Loading breakdown…',
         percentFull: percent => `${percent}% Full`,
+        runBudgetTitle: 'Run token budget',
         title: 'Context Usage',
         tokenSummary: (used, max) => `${used} / ${max} Tokens`
       },
@@ -3122,10 +3125,15 @@ export const en: Translations = {
       continueLabel: 'Continue',
       confirmAndContinueLabel: 'Confirm and continue',
       answeredBadge: 'Answered',
+      waitingHint: 'Jimmy is waiting for your answer before continuing.',
       questionProgress: (answered, total) => `${answered} of ${total} answered`,
       lateAnswer: (question, choice) => `Re: "${question}" — my answer: ${choice}`,
       lateAnswerTip: 'Draft this answer as a follow-up message',
       lateAnswerHint: 'This prompt is no longer waiting. Pick an option to draft it as a follow-up message.'
+    },
+    presentFiles: {
+      defaultTitle: 'Presented files',
+      bundle: 'Artifacts'
     },
     mcpSetup: {
       installTitle: server => `Add the ${server} MCP server?`,
@@ -3220,6 +3228,7 @@ export const en: Translations = {
         list_files: { done: 'Listed files', pending: 'Listing files', pendingAction: 'Listing' },
         memory: { done: 'Saved to memory', pending: 'Saving to memory', pendingAction: 'Saving' },
         patch: { done: 'Patched file', pending: 'Patching file', pendingAction: 'Patching' },
+        present_files: { done: 'Presented files', pending: 'Presenting files', pendingAction: 'Presenting' },
         read_file: { done: 'Read file', pending: 'Reading file', pendingAction: 'Reading' },
         search_files: { done: 'Searched files', pending: 'Searching files', pendingAction: 'Searching' },
         session_search_recall: {

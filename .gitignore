@@ -222,6 +222,11 @@ native/fts5_cjk/*.so
 /openclaw/
 /munder-difflin/
 /ECC/
+/deer-flow/
+
+# Local scrub/backup archives of sibling trees — not source.
+/deer-flow-backup-before-bytedance.tar.gz
+/deer-flow-backup-before-scrub.zip
 
 # Generated deployment mirror of the whole tree, produced by
 # .azure/apply_local_lean.py. Tracking it double-counts every source file and

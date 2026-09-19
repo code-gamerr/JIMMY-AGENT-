@@ -1,0 +1,34 @@
+Jimmy is back online.
+
+Update summary (DeerFlow capability merge — counted from docs/DEERFLOW_MERGE.md):
+
+Progress
+• 57% of tracked DeerFlow capabilities are now in Jimmy (13 of 23)
+• 13% were already present (3 of 23)
+• 4% were hardened (1 of 23) — multi-instance cron fire leases
+• 9% remain sidecar/Docker only (2 of 23)
+• 9% were deliberately not adopted (2 of 23) — LangGraph core loop and Next.js as primary UI
+
+What shipped
+• Research and media skills (DeerFlow packs under optional-skills/deerflow/)
+• SkillScan at install, with skill reviewer
+• Token-budget warn and hard-stop
+• Plan-mode exit guard
+• present_files artifacts in desktop
+• Recursion / iteration ceiling
+• GitHub Issues and PR agent channel
+• InfoQuest search
+• E2B sandbox backend
+• Durable MCP long-running tasks
+• jimmy deerflow CLI (setup / up / down / doctor)
+
+Inventory on this release tree
+• 82 bundled skills
+• 171 optional skills
+  — 27 DeerFlow-derived (16% of optional)
+  — 15 ECC-derived
+• 23 messaging platform plugins
+
+ECC: curated skills are available under optional-skills/ecc/. The full ECC control pane and hooks remain sidecar.
+
+Jimmy is ready for use on CLI, desktop, and messaging.

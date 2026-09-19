@@ -694,6 +694,7 @@ function ClarifyToolSinglePending({ fromArgs, request }: { fromArgs: ClarifyArgs
       onSubmit={handleSubmit}
     >
       <ClarifyShell className="grid gap-2">
+        <p className="text-[0.6875rem] text-muted-foreground">{copy.waitingHint}</p>
         <div className="flex items-start gap-2">
           <span className="flex-1 whitespace-pre-wrap font-medium leading-(--conversation-line-height)">
             {question}

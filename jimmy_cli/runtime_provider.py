@@ -1463,7 +1463,18 @@ def _resolve_azure_foundry_runtime(
         _getenv("AZURE_FOUNDRY_BASE_URL", "").strip()
         or _getenv("AZURE_OPENAI_ENDPOINT", "").strip()
     ).rstrip("/")
-    base_url = explicit_base_url_clean or cfg_base_url or env_base_url
+    # Code endpoint last, so a config or env override still wins. The plugin
+    # URL is what the desktop uses when the home has a key but no base_url.
+    code_base_url = ""
+    if not (explicit_base_url_clean or cfg_base_url or env_base_url):
+        try:
+            from providers import get_provider_profile
+
+            profile = get_provider_profile("azure-foundry")
+            code_base_url = str(getattr(profile, "base_url", "") or "").strip().rstrip("/")
+        except Exception:
+            code_base_url = ""
+    base_url = explicit_base_url_clean or cfg_base_url or env_base_url or code_base_url
     if not base_url:
         raise AuthError(
             "Azure Foundry requires a base URL. Set it via 'jimmy model' or "

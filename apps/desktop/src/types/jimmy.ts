@@ -710,6 +710,10 @@ export interface UsageStats {
   cost_usd?: number
   input: number
   output: number
+  token_budget_enabled?: boolean
+  token_budget_percent?: number
+  token_budget_total?: number
+  token_budget_used?: number
   total: number
 }
 

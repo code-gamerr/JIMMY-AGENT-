@@ -37,6 +37,7 @@ import { OverlayMain, OverlayNav, OverlaySplitLayout } from '../overlays/overlay
 import { OverlayView } from '../overlays/overlay-view'
 
 import { MaintenancePanel } from './maintenance'
+import { OrchestratorActivity } from './mission-timeline'
 
 export type CommandCenterSection = 'maintenance' | 'sessions' | 'system' | 'usage'
 
@@ -327,6 +328,7 @@ export function CommandCenterView({ initialSection, onClose, onDeleteSession, on
         <OverlayNav groups={navGroups} />
 
         <OverlayMain>
+          <OrchestratorActivity />
           <header className="mb-4 flex items-center justify-between gap-3 max-[47.5rem]:mb-2">
             {/* Redundant on narrow — the nav dropdown already names the section. */}
             <div className="min-w-0 max-[47.5rem]:hidden">

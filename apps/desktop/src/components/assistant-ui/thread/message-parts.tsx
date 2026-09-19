@@ -11,6 +11,7 @@ import { type ComponentProps, type FC, type ReactNode, useEffect, useRef, useSta
 import { ClarifyTool } from '@/components/assistant-ui/clarify-tool'
 import { MarkdownText, MarkdownTextContent } from '@/components/assistant-ui/markdown-text'
 import { McpSetupTool } from '@/components/assistant-ui/mcp-setup-tool'
+import { PresentFilesTool } from '@/components/assistant-ui/present-files-tool'
 import { AgentDeliveryNotice, deliveryTargetFromCommand } from '@/components/assistant-ui/thread/agent-delivery'
 import { TimelineTimestamp } from '@/components/assistant-ui/thread/timeline-timestamp'
 import { DelegateTool } from '@/components/assistant-ui/tool/delegate'
@@ -93,6 +94,15 @@ const ChainToolFallback: FC<TimelineToolCallProps> = props => {
 
   if (props.toolName === 'image_generate') {
     return <ImageGenerateTool {...props} />
+  }
+
+  if (props.toolName === 'present_files') {
+    return (
+      <>
+        <TimelineTimestamp className="mb-0.5 block" completedAt={props.completedAt} timestamp={props.timestamp} />
+        <PresentFilesTool {...props} />
+      </>
+    )
   }
 
   if (props.toolName === 'clarify') {

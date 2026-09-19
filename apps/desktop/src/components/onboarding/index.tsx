@@ -399,7 +399,9 @@ function Header() {
   )
 }
 
-export const FEATURED_ID = 'nous'
+// Jimmy is not Nous. Do not promote or offer Nous Portal in first-run setup.
+export const FEATURED_ID = ''
+const HIDDEN_PROVIDER_IDS = new Set(['nous'])
 const SHOW_ALL_KEY = 'jimmy-onboarding-show-all-v1'
 
 const readShowAll = () => {
@@ -433,7 +435,10 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
     setOnboardingMode('apikey')
   }
 
-  const ordered = useMemo(() => (providers ? sortProviders(providers) : []), [providers])
+  const ordered = useMemo(
+    () => (providers ? sortProviders(providers.filter(p => !HIDDEN_PROVIDER_IDS.has(p.id))) : []),
+    [providers]
+  )
   const hasOauth = ordered.length > 0
   const apiKeyOptions = useApiKeyCatalog()
 

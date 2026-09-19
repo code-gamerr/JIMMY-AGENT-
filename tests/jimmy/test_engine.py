@@ -76,6 +76,18 @@ def test_engine_runs_real_process_and_stores_experience(tmp_path, monkeypatch):
     assert final.result and "engine-real-exec" in final.result["summary"]
     events = engine.store.list_events(task.task_id)
     assert any(e.type == "command.started" for e in events)
+    assigned_at = next(i for i, e in enumerate(events) if e.type == "task.assignment_confirmed")
+    started_at = next(i for i, e in enumerate(events) if e.type == "command.started")
+    assert assigned_at < started_at
+    assert any(e.type == "task.assignments_complete" for e in events)
+    assert events[assigned_at].payload.get("status") == "assigned"
+    assert any(e.type == "task.assignments_complete" for e in events)
     assert any(e.type == "experience.stored" for e in events)
+    confirmed = [e for e in events if e.type == "task.assignment_confirmed"]
+    assert confirmed
+    assert confirmed[0].payload.get("status") == "assigned"
+    started = next(i for i, e in enumerate(events) if e.type == "command.started")
+    assigned = next(i for i, e in enumerate(events) if e.type == "task.assignment_confirmed")
+    assert assigned < started
     exps = engine.store.search_experiences("authentication")
     assert exps

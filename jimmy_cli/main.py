@@ -486,6 +486,9 @@ from jimmy_cli.subcommands.pairing import build_pairing_parser
 from jimmy_cli.subcommands.plugins import build_plugins_parser
 from jimmy_cli.subcommands.mcp import build_mcp_parser
 from jimmy_cli.subcommands.claw import build_claw_parser
+from jimmy_cli.subcommands.deerflow import build_deerflow_parser
+from jimmy_cli.subcommands.ecc import build_ecc_parser
+from jimmy_cli.subcommands.openclaw import build_openclaw_parser
 
 
 def _require_tty(command_name: str) -> None:
@@ -12365,6 +12368,24 @@ def cmd_claw(args):
     claw_command(args)
 
 
+def cmd_deerflow(args):
+    from jimmy_cli.deerflow_cmd import cmd_deerflow as _cmd
+
+    raise SystemExit(_cmd(args))
+
+
+def cmd_ecc(args):
+    from jimmy_cli.ecc_cmd import cmd_ecc as _cmd
+
+    raise SystemExit(_cmd(args))
+
+
+def cmd_openclaw(args):
+    from jimmy_cli.openclaw_cmd import cmd_openclaw as _cmd
+
+    raise SystemExit(_cmd(args))
+
+
 def _advertise_agent_env() -> None:
     """Advertise the agent harness to child processes.
 
@@ -13783,6 +13804,9 @@ def main():
     # claw command  (parser built in jimmy_cli/subcommands/claw.py)
     # =========================================================================
     build_claw_parser(subparsers, cmd_claw=cmd_claw)
+    build_deerflow_parser(subparsers, cmd_deerflow=cmd_deerflow)
+    build_ecc_parser(subparsers, cmd_ecc=cmd_ecc)
+    build_openclaw_parser(subparsers, cmd_openclaw=cmd_openclaw)
 
     # NOTE: the `jimmy version` subcommand was removed — `jimmy --version`
     # / `-V` now carries the full output including update status.

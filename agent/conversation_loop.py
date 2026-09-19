@@ -2088,6 +2088,15 @@ def run_conversation(
         if getattr(agent, "run_budget_seconds", None):
             _maybe_inject_run_budget_wrapup(agent, messages)
 
+        # ── Token budget wrap-up (DeerFlow-inspired) ───────────────────
+        if getattr(agent, "token_budget", None):
+            try:
+                from agent.token_budget import maybe_inject_token_budget_wrapup
+
+                maybe_inject_token_budget_wrapup(agent, messages)
+            except Exception:
+                logger.debug("token budget wrap-up failed", exc_info=True)
+
         # Prepare messages for API call
         # If we have an ephemeral system prompt, prepend it to the messages
         # Note: Reasoning is embedded in content via <think> tags for trajectory storage.
@@ -6909,6 +6918,15 @@ def run_conversation(
                 }
             elif hasattr(agent, "_codex_incomplete_retries"):
                 agent._codex_incomplete_retries = 0
+
+            # DeerFlow-inspired token hard-stop: strip tool_calls when the
+            # cumulative session token budget is exhausted so the turn ends.
+            try:
+                from agent.token_budget import maybe_apply_token_budget_hard_stop
+
+                maybe_apply_token_budget_hard_stop(agent, messages, assistant_message)
+            except Exception:
+                logger.debug("token budget hard-stop failed", exc_info=True)
             
             # Check for tool calls
             if assistant_message.tool_calls:
@@ -8099,6 +8117,40 @@ def run_conversation(
                     )
                 ):
                     messages.pop()
+
+                # Plan-mode premature-exit guard (before verify-on-stop): if the
+                # todo list still has incomplete items, nudge and continue.
+                try:
+                    from agent.plan_mode import build_plan_mode_nudge
+
+                    _plan_nudge = build_plan_mode_nudge(agent)
+                except Exception:
+                    logger.debug("plan-mode check failed", exc_info=True)
+                    _plan_nudge = None
+
+                if _plan_nudge:
+                    agent._plan_mode_nudges = (
+                        getattr(agent, "_plan_mode_nudges", 0) + 1
+                    )
+                    final_msg["finish_reason"] = "plan_mode_incomplete"
+                    agent._emit_interim_assistant_message(final_msg)
+                    append_message(messages, final_msg)
+                    try:
+                        agent._flush_messages_to_session_db(messages, conversation_history)
+                    except Exception:
+                        logger.debug("plan-mode interim flush failed", exc_info=True)
+                    append_message(messages, {
+                        "role": "user",
+                        "content": _plan_nudge,
+                        "_plan_mode_synthetic": True,
+                    })
+                    agent._session_messages = messages
+                    logger.debug(
+                        "plan-mode nudge issued (attempt %d)",
+                        agent._plan_mode_nudges,
+                    )
+                    final_response = None
+                    continue
 
                 try:
                     from agent.verification_stop import (

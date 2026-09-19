@@ -31,6 +31,7 @@ def build_command_center_parser(subparsers, *, cmd_command_center: Callable) -> 
         default="auto",
         choices=("auto", "openclaw", "munder", "ecc", "landing", "research"),
     )
+    submit.add_argument("--telegram-chat", default=None, help="Edit one Telegram status message for this task")
     submit.add_argument("--wait", action="store_true")
     submit.add_argument("--timeout", type=int, default=1800)
     submit.set_defaults(func=cmd_command_center, cc_command="submit")

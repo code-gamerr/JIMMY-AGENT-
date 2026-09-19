@@ -70,6 +70,10 @@ _JIMMY_CORE_TOOLS = [
     "session_search",
     # Clarifying questions
     "clarify",
+    # Present finished deliverables to the user (DeerFlow present_files parity)
+    "present_files",
+    # Durable MCP long-running tasks (DeerFlow mcp_tasks parity)
+    "mcp_task",
     # Code execution + delegation
     "execute_code", "delegate_task",
     # Cronjob management
@@ -287,6 +291,18 @@ TOOLSETS = {
     "clarify": {
         "description": "Ask the user clarifying questions (multiple-choice or open-ended)",
         "tools": ["clarify"],
+        "includes": []
+    },
+
+    "artifacts": {
+        "description": "Present finished files/artifacts to the user (DeerFlow present_files parity)",
+        "tools": ["present_files"],
+        "includes": []
+    },
+
+    "mcp_tasks": {
+        "description": "Durable long-running MCP tool invocations (submit/list/status/cancel)",
+        "tools": ["mcp_task"],
         "includes": []
     },
     

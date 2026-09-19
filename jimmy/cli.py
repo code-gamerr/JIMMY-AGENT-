@@ -20,7 +20,11 @@ def cmd_command_center(args) -> None:
         return
     if verb == "submit":
         engine = TaskEngine()
-        task = engine.submit(args.message, agent=getattr(args, "agent", "auto"))
+        task = engine.submit(
+            args.message,
+            agent=getattr(args, "agent", "auto"),
+            telegram_chat_id=getattr(args, "telegram_chat", None),
+        )
         print(json.dumps(task.to_dict(), indent=2))
         if getattr(args, "wait", False):
             deadline = time.time() + int(getattr(args, "timeout", 1800))

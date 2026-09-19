@@ -87,6 +87,45 @@ def _score(text: str, hints: tuple[str, ...]) -> int:
     return sum(2 if hint in low else 0 for hint in hints)
 
 
+# User-facing assignment copy. Never include route scores or registry internals.
+WORKER_ASSIGNMENT = {
+    "openclaw": ("messaging", "Handle channel and gateway work"),
+    "munder": ("workflow", "Handle workflow and implementation"),
+    "research": ("research", "Research and compare options"),
+    "ecc": ("validation", "Validate the result"),
+    "landing": ("site", "Handle the public site"),
+}
+
+WORKER_LABEL = {
+    "openclaw": "OpenClaw",
+    "munder": "Munder-Difflin",
+    "research": "Research",
+    "ecc": "ECC",
+    "landing": "Landing",
+}
+
+
+def assignment_briefs(workers: tuple[str, ...]) -> tuple[dict, ...]:
+    """Public assignment cards for the selected workers, in execution order."""
+    briefs = []
+    total = len(workers)
+    for index, agent_id in enumerate(workers, start=1):
+        capability, description = WORKER_ASSIGNMENT.get(
+            agent_id, ("work", "Handle the assigned work")
+        )
+        briefs.append(
+            {
+                "index": index,
+                "total": total,
+                "agent_id": agent_id,
+                "label": WORKER_LABEL.get(agent_id, agent_id),
+                "capability": capability,
+                "description": description,
+            }
+        )
+    return tuple(briefs)
+
+
 def plan_request(
     user_request: str,
     *,
@@ -117,7 +156,7 @@ def plan_request(
             scores[exp.agent] = scores.get(exp.agent, 0) + 3
             reused_ids.append(exp.experience_id)
         agent = max(scores, key=scores.get)
-        reason = f"Highest route score for {agent}: {scores}"
+        reason = f"Selected {WORKER_LABEL.get(agent, agent)} for this request"
         reused = tuple(reused_ids[:5])
         approach = "keyword+experience"
 

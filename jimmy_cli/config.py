@@ -3155,6 +3155,37 @@ def resolve_turn_limit(raw: Any, default: int = TURN_LIMIT_UNLIMITED) -> int:
     return default
 
 
+def clamp_max_iterations(
+    requested: Any,
+    *,
+    ceiling: Optional[int] = None,
+    default: Optional[int] = None,
+) -> int:
+    """Clamp a client-supplied iteration/recursion limit (DeerFlow parity).
+
+    Reads ``agent.max_recursion_limit`` from config when *ceiling* is omitted
+    (default 1000). Oversized or invalid client values clamp down so API
+    callers cannot DoS with unbounded recursion_limit.
+    """
+    if ceiling is None:
+        try:
+            cfg = load_config()
+            raw_ceil = (cfg.get("agent") or {}).get("max_recursion_limit", 1000)
+            ceiling = int(raw_ceil)
+        except Exception:
+            ceiling = 1000
+    ceiling = max(1, int(ceiling))
+
+    if default is None:
+        default = min(90, ceiling)
+
+    resolved = resolve_turn_limit(requested, default=default)
+    if resolved >= TURN_LIMIT_UNLIMITED:
+        # Unlimited requests still respect the safety ceiling for API surfaces.
+        return ceiling
+    return max(1, min(int(resolved), ceiling))
+
+
 def cfg_get(cfg: Optional[Dict[str, Any]], *keys: str, default: Any = None) -> Any:
     """Traverse nested dict keys safely, returning ``default`` on any miss.
 

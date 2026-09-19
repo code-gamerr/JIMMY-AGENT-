@@ -324,6 +324,13 @@ class CLIAgentSetupMixin:
             ),
         }
 
+        try:
+            from agent.smart_model_routing import apply_smart_model_routing
+
+            apply_smart_model_routing(user_message, route)
+        except Exception:
+            pass
+
         service_tier = getattr(self, "service_tier", None)
         if not service_tier:
             route["request_overrides"] = None
