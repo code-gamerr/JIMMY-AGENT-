@@ -178,6 +178,8 @@ function mountScrollWorld(container, config) {
   const lingerEase = (x, L) => { L = clamp(L); const c = x - 0.5; return (1 - L) * x + L * (4 * c * c * c + 0.5); };
   let vh = window.innerHeight, stageX = 0, totalW = 0, activeIndex = -1, ticking = false;
   let laidOutW = window.innerWidth;   // width the current layout was computed at (see onResize)
+  let activeSeg = 0;
+  let scrubBusy = false;
 
   function layout() {
     vh = window.innerHeight;
@@ -188,6 +190,7 @@ function mountScrollWorld(container, config) {
     totalW = off;
     track.style.height = (totalW * vh + vh) + 'px';   // +1vh so the last flight completes
     read();
+    kickScrub();
   }
 
   function jumpTo(i) {
@@ -209,7 +212,7 @@ function mountScrollWorld(container, config) {
         v.muted = true; v.playsInline = true; v.preload = 'auto';
         v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
         v.src = URL.createObjectURL(blob);
-        v.addEventListener('loadedmetadata', () => { s.ready = true; read(); });
+        v.addEventListener('loadedmetadata', () => { s.ready = true; read(); kickScrub(); });
         // Reveal the video (hide the still poster) only once a real frame has
         // painted — on iOS a seeked-but-never-played muted video stays blank, so
         // hiding the still on metadata alone would flash an empty scene.
@@ -224,10 +227,14 @@ function mountScrollWorld(container, config) {
     const fade = CROSSFADE * vh;
     let ci = 0;
     for (let i = 0; i < NSEG; i++) if (y >= SEGMENTS[i].start) ci = i;
+    activeSeg = ci;
 
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
-      if (y > s.start - 1.6 * vh && y < s.end + 1.6 * vh) loadClip(s);
+      // Tight preload: only the active segment + immediate neighbour. Seeking many
+      // 720p decoders at once is what makes the page feel laggy.
+      const near = (i === ci || i === ci - 1 || i === ci + 1);
+      if (near && y > s.start - 0.7 * vh && y < s.end + 0.7 * vh) loadClip(s);
       const local = clamp((y - s.start) / (s.end - s.start), 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
       let outside = 0;
@@ -235,6 +242,8 @@ function mountScrollWorld(container, config) {
       const op = smooth(1 - outside / fade);
       s.el.style.opacity = op; s.visible = op > 0.001;
       s.el.style.zIndex = (i === ci) ? '120' : String(100 + Math.round(op * 10));
+      // Only the topmost segment needs scrubbing; neighbours keep their last frame.
+      s.scrub = (i === ci) && s.visible;
       if (!s.hasClip || !s.ready) {
         const sc = reduce ? 1 : 1.03 + local * 0.14;
         s.img.style.transform = `translateX(${stageX - 2}vw) scale(${sc.toFixed(3)})`;
@@ -271,20 +280,37 @@ function mountScrollWorld(container, config) {
   }
 
   function raf() {
-    const eps = isMobile() ? 0.02 : 0.008;   // coarser seek step on phones = fewer decodes
+    // One decoder at a time. Desktop used to seek every ~0.2 frame; that stalls
+    // the main thread. Quantize to ~1 frame of a 16fps scrub master.
+    const eps = isMobile() ? 0.06 : 0.04;
+    let needs = false;
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
-      if (!s.hasClip || !s.ready || !s.video) continue;
-      // Never queue a seek while the decoder is still resolving the last one.
-      // On phones a fast flick would otherwise pile up seeks and freeze the clip;
-      // cur keeps lerping, so we snap to the latest target the moment it's free.
-      if (s.video.seeking) continue;
-      if (!s.visible && Math.abs(s.cur - s.target) < 0.002) continue;
-      s.cur += (s.target - s.cur) * (reduce ? 1 : 0.18);
+      if (!s.hasClip || !s.ready || !s.video || !s.scrub) continue;
+      if (s.video.seeking) { needs = true; continue; }
+      const delta = s.target - s.cur;
+      if (Math.abs(delta) < 0.0008) {
+        s.cur = s.target;
+      } else {
+        // Catch up in fewer hops so we issue fewer seeks under fast scrolls.
+        s.cur += delta * (reduce ? 1 : 0.42);
+        needs = true;
+      }
       const dur = s.video.duration || 1;
       const t = clamp(s.cur, 0, 0.999) * dur;
-      if (Math.abs(s.video.currentTime - t) > eps) { try { s.video.currentTime = t; } catch (e) {} }
+      if (Math.abs(s.video.currentTime - t) > eps) {
+        try { s.video.currentTime = t; } catch (e) {}
+        needs = true;
+      }
     }
+    scrubBusy = needs;
+    // Keep the loop warm while scrubbing; sleep when settled so idle costs ~0.
+    if (needs || ticking) requestAnimationFrame(raf);
+    else scrubBusy = false;
+  }
+  function kickScrub() {
+    if (scrubBusy) return;
+    scrubBusy = true;
     requestAnimationFrame(raf);
   }
 
@@ -307,8 +333,13 @@ function mountScrollWorld(container, config) {
   window.addEventListener('touchstart', onFirstGesture, { once: true, passive: true });
 
   // Particles are a per-frame cost we can't afford alongside video scrubbing on a phone.
-  seedParticles(particles, reduce || coarse);
-  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(read); } }, { passive: true });
+  seedParticles(particles, reduce || coarse || config.atmosphere === false);
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(() => { read(); kickScrub(); });
+    }
+  }, { passive: true });
   // Mobile browsers fire `resize` every time the URL bar slides in/out. Re-running
   // layout() there rebuilds the track height and yanks the scroll position, so on
   // touch we ignore height-only changes and only relayout when the width actually
@@ -322,7 +353,7 @@ function mountScrollWorld(container, config) {
   window.addEventListener('orientationchange', layout);
   window.addEventListener('load', layout);
   layout();
-  requestAnimationFrame(raf);
+  kickScrub();
 
   // ---- helpers ----
   function el(tag, cls) { const n = document.createElement(tag); if (cls) n.className = cls; return n; }

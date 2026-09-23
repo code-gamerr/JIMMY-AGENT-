@@ -139,8 +139,9 @@ def test_show_banner_does_not_print_skills():
     cli_obj = _make_real_cli(compact=False)
     cli_obj.preloaded_skills = ["jimmy-agent-dev", "github-auth"]
     cli_obj.console = MagicMock()
+    cli_obj._show_tool_availability_warnings = MagicMock()
 
-    with patch("cli.build_welcome_banner") as mock_banner, patch(
+    with patch(
         "shutil.get_terminal_size", return_value=os.terminal_size((120, 40))
     ):
         cli_obj.show_banner()
@@ -152,4 +153,5 @@ def test_show_banner_does_not_print_skills():
     ]
     startup_lines = [line for line in print_calls if "Activated skills:" in line]
     assert len(startup_lines) == 0
-    assert mock_banner.call_count == 1
+    # Decorative welcome panel is disabled — no tools/version panel content.
+    assert not any("Available Tools" in line or "Jimmy v" in line for line in print_calls)

@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Jimmy — your agentic OS</title>
+  <meta name="description" content="Jimmy is a personal agentic OS across laptop, phone, cloud, and watch. One agent. Every surface. Coming soon." />
+  <meta property="og:title" content="Jimmy — your agentic OS" />
+  <meta property="og:description" content="An ecosystem between your laptop, phone, cloud, and watch." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,700;1,9..144,560&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --bg-2: #ebe6db;
+      --ink: #17201c;
+      --ink-soft: #5c6b63;
+      --line: rgba(23, 32, 28, 0.12);
+      --teal: #1f7a5c;
+      --teal-soft: rgba(31, 122, 92, 0.1);
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Manrope", system-ui, sans-serif;
+      --pad: clamp(20px, 5vw, 72px);
+      --max: 1080px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      line-height: 1.55;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; height: auto; }
+    .wrap { width: min(var(--max), 100%); margin: 0 auto; padding-inline: var(--pad); }
+
+    body::before {
+      content: "";
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(80% 50% at 50% -20%, rgba(31, 122, 92, 0.09), transparent 55%),
+        linear-gradient(180deg, #f7f4ed 0%, var(--bg) 35%, #efebe3 100%);
+    }
+
+    .top {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 16px var(--pad);
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s ease-out;
+    }
+    .top.is-scrolled { border-bottom-color: var(--line); }
+    .brand {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.25rem;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav {
+      display: flex; gap: 22px; align-items: center;
+      font-size: 0.9rem; font-weight: 500; color: var(--ink-soft);
+    }
+    .nav a { text-decoration: none; }
+    .nav a:hover { color: var(--ink); }
+    .nav .cta {
+      color: #f7f4ed;
+      background: var(--ink);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .nav .cta:hover { background: #000; }
+    @media (max-width: 720px) {
+      .nav a:not(.cta) { display: none; }
+    }
+
+    .hero { padding: clamp(56px, 12vh, 110px) 0 0; }
+    .hero-inner {
+      width: min(var(--max), 100%);
+      margin: 0 auto;
+      padding-inline: var(--pad);
+      text-align: center;
+    }
+    .eyebrow {
+      margin: 0 0 18px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+    .hero h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(4.2rem, 14vw, 8.5rem);
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+    }
+    .hero-tag {
+      margin: 18px 0 0;
+      font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+    .hero-lede {
+      margin: 18px auto 0;
+      max-width: 42ch;
+      font-size: clamp(1.02rem, 1.8vw, 1.15rem);
+      color: var(--ink-soft);
+      text-wrap: pretty;
+    }
+    .hero-lede em {
+      font-family: var(--font-display);
+      font-style: italic;
+      color: var(--ink);
+    }
+    .hero-actions {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      justify-content: center;
+      margin-top: 28px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 13px 22px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease-out, background 0.15s ease-out;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--ink); color: #f7f4ed; }
+    .btn-primary:hover { background: #000; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    .btn-ghost:hover { border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+
+    .hero-visual {
+      margin-top: clamp(40px, 8vh, 72px);
+      width: 100%;
+      overflow: hidden;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #e7e1d4;
+    }
+    .hero-visual img {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      object-fit: cover;
+      object-position: center 40%;
+      max-height: min(58vh, 560px);
+    }
+
+    .section {
+      padding: clamp(72px, 12vh, 118px) 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-label {
+      margin: 0 0 14px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .section h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2.1rem, 5vw, 3.5rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      max-width: 14ch;
+      text-wrap: balance;
+    }
+    .section h2 em {
+      font-style: italic;
+      font-weight: 560;
+      color: var(--teal);
+    }
+    .section .sub {
+      margin: 16px 0 0;
+      max-width: 50ch;
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      text-wrap: pretty;
+    }
+
+    .nodes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      margin-top: 48px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .node {
+      background: color-mix(in srgb, #fff 55%, var(--bg));
+      padding: 28px 22px 26px;
+      min-height: 176px;
+    }
+    .node-num {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--teal);
+      margin: 0 0 18px;
+    }
+    .node h3 {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .node p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 0.94rem;
+    }
+    @media (max-width: 860px) {
+      .nodes { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .nodes { grid-template-columns: 1fr; }
+    }
+
+    .loop {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: clamp(28px, 5vw, 56px);
+      align-items: center;
+      margin-top: 56px;
+    }
+    .loop-visual {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+    }
+    .loop-visual img { width: 100%; }
+    .steps { display: grid; gap: 0; }
+    .step {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 16px;
+      padding: 22px 0;
+      border-top: 1px solid var(--line);
+    }
+    .step:last-child { border-bottom: 1px solid var(--line); }
+    .step-i {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      color: var(--teal);
+      line-height: 1;
+      padding-top: 4px;
+    }
+    .step h3 {
+      margin: 0 0 6px;
+      font-size: 1.12rem;
+      font-weight: 700;
+    }
+    .step p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+    @media (max-width: 860px) {
+      .loop { grid-template-columns: 1fr; }
+    }
+
+    .surfaces {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 40px;
+    }
+    .surface {
+      padding: 24px 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: color-mix(in srgb, #fff 40%, transparent);
+      transition: border-color 0.2s ease-out;
+    }
+    .surface:hover { border-color: color-mix(in srgb, var(--teal) 45%, transparent); }
+    .surface .tag {
+      display: inline-block;
+      margin: 0 0 14px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--teal-soft);
+      color: var(--teal);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .surface h3 {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: -0.02em;
+    }
+    .surface p { margin: 0; color: var(--ink-soft); font-size: 0.94rem; }
+    @media (max-width: 860px) {
+      .surfaces { grid-template-columns: 1fr; }
+    }
+
+    .pledge {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: end;
+    }
+    .pledge p {
+      margin: 16px 0 0;
+      color: var(--ink-soft);
+      max-width: 42ch;
+      font-size: 1.05rem;
+    }
+    .status {
+      border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+      border-radius: 16px;
+      padding: 22px 24px;
+      background: var(--teal-soft);
+    }
+    .status strong {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+    }
+    .status span { color: var(--ink-soft); font-size: 0.92rem; }
+    @media (max-width: 720px) {
+      .pledge { grid-template-columns: 1fr; }
+    }
+
+    .waitlist { padding: clamp(72px, 12vh, 118px) 0; }
+    .waitlist-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(24px, 4vw, 48px);
+      align-items: start;
+      padding: clamp(28px, 4vw, 44px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: color-mix(in srgb, #fff 50%, var(--bg-2));
+    }
+    .waitlist h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+    .waitlist h2 em { font-style: italic; color: var(--teal); }
+    .waitlist .note {
+      margin: 14px 0 0;
+      color: var(--ink-soft);
+      max-width: 36ch;
+    }
+    form { display: grid; gap: 12px; }
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 14px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font: 500 16px var(--font-body);
+    }
+    input:focus {
+      outline: 2px solid color-mix(in srgb, var(--teal) 45%, transparent);
+      outline-offset: 2px;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-msg {
+      display: none;
+      margin: 0;
+      color: var(--teal);
+      font-weight: 600;
+    }
+    form.is-done .fields { display: none; }
+    form.is-done .form-msg { display: block; }
+    @media (max-width: 860px) {
+      .waitlist-box, .form-row { grid-template-columns: 1fr; }
+    }
+
+    footer {
+      padding: 28px var(--pad) 48px;
+      display: flex; flex-wrap: wrap; gap: 12px;
+      justify-content: space-between;
+      color: var(--ink-soft);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top" id="topbar">
+    <a class="brand" href="#top">Jimmy</a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#ecosystem">Ecosystem</a>
+      <a href="#method">Method</a>
+      <a href="#surfaces">Surfaces</a>
+      <a class="cta" href="#join">Join waitlist</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">For people who live across devices · Coming soon</p>
+        <h1>Jimmy</h1>
+        <p class="hero-tag">The personal agentic OS.</p>
+        <p class="hero-lede">An ecosystem between your laptop, phone, cloud, and watch — <em>one agent</em> that keeps your context as you move.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#join">Join the waitlist</a>
+          <a class="btn btn-ghost" href="#ecosystem">See the loop</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <img src="assets/brand/ecosystem-hero.png" alt="" width="1600" height="900" fetchpriority="high" />
+      </div>
+    </section>
+
+    <section class="section" id="ecosystem">
+      <div class="wrap">
+        <p class="section-label">/ 01 · The ecosystem</p>
+        <h2>Laptop. Phone.<br>Cloud. <em>Watch.</em></h2>
+        <p class="sub">Not four apps. One continuous agent that moves with you — working at the desk, answering on the phone, syncing in the cloud, tapping you on the wrist.</p>
+        <div class="nodes">
+          <article class="node">
+            <p class="node-num">01 · Laptop</p>
+            <h3>Desk power</h3>
+            <p>Terminal, browser, files, and desktop control. The deep work surface where Jimmy can actually run the machine.</p>
+          </article>
+          <article class="node">
+            <p class="node-num">02 · Phone</p>
+            <h3>On the move</h3>
+            <p>Same conversations in Telegram, Discord, Slack, and more. Voice notes in, spoken replies out.</p>
+          </article>
+          <article class="node">
+            <p class="node-num">03 · Cloud</p>
+            <h3>Always awake</h3>
+            <p>Memory, cron, skills, and gateway stay live so the agent keeps working when your laptop sleeps.</p>
+          </article>
+          <article class="node">
+            <p class="node-num">04 · Watch</p>
+            <h3>Pulse</h3>
+            <p>Glanceable status, nudges, and approvals — the lightest edge of an agent that already knows the context.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="method">
+      <div class="wrap">
+        <p class="section-label">/ 02 · The method</p>
+        <h2>Three steps.<br><em>No silos.</em></h2>
+        <p class="sub">A clear loop in under a minute — how context moves, where Jimmy acts, and how the cloud keeps it whole.</p>
+        <div class="loop">
+          <div class="loop-visual">
+            <img src="assets/brand/desk-loop.png" alt="Jimmy at the desk, connected to phone, watch, and cloud" width="1600" height="900" loading="lazy" />
+          </div>
+          <div class="steps">
+            <article class="step">
+              <div class="step-i">01</div>
+              <div>
+                <h3>Carry context</h3>
+                <p>Memory and skills travel with the agent. Start on the laptop; finish on your phone without re-explaining.</p>
+              </div>
+            </article>
+            <article class="step">
+              <div class="step-i">02</div>
+              <div>
+                <h3>Act on the surface</h3>
+                <p>CLI and desktop for heavy work. Messaging for the rooms you already live in. Watch for the signal that matters.</p>
+              </div>
+            </article>
+            <article class="step">
+              <div class="step-i">03</div>
+              <div>
+                <h3>Sync through cloud</h3>
+                <p>Gateway, cron, and curated memory keep the loop intact — one identity across devices, not four siloed bots.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="surfaces">
+      <div class="wrap">
+        <p class="section-label">/ 03 · The surfaces</p>
+        <h2>Where Jimmy<br><em>shows up.</em></h2>
+        <p class="sub">Same core on every edge. Extend with skills and plugins — don’t grow a different product per device.</p>
+        <div class="surfaces">
+          <article class="surface">
+            <span class="tag">CLI · TUI · Desktop</span>
+            <h3>Hands on the machine</h3>
+            <p>A real terminal, file edits with checkpoints, browser automation, and computer use that doesn’t steal your cursor.</p>
+          </article>
+          <article class="surface">
+            <span class="tag">Gateway</span>
+            <h3>Rooms you already use</h3>
+            <p>One process for Telegram, Discord, Slack, and more. Voice memos transcribed. Same conversation, every room.</p>
+          </article>
+          <article class="surface">
+            <span class="tag">Mind</span>
+            <h3>Memory that stays</h3>
+            <p>Curated memory, self-writing skills, session search, and cron that keeps firing while you’re away.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pledge">
+      <div class="wrap pledge">
+        <div>
+          <p class="section-label">/ 04 · The pledge</p>
+          <h2>You stay in<br><em>control.</em></h2>
+          <p>Jimmy is a personal orchestrator — not a black box that ships your life elsewhere by default. Approvals, local profiles, and your keys stay yours.</p>
+        </div>
+        <aside class="status">
+          <strong>Status · active build</strong>
+          <span>Core loop on CLI, TUI, desktop, and messaging gateway. Watch edge and tighter cloud sync are next. Waitlist opens first.</span>
+        </aside>
+      </div>
+    </section>
+
+    <section class="waitlist" id="join">
+      <div class="wrap">
+        <div class="waitlist-box">
+          <div>
+            <p class="section-label">Pilot list</p>
+            <h2>Help shape the<br><em>ecosystem.</em></h2>
+            <p class="note">Leave your details. We’ll only mail when there’s a build worth trying — laptop first, then the rest of the loop.</p>
+          </div>
+          <form id="waitlist-form" novalidate>
+            <div class="fields">
+              <div class="form-row">
+                <div>
+                  <label for="name">Name</label>
+                  <input id="name" name="name" type="text" autocomplete="name" required placeholder="Ada" />
+                </div>
+                <div>
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+                </div>
+              </div>
+              <div>
+                <label for="surface">Primary surface</label>
+                <input id="surface" name="surface" type="text" list="surfaces-list" placeholder="Laptop · Phone · Cloud · Watch" />
+                <datalist id="surfaces-list">
+                  <option value="Laptop"></option>
+                  <option value="Phone"></option>
+                  <option value="Cloud"></option>
+                  <option value="Watch"></option>
+                  <option value="All of them"></option>
+                </datalist>
+              </div>
+              <button class="btn btn-primary" type="submit" style="justify-self: start; margin-top: 6px; border: 0;">Request launch access</button>
+            </div>
+            <p class="form-msg" id="form-msg" role="status">Saved in this browser. Nothing leaves your machine yet.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Jimmy · personal agentic OS</span>
+    <span>Coming soon · laptop ↔ phone ↔ cloud ↔ watch</span>
+  </footer>
+
+  <script>
+    const topbar = document.getElementById("topbar");
+    const onScroll = () => topbar.classList.toggle("is-scrolled", window.scrollY > 12);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    const form = document.getElementById("waitlist-form");
+    const msg = document.getElementById("form-msg");
+    const KEY = "jimmy-coming-soon-waitlist";
+
+    const saved = localStorage.getItem(KEY);
+    if (saved) {
+      form.classList.add("is-done");
+      try {
+        const data = JSON.parse(saved);
+        msg.textContent = "Already saved for " + (data.email || "you") + ". We’ll mail when the loop opens.";
+      } catch (_) {}
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const surface = document.getElementById("surface").value.trim();
+      if (!name || !email) return;
+      localStorage.setItem(KEY, JSON.stringify({ name, email, surface, at: Date.now() }));
+      form.classList.add("is-done");
+      msg.textContent = "Saved in this browser. Nothing leaves your machine yet.";
+    });
+  </script>
+</body>
+</html>

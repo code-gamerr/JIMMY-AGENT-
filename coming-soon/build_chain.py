@@ -18,10 +18,10 @@ FRAMES = ROOT / "assets" / "frames"
 FFMPEG = r"C:\Users\Arnav Singh\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0-full_build\bin\ffmpeg.exe"
 
 SCENES = ["desk", "terminal", "gateway", "memory", "launch"]
-W, H = 1280, 720
-FPS = 24
-DIVE_FRAMES = 120  # 5s
-CONN_FRAMES = 84   # 3.5s
+W, H = 960, 540
+FPS = 16
+DIVE_FRAMES = 80   # 5s @ 16fps
+CONN_FRAMES = 56   # 3.5s @ 16fps
 
 
 def crop_16x9(im: Image.Image) -> Image.Image:
@@ -50,9 +50,11 @@ def encode(pattern: Path, out: Path, frames: int) -> None:
             "-an",
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
-            "-preset", "medium",
-            "-crf", "20",
-            "-g", "8",
+            "-preset", "veryfast",
+            "-crf", "28",
+            "-g", "2",
+            "-keyint_min", "2",
+            "-sc_threshold", "0",
             "-movflags", "+faststart",
             str(out),
         ],

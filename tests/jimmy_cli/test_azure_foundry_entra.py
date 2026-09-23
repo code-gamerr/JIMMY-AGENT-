@@ -165,6 +165,27 @@ class TestResolveAzureFoundryRuntimeApiKey:
         assert runtime["auth_mode"] == "api_key"
         assert "entra" not in runtime  # only present in entra mode
 
+    def test_stale_chat_completions_upgraded_for_gpt6(self, monkeypatch):
+        """Stale model.api_mode: chat_completions must not stick for gpt-6-astra.
+
+        Azure rejects tool+reasoning turns on /chat/completions for that family;
+        the runtime must force Responses so the CLI/Telegram stop looking hung.
+        """
+        from jimmy_cli.runtime_provider import _resolve_azure_foundry_runtime
+
+        monkeypatch.setenv("AZURE_FOUNDRY_API_KEY", "sk-azure-static-key")
+        runtime = _resolve_azure_foundry_runtime(
+            requested_provider="azure-foundry",
+            model_cfg={
+                "provider": "azure-foundry",
+                "default": "gpt-6-astra",
+                "base_url": "https://r.openai.azure.com/openai/v1",
+                "api_mode": "chat_completions",
+            },
+            target_model="gpt-6-astra",
+        )
+        assert runtime["api_mode"] == "codex_responses"
+
     def test_explicit_auth_mode_api_key(self, monkeypatch):
         from jimmy_cli.runtime_provider import _resolve_azure_foundry_runtime
         monkeypatch.setenv("AZURE_FOUNDRY_API_KEY", "sk-static")

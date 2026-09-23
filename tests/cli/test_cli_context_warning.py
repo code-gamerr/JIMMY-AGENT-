@@ -23,8 +23,7 @@ def cli_obj(_isolate):
     with patch("cli.load_cli_config", return_value={
         "display": {"tool_progress": "new"},
         "terminal": {},
-    }), patch("cli.get_tool_definitions", return_value=[]), \
-         patch("cli.build_welcome_banner"):
+    }), patch("cli.get_tool_definitions", return_value=[]):
         from cli import JimmyCLI
         obj = JimmyCLI.__new__(JimmyCLI)
         obj.model = "test-model"
@@ -36,6 +35,7 @@ def cli_obj(_isolate):
         obj.base_url = ""
         obj.provider = "test"
         obj._provider_source = None
+        obj._show_tool_availability_warnings = MagicMock()
         # Mock agent with context compressor
         obj.agent = SimpleNamespace(
             context_compressor=SimpleNamespace(context_length=None)
@@ -49,8 +49,7 @@ class TestLowContextWarning:
     def test_warning_for_below_minimum_context(self, cli_obj):
         """Warning shown when context is below Jimmy' minimum."""
         cli_obj.agent.context_compressor.context_length = 32768
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]
@@ -63,8 +62,7 @@ class TestLowContextWarning:
     def test_warning_for_2048_context(self, cli_obj):
         """Warning shown for 2048 tokens (common LM Studio default)."""
         cli_obj.agent.context_compressor.context_length = 2048
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]
@@ -74,8 +72,7 @@ class TestLowContextWarning:
     def test_no_warning_at_boundary(self, cli_obj):
         """No warning at exactly Jimmy' minimum context length."""
         cli_obj.agent.context_compressor.context_length = MINIMUM_CONTEXT_LENGTH
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]
@@ -85,8 +82,7 @@ class TestLowContextWarning:
     def test_no_warning_above_boundary(self, cli_obj):
         """No warning above Jimmy' minimum context length."""
         cli_obj.agent.context_compressor.context_length = MINIMUM_CONTEXT_LENGTH + 1
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]
@@ -97,8 +93,7 @@ class TestLowContextWarning:
         """Ollama-specific fix shown when port 11434 detected."""
         cli_obj.agent.context_compressor.context_length = 4096
         cli_obj.base_url = "http://localhost:11434/v1"
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]
@@ -111,8 +106,7 @@ class TestLowContextWarning:
         """Generic fix shown for unknown servers."""
         cli_obj.agent.context_compressor.context_length = 4096
         cli_obj.base_url = "http://localhost:8080/v1"
-        with patch("cli.get_tool_definitions", return_value=[]), \
-             patch("cli.build_welcome_banner"):
+        with patch("cli.get_tool_definitions", return_value=[]):
             cli_obj.show_banner()
 
         calls = [str(c) for c in cli_obj.console.print.call_args_list]

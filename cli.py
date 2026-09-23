@@ -915,7 +915,6 @@ def get_toolset_for_tool(*args, **kwargs):
     return _get_toolset_for_tool(*args, **kwargs)
 
 # Extracted CLI modules (Phase 3)
-from jimmy_cli.banner import build_welcome_banner
 from jimmy_cli.commands import SlashCommandCompleter, SlashCommandAutoSuggest
 
 
@@ -8361,130 +8360,15 @@ class JimmyCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
             self.preloaded_skills = loaded_skills
 
     def show_banner(self):
-        """Display the welcome banner in Claude Code style."""
-        self.console.clear()
+        """Startup warnings only — decorative welcome panel is disabled."""
         ctx_len = None
         if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
             ctx_len = self.agent.context_compressor.context_length
-        
-        # Auto-compact for narrow terminals — the full banner with caduceus
-        # + tool list needs ~80 columns minimum to render without wrapping.
-        term_width = shutil.get_terminal_size().columns
-        use_compact = self.compact or term_width < 80
-        
-        if use_compact:
-            self._console_print(_build_compact_banner())
-            self._show_status()
-        else:
-            # Warm-launch fast path: replay last launch's tool panel when the
-            # snapshot fingerprint (config.yaml + .env + checkout rev +
-            # toolsets) is unchanged, skipping the ~0.5-0.9s cold
-            # get_tool_definitions walk. The agent's REAL tool list is still
-            # computed fresh at first message; a background refresh below
-            # re-verifies the snapshot so any drift self-heals next launch.
-            from jimmy_cli.banner import (
-                compute_toolset_availability,
-                load_banner_snapshot,
-                save_banner_snapshot,
-            )
 
-            snapshot = None
-            try:
-                snapshot = load_banner_snapshot(self.enabled_toolsets)
-            except Exception:
-                snapshot = None
-
-            # Get terminal working directory (where commands will execute)
-            cwd = os.getenv("TERMINAL_CWD", os.getcwd())
-
-            if snapshot is not None:
-                self._defer_tool_warnings = True
-                toolset_map = snapshot["toolset_map"]
-                build_welcome_banner(
-                    console=self.console,
-                    model=self.model,
-                    cwd=cwd,
-                    tools=snapshot["tools"],
-                    enabled_toolsets=self.enabled_toolsets,
-                    session_id=self.session_id,
-                    get_toolset_for_tool=lambda name: toolset_map.get(name),
-                    context_length=ctx_len,
-                    provider=self.provider,
-                    availability=snapshot["availability"],
-                    skills_by_category=snapshot.get("skills_by_category"),
-                )
-
-                def _refresh_banner_snapshot() -> None:
-                    try:
-                        from model_tools import get_toolset_for_tool
-                        tools = get_tool_definitions(
-                            enabled_toolsets=self.enabled_toolsets, quiet_mode=True
-                        )
-                        availability = compute_toolset_availability(self.enabled_toolsets)
-                        tmap = {
-                            t["function"]["name"]: get_toolset_for_tool(t["function"]["name"])
-                            for t in tools
-                        }
-                        for item in availability.get("unavailable_toolsets", []):
-                            for name in item.get("tools", []):
-                                tmap.setdefault(
-                                    name, item.get("id", item.get("name", ""))
-                                )
-                        save_banner_snapshot(
-                            tools, self.enabled_toolsets, availability, tmap
-                        )
-                    except Exception:
-                        logger.debug("banner snapshot refresh failed", exc_info=True)
-
-                threading.Thread(
-                    target=_refresh_banner_snapshot,
-                    name="banner-snapshot-refresh",
-                    daemon=True,
-                ).start()
-            else:
-                # Cold path: compute everything live, then persist the snapshot
-                # so the next launch replays it.
-                from model_tools import get_toolset_for_tool
-                tools = get_tool_definitions(enabled_toolsets=self.enabled_toolsets, quiet_mode=True)
-                availability = compute_toolset_availability(self.enabled_toolsets)
-
-                build_welcome_banner(
-                    console=self.console,
-                    model=self.model,
-                    cwd=cwd,
-                    tools=tools,
-                    enabled_toolsets=self.enabled_toolsets,
-                    session_id=self.session_id,
-                    context_length=ctx_len,
-                    provider=self.provider,
-                    availability=availability,
-                )
-                try:
-                    tmap = {
-                        t["function"]["name"]: get_toolset_for_tool(t["function"]["name"])
-                        for t in tools
-                    }
-                    for item in availability.get("unavailable_toolsets", []):
-                        for name in item.get("tools", []):
-                            tmap.setdefault(name, item.get("id", item.get("name", "")))
-                    save_banner_snapshot(tools, self.enabled_toolsets, availability, tmap)
-                except Exception:
-                    logger.debug("banner snapshot save failed", exc_info=True)
-        
         # Tool discovery is intentionally deferred on the Termux bare prompt
         # path; availability warnings are shown once tools are initialized.
-        # On the snapshot fast path (warm launch), the check walks every
-        # check_fn (~180ms) — run it in the background refresh thread instead
-        # and let its output land above the prompt (patch_stdout-safe).
         if os.environ.get("JIMMY_DEFER_AGENT_STARTUP") != "1":
-            if getattr(self, "_defer_tool_warnings", False):
-                threading.Thread(
-                    target=self._show_tool_availability_warnings,
-                    name="tool-availability-warnings",
-                    daemon=True,
-                ).start()
-            else:
-                self._show_tool_availability_warnings()
+            self._show_tool_availability_warnings()
 
         # Warn about low context lengths (common with local servers). Keep
         # this tied to the runtime guard so guidance cannot drift again.
@@ -11864,59 +11748,23 @@ class JimmyCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
                 out.flush()
             else:
                 self.console.clear()
-            # Show fresh banner.  Inside the TUI we must route Rich output
-            # through ChatConsole (which uses prompt_toolkit's native ANSI
-            # renderer) instead of self.console (which writes raw to stdout
-            # and gets mangled by patch_stdout).
-            if self._app:
-                cc = ChatConsole()
-                term_w = shutil.get_terminal_size().columns
-                if self.compact or term_w < 80:
-                    cc.print(_build_compact_banner())
+            # Decorative welcome panel is disabled — just confirm the reset.
+            _cprint("  ✨ (◕‿◕)✨ Fresh start! Screen cleared and conversation reset.\n")
+            try:
+                from jimmy_cli.tips import get_random_tip
+                _tip = get_random_tip()
+                try:
+                    from jimmy_cli.skin_engine import get_active_skin
+                    _tip_color = get_active_skin().get_color("banner_dim", "#B8860B")
+                except Exception:
+                    _tip_color = "#B8860B"
+                tip_line = f"[dim {_tip_color}]✦ Tip: {_tip}[/]"
+                if self._app:
+                    ChatConsole().print(tip_line)
                 else:
-                    tools = get_tool_definitions(enabled_toolsets=self.enabled_toolsets, quiet_mode=True)
-                    cwd = os.getenv("TERMINAL_CWD", os.getcwd())
-                    ctx_len = None
-                    if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
-                        ctx_len = self.agent.context_compressor.context_length
-                    build_welcome_banner(
-                        console=cc,
-                        model=self.model,
-                        cwd=cwd,
-                        tools=tools,
-                        enabled_toolsets=self.enabled_toolsets,
-                        session_id=self.session_id,
-                        context_length=ctx_len,
-                        provider=self.provider,
-                    )
-                _cprint("  ✨ (◕‿◕)✨ Fresh start! Screen cleared and conversation reset.\n")
-                # Show a random tip on new session
-                try:
-                    from jimmy_cli.tips import get_random_tip
-                    _tip = get_random_tip()
-                    try:
-                        from jimmy_cli.skin_engine import get_active_skin
-                        _tip_color = get_active_skin().get_color("banner_dim", "#B8860B")
-                    except Exception:
-                        _tip_color = "#B8860B"
-                    cc.print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
-                except Exception:
-                    pass
-            else:
-                self.show_banner()
-                print("  ✨ (◕‿◕)✨ Fresh start! Screen cleared and conversation reset.\n")
-                # Show a random tip on new session
-                try:
-                    from jimmy_cli.tips import get_random_tip
-                    _tip = get_random_tip()
-                    try:
-                        from jimmy_cli.skin_engine import get_active_skin
-                        _tip_color = get_active_skin().get_color("banner_dim", "#B8860B")
-                    except Exception:
-                        _tip_color = "#B8860B"
-                    self._console_print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
-                except Exception:
-                    pass
+                    self._console_print(tip_line)
+            except Exception:
+                pass
         elif canonical == "history":
             self.show_history()
         elif canonical == "title":

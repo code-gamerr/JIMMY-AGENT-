@@ -302,12 +302,10 @@ class TestNormalizeOpencodeBaseUrl:
 
 
 class TestAzureFoundryModelApiMode:
-    """Azure Foundry deploys GPT-5.x / codex / o-series as Responses-API-only.
+    """Azure Foundry deploys GPT-5.x / GPT-6.x / codex / o-series as Responses-API-only.
 
-    Azure returns ``400 "The requested operation is unsupported."`` when
-    /chat/completions is called against these deployments.  Verified in the
-    wild by a user debug bundle on 2026-04-26: gpt-5.3-codex failed with
-    that exact payload while gpt-4o-pure worked on the same endpoint.
+    Azure returns ``400 "The requested operation is unsupported."`` / tool+effort
+    errors when /chat/completions is called against these deployments.
     """
 
     def test_gpt5_family_uses_responses(self):
@@ -319,6 +317,12 @@ class TestAzureFoundryModelApiMode:
         # gpt-5-mini exceptions are Copilot-specific; Azure deploys the whole
         # gpt-5 family on Responses API uniformly.
         assert azure_foundry_model_api_mode("gpt-5-mini") == "codex_responses"
+
+    def test_gpt6_family_uses_responses(self):
+        # gpt-6-astra on Azure Foundry only accepts /responses (chat closes/400).
+        assert azure_foundry_model_api_mode("gpt-6-astra") == "codex_responses"
+        assert azure_foundry_model_api_mode("gpt-6") == "codex_responses"
+        assert azure_foundry_model_api_mode("gpt-6-astra-2026-09-03") == "codex_responses"
 
     def test_codex_family_uses_responses(self):
         assert azure_foundry_model_api_mode("codex") == "codex_responses"

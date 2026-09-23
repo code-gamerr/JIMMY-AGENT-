@@ -1429,26 +1429,18 @@ def _resolve_azure_foundry_runtime(
         if isinstance(_entra, dict):
             cfg_entra = _entra
 
-    # Model-family inference: Azure Foundry deploys GPT-5.x / codex / o1-o4
-    # reasoning models as Responses-API-only on some resources.  Calling
-    # /chat/completions against them can return 400.  Upgrade api_mode when
-    # the model name matches — but only when the user did NOT explicitly set
-    # model.api_mode (so chat_completions can be forced for deployments that
-    # still speak Chat Completions, e.g. gpt-5.6-sol on this resource).
+    # Model-family inference: Azure Foundry deploys GPT-5.x / GPT-6.x / codex /
+    # o1-o4 as Responses-API-only on many resources.  Calling /chat/completions
+    # against them returns 400 (often "reasoning_effort" / "operation
+    # unsupported").  Always upgrade when the model family requires Responses —
+    # a stale ``model.api_mode: chat_completions`` must not win (that silence
+    # is what made local/Telegram Jimmy appear to "not reply").  Explicit
+    # ``anthropic_messages`` still wins for Anthropic-style Azure endpoints.
     # AZURE_OPENAI_DEPLOYMENT is an alias when no model/deployment is set.
-    explicit_api_mode = (
-        _parse_api_mode(model_cfg.get("api_mode"))
-        if cfg_provider == "azure-foundry"
-        else None
-    )
     effective_model = str(target_model or model_cfg.get("default") or "").strip()
     if not effective_model:
         effective_model = _getenv("AZURE_OPENAI_DEPLOYMENT", "").strip()
-    if (
-        effective_model
-        and cfg_api_mode != "anthropic_messages"
-        and not explicit_api_mode
-    ):
+    if effective_model and cfg_api_mode != "anthropic_messages":
         try:
             from jimmy_cli.models import azure_foundry_model_api_mode
 

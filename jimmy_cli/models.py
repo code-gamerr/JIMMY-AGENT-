@@ -5200,6 +5200,7 @@ def copilot_model_api_mode(
 _AZURE_FOUNDRY_RESPONSES_PREFIXES = (
     "codex",       # codex-*, codex-mini
     "gpt-5",       # gpt-5, gpt-5.x, gpt-5-codex, gpt-5.x-codex
+    "gpt-6",       # gpt-6-astra and later Azure Responses-only deployments
     "o1",          # o1, o1-preview, o1-mini
     "o3",          # o3, o3-mini
     "o4",          # o4, o4-mini
@@ -5210,9 +5211,9 @@ def azure_foundry_model_api_mode(model_name: Optional[str]) -> Optional[str]:
     """Infer Azure Foundry api_mode from a deployment/model name.
 
     Returns ``"codex_responses"`` when the model name matches a family that
-    only accepts the Responses API on Azure Foundry (GPT-5.x, codex, o1/o3/o4
-    reasoning models).  Returns ``None`` otherwise — the caller should fall
-    back to the configured/default api_mode (typically ``chat_completions``)
+    only accepts the Responses API on Azure Foundry (GPT-5.x, GPT-6.x, codex,
+    o1/o3/o4 reasoning models).  Returns ``None`` otherwise — the caller should
+    fall back to the configured/default api_mode (typically ``chat_completions``)
     so GPT-4o, GPT-4 Turbo, Llama, Mistral, etc. keep working.
 
     Intentionally does NOT return ``anthropic_messages``; Anthropic-style
