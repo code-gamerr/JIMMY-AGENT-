@@ -8006,9 +8006,7 @@ async function discoverCloudAgents(org?: string) {
       // A 401 means the portal session lapsed (and silent renewal could not
       // recover it) — surface it as a re-login, not a generic failure.
       if (error && error.statusCode === 401) {
-        const err = new Error(
-          'Your Jimmy Cloud session has expired. Open Settings → Gateway and sign in again.'
-        ) as any
+        const err = new Error('Your Jimmy Cloud session has expired. Open Settings → Gateway and sign in again.') as any
 
         err.needsCloudLogin = true
         err.cause = error
@@ -10781,10 +10779,7 @@ async function startJimmy() {
     await advanceBootProgress('backend.port', 'Waiting for Jimmy backend to launch', 86)
 
     // Discover the ephemeral port the child bound to
-    const port = await Promise.race([
-      waitForDashboardPortAnnouncement(jimmyProcess, { readyFile }),
-      backendStartFailed
-    ])
+    const port = await Promise.race([waitForDashboardPortAnnouncement(jimmyProcess, { readyFile }), backendStartFailed])
 
     if (readyFile) {
       fs.unlink(readyFile, () => {})

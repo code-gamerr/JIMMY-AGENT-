@@ -1,6 +1,6 @@
 import { requestComposerFocus, requestComposerInsert } from '@/app/chat/composer/focus'
-import { getSkills } from '@/jimmy'
 import { translateNow } from '@/i18n'
+import { getSkills } from '@/jimmy'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { type ComposerSuggestion, registerDraftProvider } from '@/store/composer-suggestions'
 import { $activeSessionId, $currentCwd, $messages } from '@/store/session'

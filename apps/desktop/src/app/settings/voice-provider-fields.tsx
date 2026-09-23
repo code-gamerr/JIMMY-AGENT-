@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { getElevenLabsVoices, getJimmyConfigSchema, saveJimmyConfig } from '@/jimmy'
 import { useI18n } from '@/i18n'
+import { getElevenLabsVoices, getJimmyConfigSchema, saveJimmyConfig } from '@/jimmy'
 import { notifyError } from '@/store/notifications'
 import type { JimmyConfigRecord } from '@/types/jimmy'
 

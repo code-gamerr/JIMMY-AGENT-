@@ -57,8 +57,7 @@ const remoteGit: GitBridge = {
 
   branchSwitch: (repoPath, branch) => gitPost('branch/switch', { branch, path: repoPath }),
 
-  branchList: async repoPath =>
-    (await gitGet<{ branches: JimmyGitBranch[] }>('branches', { path: repoPath })).branches,
+  branchList: async repoPath => (await gitGet<{ branches: JimmyGitBranch[] }>('branches', { path: repoPath })).branches,
 
   baseBranchList: async repoPath =>
     (await gitGet<{ branches: JimmyGitBaseBranch[] }>('base-branches', { path: repoPath })).branches,

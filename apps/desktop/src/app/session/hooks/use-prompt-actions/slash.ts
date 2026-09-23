@@ -1,8 +1,8 @@
 import { skillInvocationText } from '@jimmy/shared'
 import { type MutableRefObject, useCallback, useRef } from 'react'
 
-import { getProfiles } from '@/jimmy'
 import type { Translations } from '@/i18n'
+import { getProfiles } from '@/jimmy'
 import { type ChatMessage, toChatMessages } from '@/lib/chat-messages'
 import { parseCommandDispatch, parseSlashCommand, sessionTitle } from '@/lib/chat-runtime'
 import {

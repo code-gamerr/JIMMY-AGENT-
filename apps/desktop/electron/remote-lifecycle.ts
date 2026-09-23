@@ -400,15 +400,7 @@ async function remotePidAlive(ssh, pid) {
 
 // A pid is "provably ours" only if its remote cmdline carries our dashboard
 // args — never kill a pid we can't positively identify as our dashboard.
-async function pidIsOurDashboard(
-  ssh,
-  pid,
-  spawnNonce,
-  jimmyPath = '',
-  jimmyHome = '',
-  ownershipId = '',
-  profile = ''
-) {
+async function pidIsOurDashboard(ssh, pid, spawnNonce, jimmyPath = '', jimmyHome = '', ownershipId = '', profile = '') {
   if (!pid || !/^[0-9a-f]{16}$/.test(String(spawnNonce || '')) || !jimmyPath) {
     return false
   }
@@ -477,15 +469,7 @@ async function cleanupStale(ssh, ownershipId, lock, pidAlive = true) {
   if (
     pidAlive &&
     lock &&
-    (await pidIsOurDashboard(
-      ssh,
-      lock.pid,
-      lock.spawnNonce,
-      lock.jimmyPath,
-      lock.jimmyHome,
-      ownershipId,
-      lock.profile
-    ))
+    (await pidIsOurDashboard(ssh, lock.pid, lock.spawnNonce, lock.jimmyPath, lock.jimmyHome, ownershipId, lock.profile))
   ) {
     try {
       const result = (

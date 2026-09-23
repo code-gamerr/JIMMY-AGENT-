@@ -2,8 +2,8 @@ import { isGatewayReauthRequired, resolveGatewayWsUrl } from '@jimmy/shared'
 import { useEffect, useRef } from 'react'
 
 import type { JimmyConnection } from '@/global'
-import { JimmyGateway } from '@/jimmy'
 import { translateNow } from '@/i18n'
+import { JimmyGateway } from '@/jimmy'
 import { desktopDefaultCwd } from '@/lib/desktop-fs'
 import { reconnectBackoffDelayMs } from '@/lib/reconnect-backoff'
 import {

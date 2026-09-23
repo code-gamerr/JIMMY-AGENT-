@@ -6,8 +6,8 @@ import {
   type SidebarProjectTree
 } from '@/app/chat/sidebar/projects/workspace-groups'
 import type { JimmyGitBaseBranch, JimmyGitBranch } from '@/global'
-import { getJimmyConfig, jimmyApi, type JimmyGateway } from '@/jimmy'
 import { translateNow } from '@/i18n'
+import { getJimmyConfig, jimmyApi, type JimmyGateway } from '@/jimmy'
 import { desktopDefaultCwd, isDesktopFsRemoteMode, selectDesktopPaths, writeDesktopFileText } from '@/lib/desktop-fs'
 import { desktopGit } from '@/lib/desktop-git'
 import { isMissingRestEndpoint, isMissingRpcMethod } from '@/lib/gateway-rpc'
