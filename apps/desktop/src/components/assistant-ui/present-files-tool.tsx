@@ -103,9 +103,7 @@ export const PresentFilesTool: FC<ToolCallMessagePartProps> = props => {
                     return
                   }
 
-                  const fileUrl = path.startsWith('file:')
-                    ? path
-                    : `file://${path.replace(/\\/g, '/')}`
+                  const fileUrl = path.startsWith('file:') ? path : `file://${path.replace(/\\/g, '/')}`
 
                   openPreview(
                     {

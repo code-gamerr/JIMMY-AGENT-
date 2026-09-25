@@ -1734,7 +1734,8 @@ export const zh: Translations = {
     search: '搜索消息平台…',
     loading: '正在加载消息平台…',
     loadFailed: '消息平台加载失败',
-    noPublicIpBanner: '无需公网 IP。Telegram 使用长轮询，Slack 使用 Socket Mode，Discord 使用 Gateway WebSocket — 在此绑定令牌后 Jimmy 会主动出站连接。',
+    noPublicIpBanner:
+      '无需公网 IP。Telegram 使用长轮询，Slack 使用 Socket Mode，Discord 使用 Gateway WebSocket — 在此绑定令牌后 Jimmy 会主动出站连接。',
     states: {
       connected: '已连接',
       connecting: '连接中',

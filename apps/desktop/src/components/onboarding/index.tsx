@@ -439,6 +439,7 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
     () => (providers ? sortProviders(providers.filter(p => !HIDDEN_PROVIDER_IDS.has(p.id))) : []),
     [providers]
   )
+
   const hasOauth = ordered.length > 0
   const apiKeyOptions = useApiKeyCatalog()
 

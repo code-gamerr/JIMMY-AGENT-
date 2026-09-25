@@ -79,9 +79,11 @@ export function OrchestratorActivity() {
 
   useEffect(() => {
     const token = window.localStorage.getItem('jimmy-cc-token') || window.localStorage.getItem('jimmyToken')
+
     if (!token) {
       return
     }
+
     let stopped = false
 
     async function tick() {
@@ -89,22 +91,29 @@ export function OrchestratorActivity() {
         const listed = await fetch(`${CC_BASE}/api/jimmy/tasks`, {
           headers: { 'x-jimmy-token': token }
         })
+
         if (!listed.ok) {
           return
         }
+
         const body = await listed.json()
         const tasks = body.data || []
         const latest = tasks[0]
+
         if (!latest) {
           return
         }
+
         const detail = await fetch(`${CC_BASE}/api/jimmy/tasks/${latest.task_id}`, {
           headers: { 'x-jimmy-token': token }
         })
+
         if (!detail.ok || stopped) {
           return
         }
+
         const payload = await detail.json()
+
         if (!stopped) {
           setSnapshot(payload.data?.narration || null)
         }
@@ -115,6 +124,7 @@ export function OrchestratorActivity() {
 
     void tick()
     const id = window.setInterval(() => void tick(), 1500)
+
     return () => {
       stopped = true
       window.clearInterval(id)
