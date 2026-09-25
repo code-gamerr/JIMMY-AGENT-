@@ -3,7 +3,7 @@
 Goal: **Jimmy gets what DeerFlow has**, without replacing Jimmy’s custom agent
 loop with LangGraph.
 
-Analysis source: `Jimmy_vs_DeerFlow_Deep_Comparison.xlsx`
+Analysis source: `docs/comparisons/Jimmy_vs_DeerFlow_Deep_Comparison.xlsx`
 
 ## Capability matrix
 

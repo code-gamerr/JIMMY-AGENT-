@@ -225,8 +225,11 @@ native/fts5_cjk/*.so
 /deer-flow/
 
 # Local scrub/backup archives of sibling trees — not source.
+# Canonical place is local/backups/. Root names stay ignored so a fresh drop
+# does not land back in the checkout root.
 /deer-flow-backup-before-bytedance.tar.gz
 /deer-flow-backup-before-scrub.zip
+/local/
 
 # Generated deployment mirror of the whole tree, produced by
 # .azure/apply_local_lean.py. Tracking it double-counts every source file and
