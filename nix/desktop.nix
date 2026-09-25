@@ -175,7 +175,7 @@ stdenv.mkDerivation {
     install -m 0644 ${../app/desktop/assets/icon.png} \
       $out/share/icons/hicolor/1024x1024/apps/jimmy.png
     export PYTHONPATH=$(mktemp -d)
-    cp ${../jimmy_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
+    cp ${../agent/jimmy_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"
     export DESKTOP_EXEC="$out/bin/jimmy-desktop"
     export DESKTOP_ICON="$out/share/icons/hicolor/1024x1024/apps/jimmy.png"
     python3 -c 'import os; from linux_desktop_entry import render_desktop_entry; print(render_desktop_entry(os.environ["DESKTOP_EXEC"], os.environ["DESKTOP_ICON"]))' > $out/share/applications/jimmy.desktop

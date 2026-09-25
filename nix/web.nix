@@ -21,7 +21,7 @@ jimmyNpmLib.buildNpmPackage {
     node ../../node_modules/vite/bin/vite.js build --outDir dist
 
     # Return to source root so installPhase paths are correct.
-    cd ..
+    cd ../..
   '';
 
   installPhase = ''
