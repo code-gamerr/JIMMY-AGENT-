@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: apps/bootstrap-installer/src-tauri
+        working-directory: app/bootstrap-installer/src-tauri
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -49,7 +49,7 @@ jobs:
             libssl-dev \
             patchelf
 
-      # Keyed on Cargo.toml, not Cargo.lock: apps/bootstrap-installer/.gitignore
+      # Keyed on Cargo.toml, not Cargo.lock: app/bootstrap-installer/.gitignore
       # excludes the lockfile (a create-tauri-app scaffold default), so there is
       # nothing pinned to hash and `--locked` cannot be used. That also means
       # this crate re-resolves its whole dependency graph on every build, which
@@ -64,8 +64,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            apps/bootstrap-installer/src-tauri/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('apps/bootstrap-installer/src-tauri/Cargo.toml') }}
+            app/bootstrap-installer/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('app/bootstrap-installer/src-tauri/Cargo.toml') }}
 
       # --lib only: the integration/bin targets would need a built frontend
       # (vite dist) that this lane deliberately does not produce.

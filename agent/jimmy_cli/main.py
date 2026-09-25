@@ -2655,7 +2655,7 @@ def _apply_tui_python_env(env: dict) -> None:
     """Seed/repair Python-related env vars shared by CLI and dashboard TUI launches."""
     src_root = str(env.get("JIMMY_PYTHON_SRC_ROOT") or "").strip()
     if not src_root or not Path(src_root).is_dir():
-        env["JIMMY_PYTHON_SRC_ROOT"] = str(PROJECT_ROOT)
+        env["JIMMY_PYTHON_SRC_ROOT"] = str(Path(__file__).resolve().parents[1])
 
     cwd = str(env.get("JIMMY_CWD") or "").strip()
     if not cwd or not Path(cwd).is_dir():

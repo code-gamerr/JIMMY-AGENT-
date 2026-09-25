@@ -13,9 +13,9 @@
     "ignoreDeprecations": "6.0",
     "composite": true,
     "declaration": true,
-    "rootDir": "..",
+    "rootDir": "../..",
     "outDir": "build/electron-types"
   },
-  "include": ["electron", "../shared/src/data-url-read-max.ts", "../shared/src/translucency.ts"],
+  "include": ["electron", "../../packages/shared/src/data-url-read-max.ts", "../../packages/shared/src/translucency.ts"],
   "exclude": ["src", "electron/**/*.e2e.mts"]
 }

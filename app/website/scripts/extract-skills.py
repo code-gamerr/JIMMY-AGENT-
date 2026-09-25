@@ -25,19 +25,19 @@ from datetime import datetime, timezone
 
 import yaml
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 LOCAL_SKILL_DIRS = [
     ("skills", "built-in"),
     ("optional-skills", "optional"),
 ]
-UNIFIED_INDEX_PATH = os.path.join(REPO_ROOT, "website", "static", "api", "skills-index.json")
+UNIFIED_INDEX_PATH = os.path.join(REPO_ROOT, "app", "website", "static", "api", "skills-index.json")
 LEGACY_INDEX_CACHE_DIR = os.path.join(REPO_ROOT, "skills", "index-cache")
 # Output to static/api/ so the file is CDN-served at /api/skills.json
 # rather than bundled into the page's JS chunk. At 50k+ skills the
 # bundled payload was ~26 MB; lazy-fetch keeps the initial page load
 # fast and shrinks the JS chunk back to a few hundred KB.
-OUTPUT = os.path.join(REPO_ROOT, "website", "static", "api", "skills.json")
-META_OUTPUT = os.path.join(REPO_ROOT, "website", "static", "api", "skills-meta.json")
+OUTPUT = os.path.join(REPO_ROOT, "app", "website", "static", "api", "skills.json")
+META_OUTPUT = os.path.join(REPO_ROOT, "app", "website", "static", "api", "skills-meta.json")
 
 CATEGORY_LABELS = {
     "apple": "Apple",

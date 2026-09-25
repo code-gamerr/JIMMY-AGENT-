@@ -91,7 +91,7 @@ jobs:
         id: restore-baselines
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
-          path: apps/desktop/e2e/*-snapshots
+          path: app/desktop/e2e/*-snapshots
           key: visual-baselines-${{ github.ref_name }}
           restore-keys: |
             visual-baselines-main
@@ -103,7 +103,7 @@ jobs:
       # `npm run test:e2e` builds dist/ as a pretest hook so the renderer
       # is always fresh — no separate build step needed.
       - name: Run Playwright E2E tests
-        working-directory: apps/desktop
+        working-directory: app/desktop
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
             echo "On main — generating/updating baseline screenshots"
@@ -126,7 +126,7 @@ jobs:
         if: github.ref_name == 'main' && always()
         uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
-          path: apps/desktop/e2e/*-snapshots
+          path: app/desktop/e2e/*-snapshots
           key: visual-baselines-main
 
       # ── Upload Playwright report (HTML + traces) ──────────────────────
@@ -136,7 +136,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report-${{ github.sha }}
-          path: apps/desktop/playwright-report
+          path: app/desktop/playwright-report
           retention-days: 14
           overwrite: true
 
@@ -147,7 +147,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-test-results-${{ github.sha }}
-          path: apps/desktop/test-results
+          path: app/desktop/test-results
           retention-days: 14
           overwrite: true
 
@@ -159,9 +159,9 @@ jobs:
         with:
           name: visual-diffs-${{ github.sha }}
           path: |
-            apps/desktop/test-results/**/*-diff.png
-            apps/desktop/test-results/**/*-actual.png
-            apps/desktop/test-results/**/*-expected.png
+            app/desktop/test-results/**/*-diff.png
+            app/desktop/test-results/**/*-actual.png
+            app/desktop/test-results/**/*-expected.png
           retention-days: 14
           overwrite: true
           if-no-files-found: ignore
@@ -169,7 +169,7 @@ jobs:
       - name: Build screenshot review status
         id: review-status
         if: always()
-        working-directory: apps/desktop
+        working-directory: app/desktop
         env:
           RESULTS_URL: ${{ steps.upload-results.outputs.artifact-url }}
         run: |
@@ -192,7 +192,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: review-status-e2e-desktop
-          path: apps/desktop/review-status.json
+          path: app/desktop/review-status.json
           retention-days: 1
           overwrite: true
           if-no-files-found: ignore
@@ -217,7 +217,7 @@ jobs:
       # the artifact download URLs from their step outputs.
       - name: Generate visual diff summary
         if: always()
-        working-directory: apps/desktop
+        working-directory: app/desktop
         env:
           REPORT_URL: ${{ steps.upload-report.outputs.artifact-url }}
           RESULTS_URL: ${{ steps.upload-results.outputs.artifact-url }}

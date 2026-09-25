@@ -23,9 +23,8 @@
     {
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
-          (pkgs.runCommand "jimmy" { } ''
-            mkdir -p $out/bin
-            install -Dm755 ${../jimmy} $out/bin/jimmy
+          (pkgs.writeShellScriptBin "jimmy" ''
+            exec ${self'.packages.default}/bin/jimmy "$@"
           '')
           self'.packages.sandbox
           uv

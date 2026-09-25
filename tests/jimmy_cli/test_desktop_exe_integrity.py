@@ -285,7 +285,7 @@ def test_build_only_fails_when_pack_produces_corrupt_exe(tmp_path, monkeypatch, 
     gate itself both short-circuit off Windows.
     """
     root = tmp_path / "jimmy-agent"
-    desktop_dir = root / "apps" / "desktop"
+    desktop_dir = root / "app" / "desktop"
     desktop_dir.mkdir(parents=True)
     (desktop_dir / "package.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)

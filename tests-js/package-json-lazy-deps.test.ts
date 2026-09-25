@@ -52,7 +52,7 @@ import { test } from 'vitest'
 const REPO_ROOT = path.resolve(__dirname, '..')
 const ROOT_PKG = path.join(REPO_ROOT, 'package.json')
 const ROOT_LOCK = path.join(REPO_ROOT, 'package-lock.json')
-const DESKTOP_PKG = path.join(REPO_ROOT, 'apps', 'desktop', 'package.json')
+const DESKTOP_PKG = path.join(REPO_ROOT, 'app', 'desktop', 'package.json')
 
 function rootPackageJson(): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(ROOT_PKG, 'utf-8'))

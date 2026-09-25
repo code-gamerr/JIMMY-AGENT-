@@ -32,7 +32,7 @@ import * as plist from 'plist'
 import { test } from 'vitest'
 
 const REPO_ROOT = path.resolve(__dirname, '..')
-const ELECTRON_DIR = path.join(REPO_ROOT, 'apps', 'desktop', 'electron')
+const ELECTRON_DIR = path.join(REPO_ROOT, 'app', 'desktop', 'electron')
 const MAIN_PLIST = path.join(ELECTRON_DIR, 'entitlements.mac.plist')
 const INHERIT_PLIST = path.join(ELECTRON_DIR, 'entitlements.mac.inherit.plist')
 

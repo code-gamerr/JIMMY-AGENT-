@@ -30,7 +30,7 @@ import path from 'node:path'
 import { test } from 'vitest'
 
 const REPO_ROOT = path.resolve(__dirname, '..')
-const DESKTOP_VITE_CONFIG = path.join(REPO_ROOT, 'apps', 'desktop', 'vite.config.ts')
+const DESKTOP_VITE_CONFIG = path.join(REPO_ROOT, 'app', 'desktop', 'vite.config.ts')
 
 interface Manifest {
   dependencies?: Record<string, string>

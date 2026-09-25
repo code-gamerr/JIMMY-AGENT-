@@ -62,6 +62,11 @@ def append_log_record(path: str | Path, record: str) -> None:
         os.close(fd)
 
 
+def _distribution_root() -> Path:
+    """Directory that contains ``tui_gateway`` and ``jimmy_cli``."""
+    return Path(__file__).resolve().parents[1]
+
+
 def _repo_root() -> Path:
     from jimmy_constants import get_workspace_root
     return get_workspace_root()
@@ -90,14 +95,21 @@ def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
     try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+        import psutil
+
+        return bool(psutil.pid_exists(pid))
     except Exception:
-        return False
+        if sys.platform == "win32":
+            return False
+        try:
+            os.kill(pid, 0)  # windows-footgun: ok — POSIX-only fallback
+            return True
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        except Exception:
+            return False
 
 
 def _pid_command(pid: int) -> str:
@@ -321,9 +333,9 @@ class HostSupervisor:
         if self.env:
             env.update(self.env)
         env["JIMMY_COMPUTE_HOST_HEARTBEAT_SECS"] = str(self.heartbeat_secs)
-        env.setdefault("PYTHONPATH", str(_repo_root()))
-        if str(_repo_root()) not in env["PYTHONPATH"].split(os.pathsep):
-            env["PYTHONPATH"] = str(_repo_root()) + os.pathsep + env["PYTHONPATH"]
+        env.setdefault("PYTHONPATH", str(_distribution_root()))
+        if str(_distribution_root()) not in env["PYTHONPATH"].split(os.pathsep):
+            env["PYTHONPATH"] = str(_distribution_root()) + os.pathsep + env["PYTHONPATH"]
         proc = subprocess.Popen(
             self.argv,
             cwd=str(self.cwd),
@@ -545,7 +557,7 @@ class HostSupervisor:
                 return
             time.sleep(0.05)
         try:
-            os.kill(pid, signal.SIGKILL)
+            os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
         except ProcessLookupError:
             return
         except Exception:
