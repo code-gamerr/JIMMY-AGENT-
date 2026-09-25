@@ -1,0 +1,17 @@
+[project]
+name = "jimmy-training"
+version = "0.0.0"
+description = "Jimmy evals, trajectory runners, task environments, and eval harnesses"
+requires-python = ">=3.11,<3.14"
+dependencies = ["jimmy-agent"]
+
+[tool.uv.sources]
+jimmy-agent = { workspace = true }
+
+[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["batch_runner", "trajectory_compressor", "mini_swe_runner"]
+package-dir = {"" = "runners"}

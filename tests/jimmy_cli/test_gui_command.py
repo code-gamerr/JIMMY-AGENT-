@@ -64,7 +64,7 @@ def _ns(**kw):
 
 def _make_desktop_tree(tmp_path: Path) -> Path:
     root = tmp_path / "jimmy-agent"
-    desktop_dir = root / "apps" / "desktop"
+    desktop_dir = root / "app" / "desktop"
     desktop_dir.mkdir(parents=True)
     (desktop_dir / "package.json").write_text("{}", encoding="utf-8")
     return root
@@ -83,7 +83,7 @@ def _make_packaged_executable(root: Path, monkeypatch) -> Path:
     darwin-by-default fake concealed — on Linux the packaged tree genuinely has
     to include it.
     """
-    desktop_dir = root / "apps" / "desktop"
+    desktop_dir = root / "app" / "desktop"
     if sys.platform == "darwin":
         exe = desktop_dir / "release" / "mac-arm64" / "Jimmy.app" / "Contents" / "MacOS" / "Jimmy"
     elif sys.platform == "win32":
@@ -99,7 +99,7 @@ def _make_packaged_executable(root: Path, monkeypatch) -> Path:
 
 def test_gui_installs_packages_and_launches_desktop_app(tmp_path, monkeypatch):
     root = _make_desktop_tree(tmp_path)
-    desktop_dir = root / "apps" / "desktop"
+    desktop_dir = root / "app" / "desktop"
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     packaged_exe = _make_packaged_executable(root, monkeypatch)
 
@@ -110,6 +110,7 @@ def test_gui_installs_packages_and_launches_desktop_app(tmp_path, monkeypatch):
     with patch("jimmy_cli.main.shutil.which", return_value="/usr/bin/npm"), \
          patch("jimmy_cli.main._run_npm_install_deterministic", return_value=install_ok) as mock_install, \
          patch("jimmy_cli.main._desktop_build_needed", return_value=True), \
+         patch("jimmy_cli.main._desktop_exe_integrity_error", return_value=None), \
          patch("jimmy_cli.main._write_desktop_build_stamp"), \
          patch("jimmy_cli.main._desktop_macos_relaunchable_fixup"), \
          patch("jimmy_cli.main._desktop_linux_sandbox_fixup", return_value=True), \
@@ -122,11 +123,14 @@ def test_gui_installs_packages_and_launches_desktop_app(tmp_path, monkeypatch):
     # The install now runs with a resolved env (managed-Node PATH), never a bare
     # ``env=None`` that would leave npm's child scripts unable to find ``node``.
     mock_install.assert_called_once()
-    assert mock_install.call_args.args == ("/usr/bin/npm", root)
+    assert Path(mock_install.call_args.args[0]).name in {"npm", "npm.cmd"}
+    assert mock_install.call_args.args[1] == root
     assert mock_install.call_args.kwargs["capture_output"] is False
     install_env = mock_install.call_args.kwargs["env"]
     assert install_env is not None and "PATH" in install_env
-    assert mock_run.call_args_list[0].args[0] == ["/usr/bin/npm", "run", "pack"]
+    pack_cmd = mock_run.call_args_list[0].args[0]
+    assert Path(pack_cmd[0]).name in {"npm", "npm.cmd"}
+    assert pack_cmd[1:] == ["run", "pack"]
     assert mock_run.call_args_list[0].kwargs["cwd"] == desktop_dir
     assert mock_run.call_args_list[1].args[0] == [str(packaged_exe)]
     assert mock_run.call_args_list[1].kwargs["cwd"] == desktop_dir
@@ -221,7 +225,7 @@ def test_purge_electron_build_cache_clears_all_zips_and_unpacked_dir(tmp_path, m
     _write_zip(prepended)
     prepended.write_bytes(b"\x00" * 4096 + prepended.read_bytes())
 
-    desktop_dir = tmp_path / "apps" / "desktop"
+    desktop_dir = tmp_path / "app" / "desktop"
     unpacked = desktop_dir / "release" / "linux-unpacked"
     unpacked.mkdir(parents=True)
     (unpacked / "LICENSE.electron.txt").write_text("x", encoding="utf-8")
@@ -439,7 +443,7 @@ def test_desktop_macos_local_codesign_signs_native_binaries(tmp_path, monkeypatc
     Jimmy.app component, silently skipping every .node/.dylib/crashpad
     binary — codesign then rejects the outer signature (nested code unsigned).
     """
-    desktop_dir = tmp_path / "apps" / "desktop"
+    desktop_dir = tmp_path / "app" / "desktop"
     app = _make_signable_app(desktop_dir)
     calls = _collect_codesign_calls(monkeypatch)
 
@@ -460,7 +464,7 @@ def test_relaunchable_fixup_falls_back_to_legacy_adhoc_on_failure(tmp_path, monk
     layout (``exe.parents[2]``), which only the macOS packaged tree produces.
     """
     root = _make_desktop_tree(tmp_path)
-    desktop_dir = root / "apps" / "desktop"
+    desktop_dir = root / "app" / "desktop"
     monkeypatch.setattr(cli_main, "PROJECT_ROOT", root)
     monkeypatch.delenv("CSC_LINK", raising=False)
     monkeypatch.delenv("APPLE_SIGNING_IDENTITY", raising=False)

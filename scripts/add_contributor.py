@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Add a contributor email → GitHub login mapping.
 
-Writes one file per email under contributors/emails/ (filename = email,
+Writes one file per email under scripts/contributors/emails/ (filename = email,
 content = login). File additions never merge-conflict, unlike the legacy
 AUTHOR_MAP dict in scripts/release.py, which is frozen — do not append to it.
 
@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EMAILS_DIR = REPO_ROOT / "contributors" / "emails"
+EMAILS_DIR = REPO_ROOT / "scripts" / "contributors" / "emails"
 
 _EMAIL_RE = re.compile(r"^[^/\\\s]+@[^/\\\s]+$")
 # GitHub's *current* signup rules forbid consecutive hyphens, but legacy
@@ -86,7 +86,7 @@ def add_contributor(email: str, login: str, comment: str = "") -> int:
     if comment:
         body += f"# {comment}\n"
     path.write_text(body, encoding="utf-8")
-    print(f"added: contributors/emails/{email} -> {login}")
+    print(f"added: scripts/contributors/emails/{email} -> {login}")
     return 0
 
 

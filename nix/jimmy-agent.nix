@@ -84,7 +84,7 @@ let
   # i18n locale catalogs (locales/*.yaml). Shipped into the store and pointed
   # at by JIMMY_BUNDLED_LOCALES so the wrapped binary always resolves human
   # strings instead of raw i18n keys (#23943 / #27632 / #35374).
-  bundledLocales = lib.cleanSource ../locales;
+  bundledLocales = lib.cleanSource ../agent/locales;
 
   # Shipped MCP catalog (optional-mcps/<name>/manifest.yaml). Same bare-data-dir
   # case as locales: not a Python package, so it's symlinked into the store and
@@ -160,7 +160,7 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "jimmy-agent";
-  version = (fromTOML (builtins.readFile ../pyproject.toml)).project.version;
+  version = (fromTOML (builtins.readFile ../agent/pyproject.toml)).project.version;
 
   dontUnpack = true;
   dontBuild = true;

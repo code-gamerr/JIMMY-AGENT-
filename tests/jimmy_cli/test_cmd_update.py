@@ -893,14 +893,14 @@ class TestNodeRuntimeNpmResolution:
 
         project_root = tmp_path / "jimmy-agent"
         (project_root / ".git").mkdir(parents=True)
-        desktop_dir = project_root / "apps" / "desktop"
+        desktop_dir = project_root / "app" / "desktop"
         packaged_exe = desktop_dir / "release" / "win-unpacked" / "Jimmy.exe"
         packaged_exe.parent.mkdir(parents=True)
         packaged_exe.write_bytes(b"desktop")
 
         def write_source_zip(_url, destination):
             with zipfile.ZipFile(destination, "w") as archive:
-                archive.writestr("jimmy-agent-main/apps/desktop/package.json", "{}")
+                archive.writestr("jimmy-agent-main/app/desktop/package.json", "{}")
 
         def fail_git_fetch(command, **_kwargs):
             if "fetch" in command:
@@ -1051,7 +1051,7 @@ class TestUpdateNodeDependencies:
         calls = self._popen_npm_calls(popen_calls)
         assert len(calls) == 1, f"expected exactly 1 npm call, got: {calls}"
         joined = " ".join(str(a) for a in calls[0])
-        assert "--workspace ui-tui" in joined and "--workspace web" in joined, (
+        assert "--workspace app/ui-tui" in joined and "--workspace app/web" in joined, (
             f"expected ui-tui + web workspace selectors; actual: {calls[0]}"
         )
         assert "desktop" not in joined, (

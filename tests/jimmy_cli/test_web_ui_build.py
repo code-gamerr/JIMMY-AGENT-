@@ -27,6 +27,7 @@ from jimmy_cli.main import (
     _web_build_toolchain_ready,
     _web_toolchain_roots,
     _web_ui_stamp_path,
+    _workspace_root,
     _write_web_ui_build_stamp,
 )
 
@@ -64,7 +65,7 @@ class TestWebUIBuildNeeded:
 
     @staticmethod
     def _root(web_dir: Path) -> Path:
-        return web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
+        return _workspace_root(web_dir)
 
     def _stamp_current(self, web_dir: Path) -> None:
         """Record a stamp matching web_dir's current source content."""
@@ -171,8 +172,8 @@ class TestBuildWebUISkipsWhenFresh:
         web_dir, _ = _make_web_dir(tmp_path)
         # Root lockfile only => _workspace_root(web_dir) == tmp_path.
         (tmp_path / "package-lock.json").write_text("{}", encoding="utf-8")
-        (tmp_path / "ui-tui").mkdir()
-        (tmp_path / "ui-tui" / "package.json").write_text("{}", encoding="utf-8")
+        (tmp_path / "app" / "ui-tui").mkdir(parents=True)
+        (tmp_path / "app" / "ui-tui" / "package.json").write_text("{}", encoding="utf-8")
         monkeypatch.delenv("TERMUX_VERSION", raising=False)
         monkeypatch.setenv("PREFIX", "/usr")
 
@@ -188,7 +189,7 @@ class TestBuildWebUISkipsWhenFresh:
         cmd = args[0]
         assert "--include-workspace-root" in cmd
         assert cmd.count("--workspace") == 2
-        assert "ui-tui" in cmd and "web" in cmd
+        assert "app/ui-tui" in cmd and "app/web" in cmd
         assert kwargs["cwd"] == tmp_path
 
     def test_workspace_root_install_skips_missing_ui_tui(self, tmp_path, monkeypatch):
@@ -208,9 +209,9 @@ class TestBuildWebUISkipsWhenFresh:
 
         assert result is True
         cmd = mock_run.call_args[0][0]
-        assert "ui-tui" not in cmd
+        assert "app/ui-tui" not in cmd
         assert "--include-workspace-root" in cmd
-        assert "web" in cmd
+        assert "app/web" in cmd
 
     def test_web_build_uses_idle_timeout_helper(self, tmp_path):
         """npm run build now goes through _run_with_idle_timeout (issue #33788).
@@ -233,7 +234,8 @@ class TestBuildWebUISkipsWhenFresh:
         mock_idle.assert_called_once()
         args, kwargs = mock_idle.call_args
         # Positional: [npm, "run", "build"]; cwd passed as kwarg.
-        assert args[0] == ["/usr/bin/npm", "run", "build"]
+        assert Path(args[0][0]).name in {"npm", "npm.cmd"}
+        assert args[0][1:] == ["run", "build"]
         assert kwargs["cwd"] == web_dir
 
 
@@ -298,20 +300,21 @@ class TestBuildWebUIFlock:
         """First-ever build race: the waiter blocks, and once it acquires the
         lock the callee's own staleness check (running under the lock) sees
         the winner's output and skips a duplicate build."""
-        import fcntl
+        fcntl = pytest.importorskip("fcntl")
         import threading
         from jimmy_cli.main import _build_web_ui as build
 
         web_dir, dist_dir = _make_web_dir(tmp_path)
         # No dist yet — contender must take the blocking-wait path.
-        lock_path = tmp_path / ".web_ui_build.lock"
+        root = _workspace_root(web_dir)
+        lock_path = root / ".web_ui_build.lock"
         holder = open(lock_path, "a")
         fcntl.flock(holder.fileno(), fcntl.LOCK_EX)
 
         def release_after_building():
             # Simulate the winning process finishing its build.
             _touch(dist_dir / ".vite" / "manifest.json")
-            _write_web_ui_build_stamp(tmp_path, web_dir)
+            _write_web_ui_build_stamp(root, web_dir)
             holder.close()  # releases the flock
 
         t = threading.Timer(0.2, release_after_building)

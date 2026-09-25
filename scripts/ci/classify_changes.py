@@ -59,14 +59,20 @@ import json
 import os
 import sys
 
-_FRONTEND = ("ui-tui/", "web/", "apps/")  # TS typecheck-matrix packages
+_FRONTEND = (
+    "app/desktop/",
+    "app/ui-tui/",
+    "app/web/",
+    "app/bootstrap-installer/",
+    "packages/",
+)
 _ROOT_NPM = {"package.json", "package-lock.json"}  # shifts every package's tree
 _DOCKER_META = ("docker/", ".hadolint.yml", "Dockerfile") # docker setup
 _NIX_PATHS = ("nix/",) # nix files
 _NIX_FILES = {"flake.nix", "flake.lock"} # base nix files
-_SITE = ("website/", "skills/", "optional-skills/")  # docs site + skill pages
+_SITE = ("app/website/", "skills/", "optional-skills/")  # docs site + skill pages
 # Prose/frontend trees that can't touch Python. skills/ is excluded on purpose.
-_PY_SKIP = ("docs/", "website/") + _FRONTEND
+_PY_SKIP = ("docs/", "app/website/") + _FRONTEND
 # Published artifacts that live under website/ but that Python asserts about.
 # The OAuth Client ID Metadata Document is cross-checked against the pinned
 # callback ports in tools/mcp_oauth.py, so editing it alone must still run the
@@ -78,9 +84,9 @@ _PY_SKIP = ("docs/", "website/") + _FRONTEND
 # tests/website/test_generate_llms_txt.py holds every page to appearing in it.
 # Skipping Python on a docs-only PR is how the index drifted to 53% coverage.
 _PY_RELEVANT_SITE = (
-    "website/static/oauth/",
-    "website/docs/",
-    "website/scripts/",
+    "app/website/static/oauth/",
+    "app/website/docs/",
+    "app/website/scripts/",
 )
 
 # CI-sensitive files: eslint config, workflow files, composite actions.
@@ -102,7 +108,7 @@ _SCAN_FILES = {"setup.cfg", "pyproject.toml"}
 
 # MCP catalog files that require explicit security review.
 _MCP_CATALOG_PATHS = ("optional-mcps/",)
-_MCP_CATALOG_FILES = {"jimmy_cli/mcp_catalog.py"}
+_MCP_CATALOG_FILES = {"agent/jimmy_cli/mcp_catalog.py"}
 
 # Windows installer + its PowerShell tests. These only run on a Windows runner,
 # so they get their own lane rather than riding along with ``python``.
@@ -113,7 +119,7 @@ _INSTALLER_FILES = {"scripts/install.ps1", "scripts/install.cmd"}
 # These live under ``apps/``, so before this lane existed a ``.rs`` edit matched
 # ``frontend`` and nothing more: the TypeScript matrix built, cargo never ran,
 # and the crate's unit tests had never executed in CI at all.
-_RUST_PATHS = ("apps/bootstrap-installer/src-tauri/",)
+_RUST_PATHS = ("app/bootstrap-installer/src-tauri/",)
 _RUST_FILENAMES = {"Cargo.toml", "Cargo.lock"}
 
 def _is_docs(p: str) -> bool:
@@ -189,7 +195,7 @@ def classify(files: list[str]) -> dict[str, bool]:
     python = any(not _py_irrelevant(f) for f in files)
     python_prod = any(not _py_irrelevant(f) and not _py_test_only(f) for f in files)
     frontend = any(f.startswith(_FRONTEND) or f in _ROOT_NPM for f in files)
-    deps = any(f == "pyproject.toml" for f in files)
+    deps = any(f in ("pyproject.toml", "agent/pyproject.toml", "training/pyproject.toml") for f in files)
     npm_lock = any(f.split("/")[-1] == "package-lock.json" for f in files)
     docker_meta = any(f.startswith(_DOCKER_META) for f in files)
     
@@ -202,7 +208,7 @@ def classify(files: list[str]) -> dict[str, bool]:
         "site": any(f.startswith(_SITE) for f in files),
         "scan": any(_is_scan(f) for f in files),
         "deps": deps,
-        "uv_lock": any(f in ("pyproject.toml", "uv.lock") for f in files),
+        "uv_lock": any(f in ("pyproject.toml", "agent/pyproject.toml", "training/pyproject.toml", "uv.lock") for f in files),
         "npm_lock": npm_lock,
         "installer": any(_is_installer(f) for f in files),
         "rust": any(_is_rust(f) for f in files),

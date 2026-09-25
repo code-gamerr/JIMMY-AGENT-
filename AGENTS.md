@@ -48,21 +48,38 @@ intentional isolation. Trace runtime; read `git log -p -S` for original intent.
 Session surface (desktop panes, reactions, Projects) comes from the **session**,
 never from process env like `JIMMY_DESKTOP=1`.
 
+## Monorepo
+
+The git root is the workspace root (locks, Docker, Nix, CI, docs). Product code lives in these top-level folders:
+
+- `app/<name>` — user-facing apps. Add the package to npm `workspaces` in the root `package.json`.
+- `packages/<name>` — shared libraries only. The agent runtime is not a package here.
+- `agent/` — the Python agent distribution (`jimmy_cli`, `tools`, `gateway`, `plugins`, the `agent` import package, and the other runtime modules). Locale catalogs live in `agent/locales/`. The FTS tokenizer lives in `agent/native/`. Keep existing import names (`import agent`, `import jimmy_cli`). Do not add new importable agent modules at the git root.
+- `training/` — evals (`training/evals/`), trajectory runners (`training/runners/`), RL/task env configs (`training/envs/`), eval harnesses (`training/harness/`), and research datasets (`training/data/`). Do not add a new eval, runner, or task env at the git root or inside `agent/`.
+- `tests/` — Python behavior tests. `tests-js/` is the JS contract suite. JS unit tests stay inside the package that owns them.
+- `skills/` — bundled skills. `optional-skills/` and `optional-mcps/` stay beside it.
+
+Package-specific guidance goes in that package’s `AGENTS.md` (desktop already has one). Workspace-wide rules stay in this file.
+
 ## Layout (entry points)
 
 ```
-run_agent.py      # AIAgent conversation loop
-model_tools.py    # tool orchestration + discovery
-toolsets.py       # TOOLSETS + _JIMMY_CORE_TOOLS
-cli.py            # interactive CLI
-jimmy_constants.py# get_jimmy_home() / display_jimmy_home()
-agent/            # providers, memory, compression, prompts
-tools/            # auto-discovered via tools/registry.py
-gateway/          # messaging + platforms/
-plugins/          # memory, model-providers, …
-skills/           # bundled skills
-optional-skills/  # install via jimmy skills install
-tests/            # pytest — always via scripts/run_tests.sh
+agent/run_agent.py    # AIAgent conversation loop
+agent/model_tools.py  # tool orchestration + discovery
+agent/toolsets.py     # TOOLSETS + _JIMMY_CORE_TOOLS
+agent/cli.py          # interactive CLI
+agent/jimmy_constants.py
+agent/agent/          # providers, memory, compression, prompts
+agent/tools/          # auto-discovered via tools/registry.py
+agent/gateway/        # messaging + platforms/
+agent/plugins/        # memory, model-providers, …
+app/desktop/          # Electron
+app/ui-tui/           # Ink TUI
+app/web/              # Vite dashboard
+skills/               # bundled skills
+optional-skills/      # install via jimmy skills install
+training/             # evals, runners, task envs, harnesses
+tests/                # pytest — always via scripts/run_tests.sh
 ```
 
 User config: `~/.jimmy/config.yaml` (settings), `~/.jimmy/.env` (secrets only).
@@ -83,9 +100,9 @@ profile secrets/authz — use scoped secret helpers (fail closed).
 
 ## Tools & config
 
-- Register in `tools/*.py` via `registry.register(...)`; expose by adding the
-  name to a toolset in `toolsets.py`.
-- Non-secret settings → `DEFAULT_CONFIG` in `jimmy_cli/config.py` + `config.yaml`.
+- Register in `agent/tools/*.py` via `registry.register(...)`; expose by adding the
+  name to a toolset in `agent/toolsets.py`.
+- Non-secret settings → `DEFAULT_CONFIG` in `agent/jimmy_cli/config.py` + `config.yaml`.
 - Secrets → `OPTIONAL_ENV_VARS` + `.env`.
 - Slash commands → `COMMAND_REGISTRY` in `jimmy_cli/commands.py`, then CLI /
   gateway handlers.

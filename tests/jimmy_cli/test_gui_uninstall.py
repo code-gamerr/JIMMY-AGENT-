@@ -25,7 +25,7 @@ def _make_agent(jimmy_home: Path) -> Path:
 
 def _make_gui_build(jimmy_home: Path) -> None:
     """Create the source-built GUI artifacts a `jimmy desktop` run produces."""
-    desktop = jimmy_home / "jimmy-agent" / "apps" / "desktop"
+    desktop = jimmy_home / "jimmy-agent" / "app" / "desktop"
     (desktop / "dist").mkdir(parents=True)
     (desktop / "dist" / "index.html").write_text("<html>")
     (desktop / "release" / "linux-unpacked").mkdir(parents=True)

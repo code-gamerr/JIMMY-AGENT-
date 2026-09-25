@@ -7,6 +7,8 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+AGENT_PYPROJECT = REPO_ROOT / "agent" / "pyproject.toml"
+WORKSPACE_PYPROJECT = REPO_ROOT / "pyproject.toml"
 
 
 def _distribution_name(requirement: str) -> str:
@@ -36,7 +38,7 @@ def test_packaging_declared_as_core_dependency():
     be a declared core dependency so it installs everywhere and the
     update-repair step (``_verify_core_dependencies_installed``) guards it.
     """
-    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    data = tomllib.loads(AGENT_PYPROJECT.read_text(encoding="utf-8"))
     core = data["project"]["dependencies"]
     names = {_distribution_name(dep) for dep in core}
     assert "packaging" in names, (
@@ -47,7 +49,7 @@ def test_packaging_declared_as_core_dependency():
 
 
 def test_faster_whisper_is_not_a_base_dependency():
-    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    data = tomllib.loads(AGENT_PYPROJECT.read_text(encoding="utf-8"))
     deps = data["project"]["dependencies"]
 
     assert not any(dep.startswith("faster-whisper") for dep in deps)
@@ -94,7 +96,7 @@ def test_starlette_pinned_above_cve_2026_48710_floor_in_pyproject():
     ``>=0.40.0`` from fastapi) or pins a pre-1.0.1 version fails here instead of
     shipping a Host-header auth-bypass to dashboard / MCP-HTTP users.
     """
-    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    data = tomllib.loads(AGENT_PYPROJECT.read_text(encoding="utf-8"))
     extras = data["project"]["optional-dependencies"]
 
     found = {}
@@ -202,7 +204,7 @@ def _locked_versions(package: str) -> set[str]:
 
 
 def _pyproject_pinned_specs():
-    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    data = tomllib.loads(AGENT_PYPROJECT.read_text(encoding="utf-8"))
     specs = list(data["project"].get("dependencies", []))
     for extra in data["project"].get("optional-dependencies", {}).values():
         specs.extend(extra)
@@ -215,7 +217,7 @@ def _lazy_deps_pinned_specs():
     Parsing rather than importing keeps this test free of
     tools/lazy_deps.py's runtime imports and side effects.
     """
-    src = (REPO_ROOT / "tools" / "lazy_deps.py").read_text(encoding="utf-8")
+    src = (REPO_ROOT / "agent" / "tools" / "lazy_deps.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     specs: list[str] = []
     for node in ast.walk(tree):
@@ -265,8 +267,8 @@ def test_build_system_requires_exempt_from_exclude_newer():
     ``exclude-newer-package`` whitelist (set to ``false``) for as long as a
     relative ``exclude-newer`` cutoff is configured.
     """
-    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    uv_cfg = data.get("tool", {}).get("uv", {})
+    workspace = tomllib.loads(WORKSPACE_PYPROJECT.read_text(encoding="utf-8"))
+    uv_cfg = workspace.get("tool", {}).get("uv", {})
     if "exclude-newer" not in uv_cfg:
         pytest.skip("no exclude-newer cutoff configured — nothing to exempt")
     whitelist = {
@@ -274,10 +276,17 @@ def test_build_system_requires_exempt_from_exclude_newer():
         for name, enabled in uv_cfg.get("exclude-newer-package", {}).items()
         if enabled is False
     }
-    build_requires = {
-        _canonical(_distribution_name(req))
-        for req in data.get("build-system", {}).get("requires", [])
-    }
+    build_requires = set()
+    for pyproject in (
+        WORKSPACE_PYPROJECT,
+        AGENT_PYPROJECT,
+        REPO_ROOT / "training" / "pyproject.toml",
+    ):
+        member = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        build_requires.update(
+            _canonical(_distribution_name(req))
+            for req in member.get("build-system", {}).get("requires", [])
+        )
     missing = sorted(build_requires - whitelist)
     assert not missing, (
         "build-system.requires packages are subject to the exclude-newer "
@@ -294,7 +303,7 @@ def _lazy_deps_by_feature():
     Same parse-don't-import rationale as _lazy_deps_pinned_specs, but keeps the
     feature -> specs grouping so per-feature coverage can be asserted.
     """
-    src = (REPO_ROOT / "tools" / "lazy_deps.py").read_text(encoding="utf-8")
+    src = (REPO_ROOT / "agent" / "tools" / "lazy_deps.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     for node in ast.walk(tree):
         targets = (

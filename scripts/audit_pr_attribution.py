@@ -12,7 +12,7 @@ Logic (kept in sync with contributor-check.yml):
   - scans ``git log $(git merge-base origin/main HEAD)..HEAD --format=%ae``
   - skips teknium/bot emails and ``<id>+<login>@users.noreply.github.com``
     (CI auto-resolves those)
-  - everything else must have ``contributors/emails/<email>`` or a legacy
+  - everything else must have ``scripts/contributors/emails/<email>`` or a legacy
     AUTHOR_MAP entry in scripts/release.py
 
 ``--fix`` resolution order for an unmapped email:
@@ -66,7 +66,7 @@ def is_mapped(email: str) -> bool:
         return True
     if ID_NOREPLY_RE.search(email):
         return True
-    if (REPO_ROOT / "contributors" / "emails" / email).is_file():
+    if (REPO_ROOT / "scripts" / "contributors" / "emails" / email).is_file():
         return True
     release_py = REPO_ROOT / "scripts" / "release.py"
     try:
@@ -102,7 +102,7 @@ def resolve_login(email: str) -> tuple[str, str] | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fix", action="store_true",
-                        help="auto-create contributors/emails/ mapping files")
+                        help="auto-create scripts/contributors/emails/ mapping files")
     args = parser.parse_args()
 
     unmapped = [e for e in new_emails() if not is_mapped(e)]
@@ -139,7 +139,7 @@ def main() -> int:
             print(f"    python3 scripts/add_contributor.py {email} <github-username>  # {author}")
         return 1
 
-    print("\nDone — remember to `git add contributors && git commit`.")
+    print("\nDone — remember to `git add scripts/contributors && git commit`.")
     return 0
 
 
