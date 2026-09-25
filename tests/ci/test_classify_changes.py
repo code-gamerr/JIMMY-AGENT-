@@ -71,39 +71,39 @@ def _lanes(python=False, frontend=False, site=False, scan=False, deps=False, uv_
 
 CASES = {
     "docs-only → nothing heavy": (["README.md", "docs/guide.md"], _lanes()),
-    "python source → python": (["run_agent.py"], _lanes(python=True, scan=True)),
+    "python source → python": (["agent/run_agent.py"], _lanes(python=True, scan=True)),
     "dep manifest → python": (["pyproject.toml"], _lanes(python=True, scan=True, deps=True, uv_lock=True)),
     "uv.lock → python": (["uv.lock"], _lanes(python=True, uv_lock=True)),
-    "ts package → frontend": (["apps/desktop/src/app.tsx"], _lanes(frontend=True)),
-    "ui-tui → frontend": (["ui-tui/src/entry.ts"], _lanes(frontend=True)),
+    "ts package → frontend": (["app/desktop/src/app.tsx"], _lanes(frontend=True)),
+    "ui-tui → frontend": (["app/ui-tui/src/entry.ts"], _lanes(frontend=True)),
     # Lockfile bump shifts every TS package's tree, but not the Python suite.
     "root lockfile → frontend, not python": (["package-lock.json"], _lanes(frontend=True, npm_lock=True)),
-    "nested lockfile → npm_lock": (["website/package-lock.json"], _lanes(site=True, npm_lock=True)),
+    "nested lockfile → npm_lock": (["app/website/package-lock.json"], _lanes(site=True, npm_lock=True)),
     # A website file the Python suite cannot read stays site-only.
-    "website config → site": (["website/docusaurus.config.ts"], _lanes(site=True)),
+    "website config → site": (["app/website/docusaurus.config.ts"], _lanes(site=True)),
     # uv lock --check re-resolves against PyPI, so it must stay off for any
     # diff that can't desync the lockfile — a registry blip on a docs PR
     # otherwise shows up as a blocking "uv.lock out of sync" red X.
     "docs → no uv_lock": (
-        ["website/docs/developer-guide/plugins/index.md"],
+        ["app/website/docs/developer-guide/plugins/index.md"],
         _lanes(python=True, site=True),
     ),
-    "frontend → no uv_lock": (["apps/desktop/src/store/profile.ts"], _lanes(frontend=True)),
+    "frontend → no uv_lock": (["app/desktop/src/store/profile.ts"], _lanes(frontend=True)),
     # The published CIMD document is asserted about by the Python suite, so a
     # lone edit there must not skip the lane that would catch a bad edit.
     "cimd document → python + site": (
-        ["website/static/oauth/client-metadata.json"],
+        ["app/website/static/oauth/client-metadata.json"],
         _lanes(python=True, site=True),
     ),
     # A new docs page must reach llms.txt, and the generator that puts it there
     # has its own tests. Skipping Python on either is how the index drifted to
     # 53% coverage while every PR stayed green.
     "docs page → python + site": (
-        ["website/docs/user-guide/bot-mode.md"],
+        ["app/website/docs/user-guide/bot-mode.md"],
         _lanes(python=True, site=True),
     ),
     "docs generator → python + site": (
-        ["website/scripts/generate-llms-txt.py"],
+        ["app/website/scripts/generate-llms-txt.py"],
         _lanes(python=True, scan=True, site=True),
     ),
     # SKILL.md reads like docs, but the skill-doc tests read skills/, so a
@@ -135,30 +135,31 @@ CASES = {
         _lanes(python=True, installer=True),
     ),
     "python source alone → no installer lane": (["run_agent.py"], _lanes(python=True, scan=True)),
-    # `.rs` lives under apps/, so it matches `frontend` too. That lane builds
-    # TypeScript and cannot notice a Rust error — before `rust` existed it was
-    # the ONLY lane a Rust change ran, and the crate's tests never executed.
+    # `.rs` lives under app/bootstrap-installer, so it matches `frontend` too.
+    # That lane builds TypeScript and cannot notice a Rust error — before
+    # `rust` existed it was the ONLY lane a Rust change ran, and the crate's
+    # tests never executed.
     "rust source → rust": (
-        ["apps/bootstrap-installer/src-tauri/src/powershell.rs"],
+        ["app/bootstrap-installer/src-tauri/src/powershell.rs"],
         _lanes(frontend=True, rust=True),
     ),
     "cargo lockfile → rust": (
-        ["apps/bootstrap-installer/src-tauri/Cargo.lock"],
+        ["app/bootstrap-installer/src-tauri/Cargo.lock"],
         _lanes(frontend=True, rust=True),
     ),
     # Non-.rs files in the crate still change what cargo builds.
     "tauri config → rust": (
-        ["apps/bootstrap-installer/src-tauri/tauri.conf.json"],
+        ["app/bootstrap-installer/src-tauri/tauri.conf.json"],
         _lanes(frontend=True, rust=True),
     ),
     "ts source alone → no rust lane": (
-        ["apps/bootstrap-installer/src/main.tsx"],
+        ["app/bootstrap-installer/src/main.tsx"],
         _lanes(frontend=True),
     ),
     # Unknown top-level file keeps Python on rather than risk a silent skip.
     "unknown toplevel → python": (["Makefile"], _lanes(python=True)),
     "mixed docs+python → python": (["README.md", "agent/x.py"], _lanes(python=True, scan=True)),
-    "mixed docs+frontend → frontend": (["README.md", "apps/x.tsx"], _lanes(frontend=True)),
+    "mixed docs+frontend → frontend": (["README.md", "app/desktop/x.tsx"], _lanes(frontend=True)),
     # tests-only diffs: pytest lanes stay ON, product jobs (Desktop E2E,
     # Docker) gate on python_prod and skip.
     "tests-only → python without python_prod": (
@@ -177,18 +178,18 @@ CASES = {
     ),
     # Supply-chain lanes
     ".pth file → scan": (["evil.pth"], _lanes(python=True, scan=True)),
-    "setup.py → scan": (["setup.py"], _lanes(python=True, scan=True)),
+    "setup.py → scan": (["agent/setup.py"], _lanes(python=True, scan=True)),
     "mcp catalog manifest → mcp_catalog": (
         ["optional-mcps/foo/manifest.yaml"],
         _lanes(python=True, mcp_catalog=True),
     ),
     "mcp_catalog.py → mcp_catalog": (
-        ["jimmy_cli/mcp_catalog.py"],
+        ["agent/jimmy_cli/mcp_catalog.py"],
         _lanes(python=True, scan=True, mcp_catalog=True),
     ),
     # CI-sensitive files require explicit review label.
     "eslint config → ci_review": (
-        ["apps/desktop/eslint.config.mjs"],
+        ["app/desktop/eslint.config.mjs"],
         _lanes(frontend=True, ci_review=True),
     ),
     "shared eslint config → ci_review": (
@@ -196,19 +197,19 @@ CASES = {
         _lanes(python=True, ci_review=True),
     ),
     "ui-tui eslint config → ci_review": (
-        ["ui-tui/eslint.config.mjs"],
+        ["app/ui-tui/eslint.config.mjs"],
         _lanes(frontend=True, ci_review=True),
     ),
     "web eslint config → ci_review": (
-        ["web/eslint.config.js"],
+        ["app/web/eslint.config.js"],
         _lanes(frontend=True, ci_review=True),
     ),
     "shared package eslint config → ci_review": (
-        ["apps/shared/eslint.config.mjs"],
+        ["packages/shared/eslint.config.mjs"],
         _lanes(frontend=True, ci_review=True),
     ),
     "bootstrap-installer eslint config → ci_review": (
-        ["apps/bootstrap-installer/eslint.config.mjs"],
+        ["app/bootstrap-installer/eslint.config.mjs"],
         _lanes(frontend=True, ci_review=True),
     ),
     "prettier config → ci_review": (
@@ -225,7 +226,7 @@ CASES = {
     ),
     # Normal desktop source doesn't trigger ci_review.
     "desktop src → no ci_review": (
-        ["apps/desktop/src/app.tsx"],
+        ["app/desktop/src/app.tsx"],
         _lanes(frontend=True),
     ),
     # Fail open: CI-config / empty / blank diffs run everything.
@@ -292,11 +293,11 @@ def _iter_if_expressions(job: object):
 
 def test_ci_review_files_returns_only_sensitive_paths_sorted_and_unique():
     assert ci_review_files([
-        "apps/desktop/src/app.tsx",
+        "app/desktop/src/app.tsx",
         ".github/workflows/ci.yml",
-        "apps/desktop/eslint.config.mjs",
+        "app/desktop/eslint.config.mjs",
         ".github/workflows/ci.yml",
     ]) == [
         ".github/workflows/ci.yml",
-        "apps/desktop/eslint.config.mjs",
+        "app/desktop/eslint.config.mjs",
     ]

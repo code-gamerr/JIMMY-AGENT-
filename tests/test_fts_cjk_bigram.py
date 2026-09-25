@@ -1,6 +1,6 @@
 """Tests for the messages_fts_cjk CJK-bigram index (salvaged from PR #65544).
 
-Builds the loadable tokenizer from native/fts5_cjk/fts5_cjk.c on the fly;
+Builds the loadable tokenizer from agent/native/fts5_cjk/fts5_cjk.c on the fly;
 skips when no C toolchain / extension loading is available.
 """
 
@@ -14,8 +14,8 @@ import pytest
 from jimmy_state import FTS_CJK_STALE_KEY, SessionDB
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = REPO / "native" / "fts5_cjk" / "fts5_cjk.c"
-VENDOR = REPO / "native" / "fts5_cjk" / "vendor"
+SRC = REPO / "agent" / "native" / "fts5_cjk" / "fts5_cjk.c"
+VENDOR = REPO / "agent" / "native" / "fts5_cjk" / "vendor"
 
 
 @pytest.fixture(scope="session")

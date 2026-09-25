@@ -2,8 +2,8 @@
 { jimmyNpmLib, ... }:
 jimmyNpmLib.buildNpmPackage {
   dirs = [
-    "ui-tui"
-    "apps/shared"
+    "app/ui-tui"
+    "packages/shared"
   ];
 
   doCheck = false;
@@ -11,7 +11,7 @@ jimmyNpmLib.buildNpmPackage {
   buildPhase = ''
     # esbuild bundles everything — no need for tsc or vite.
     # Run from the workspace root where node_modules/ lives.
-    node ui-tui/scripts/build.mjs
+    node app/ui-tui/scripts/build.mjs
   '';
 
   installPhase = ''
@@ -19,10 +19,10 @@ jimmyNpmLib.buildNpmPackage {
 
     mkdir -p $out/lib/jimmy-tui
     # esbuild writes to ui-tui/dist/ from the source root (no cd).
-    cp -r ui-tui/dist $out/lib/jimmy-tui/dist
+    cp -r app/ui-tui/dist $out/lib/jimmy-tui/dist
 
     # package.json kept for "type": "module" resolution on `node dist/entry.js`.
-    cp ui-tui/package.json $out/lib/jimmy-tui/
+    cp app/ui-tui/package.json $out/lib/jimmy-tui/
 
     runHook postInstall
   '';

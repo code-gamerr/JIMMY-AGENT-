@@ -7,7 +7,7 @@ Canonical AI guide: **`AGENTS.md`**. Full deep-dive: **`docs/DEVELOPMENT.md`**.
 - **Language:** Python `>=3.11,<3.14` (package `jimmy-agent`, exact-pinned deps + `uv.lock`)
 - **CLI entry:** `jimmy` → `jimmy_cli.main:main`
 - **Agent core:** `run_agent.AIAgent`
-- **UI edges:** Ink TUI (`ui-tui` + `tui_gateway`), Electron (`apps/desktop`), Vite dashboard (`web`)
+- **UI edges:** Ink TUI (`app/ui-tui` + `agent/tui_gateway`), Electron (`app/desktop`), Vite dashboard (`app/web`)
 - **Tests:** `scripts/run_tests.sh` (pytest) · JS: vitest under `tests-js` / package trees
 
 ## Sacred Rules
@@ -16,18 +16,22 @@ Canonical AI guide: **`AGENTS.md`**. Full deep-dive: **`docs/DEVELOPMENT.md`**.
 2. **Narrow core** — new capability via footprint ladder: extend → CLI+skill → service-gated tool → plugin → MCP → new core tool (last).
 3. **Profiles** — always `get_jimmy_home()` / `display_jimmy_home()`; never hardcode `~/.jimmy`.
 4. **Secrets vs settings** — `.env` secrets only; behavioral config in `config.yaml`.
+5. **Monorepo** — follow the layout in `AGENTS.md`. Apps go in `app/`, shared libraries in `packages/`, the Python runtime in `agent/`, evals and trajectory runners in `training/`, tests in `tests/`, skills in `skills/`. Do not add new apps, agent modules, or training runners at the git root.
 
 ## Structure (edit targets)
 
 | Path | Role |
 |------|------|
-| `run_agent.py` | Conversation loop |
-| `model_tools.py` / `toolsets.py` | Tools + toolsets |
-| `agent/` | Providers, memory, compression |
-| `tools/` | Auto-registered tools |
-| `gateway/` | Messaging + `platforms/` |
-| `jimmy_cli/` | Subcommands, config, plugins, skins |
-| `plugins/` / `skills/` | Edges, not core |
+| `agent/run_agent.py` | Conversation loop |
+| `agent/model_tools.py` / `agent/toolsets.py` | Tools + toolsets |
+| `agent/agent/` | Providers, memory, compression |
+| `agent/tools/` | Auto-registered tools |
+| `agent/gateway/` | Messaging + `platforms/` |
+| `agent/jimmy_cli/` | Subcommands, config, plugins, skins |
+| `agent/plugins/` / `skills/` | Edges, not core |
+| `app/` | Desktop, TUI, web, docs site |
+| `packages/` | Shared libraries (`packages/shared`) |
+| `training/` | Evals, trajectory runners, task envs, harnesses |
 | `tests/` | Behavior-contract tests (temp `JIMMY_HOME`) |
 
 ## Build & Test

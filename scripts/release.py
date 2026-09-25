@@ -39,8 +39,8 @@ PYPROJECT_FILE = REPO_ROOT / "pyproject.toml"
 # ──────────────────────────────────────────────────────────────────────
 
 # FROZEN legacy mappings — do NOT add new entries here. New contributor
-# mappings live as one-file-per-email entries under contributors/emails/
-# (see contributors/README.md), which merge-conflict-free by construction.
+# mappings live as one-file-per-email entries under scripts/contributors/emails/
+# (see scripts/contributors/README.md), which merge-conflict-free by construction.
 # This dict is kept only so existing history keeps resolving; the effective
 # AUTHOR_MAP below merges it with the directory (directory wins).
 LEGACY_AUTHOR_MAP = {
@@ -2074,13 +2074,13 @@ LEGACY_AUTHOR_MAP = {
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Directory-based mappings: contributors/emails/<email> → login
+# Directory-based mappings: scripts/contributors/emails/<email> → login
 # ──────────────────────────────────────────────────────────────────────
-CONTRIBUTORS_EMAILS_DIR = REPO_ROOT / "contributors" / "emails"
+CONTRIBUTORS_EMAILS_DIR = REPO_ROOT / "scripts" / "contributors" / "emails"
 
 
 def _load_contributor_dir(directory: "Path | None" = None) -> dict:
-    """Load one-file-per-email mappings from contributors/emails/.
+    """Load one-file-per-email mappings from scripts/contributors/emails/.
 
     Filename = commit-author email, first non-comment line = GitHub login.
     Additions never merge-conflict (each mapping is a distinct file), which
@@ -2210,7 +2210,7 @@ def update_version_files(semver: str, calver_date: str):
     # Python package version. The desktop About panel reads the live Jimmy
     # version at runtime, but app.getVersion()/packaging metadata still come
     # from this field, so it must track pyproject to avoid drift.
-    desktop_pkg = REPO_ROOT / "apps" / "desktop" / "package.json"
+    desktop_pkg = REPO_ROOT / "app" / "desktop" / "package.json"
     if desktop_pkg.exists():
         pkg_text = desktop_pkg.read_text(encoding="utf-8")
         pkg_text = re.sub(

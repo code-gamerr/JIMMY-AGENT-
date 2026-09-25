@@ -114,5 +114,5 @@ def test_cli_entrypoint_end_to_end(tmp_path):
         cwd=tmp_path, capture_output=True, text=True,
     )
     assert proc.returncode == 0, proc.stderr
-    out = (tmp_path / "contributors" / "emails" / "cli@example.com").read_text(encoding="utf-8")
+    out = (tmp_path / "scripts" / "contributors" / "emails" / "cli@example.com").read_text(encoding="utf-8")
     assert out.splitlines()[0] == "cliperson"

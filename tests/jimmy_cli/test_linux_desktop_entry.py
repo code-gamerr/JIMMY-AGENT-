@@ -20,7 +20,7 @@ def xdg_home(tmp_path, monkeypatch) -> Path:
 
 def _make_project(tmp_path: Path) -> Path:
     root = tmp_path / "jimmy-agent"
-    icon = root / "apps" / "desktop" / "assets" / "icon.png"
+    icon = root / "app" / "desktop" / "assets" / "icon.png"
     icon.parent.mkdir(parents=True)
     icon.write_bytes(b"\x89PNG fake")
     return root

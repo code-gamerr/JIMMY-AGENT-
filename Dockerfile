@@ -177,12 +177,12 @@ WORKDIR /opt/jimmy
 # ui-tui/package.json.  Copying the tree up front lets npm resolve the
 # workspace to real content instead of stopping at a bare package.json.
 COPY package.json package-lock.json ./
-COPY web/package.json web/
-COPY ui-tui/package.json ui-tui/
-COPY ui-tui/packages/jimmy-ink/ ui-tui/packages/jimmy-ink/
-# apps/shared/ is copied IN FULL because web/package.json references it as a
+COPY app/web/package.json app/web/
+COPY app/ui-tui/package.json app/ui-tui/
+COPY app/ui-tui/packages/jimmy-ink/ app/ui-tui/packages/jimmy-ink/
+# packages/shared/ is copied IN FULL because app/web/package.json references it as a
 # `file:` workspace dependency (same pattern as jimmy-ink above).
-COPY apps/shared/ apps/shared/
+COPY packages/shared/ packages/shared/
 
 # `npm_config_install_links=false` forces npm to install `file:` deps as
 # symlinks instead of copies.  This is the default since npm 10+, which is
@@ -263,16 +263,18 @@ RUN cd plugins/platforms/photon/sidecar && \
 #
 # The editable link is created after the source copy below.
 COPY pyproject.toml uv.lock ./
+COPY agent/pyproject.toml agent/pyproject.toml
+COPY training/pyproject.toml training/pyproject.toml
 RUN touch ./README.md
 RUN uv sync --frozen --no-install-project --extra all --extra messaging --extra otlp --extra anthropic --extra bedrock --extra azure-identity --extra hindsight --extra matrix
 
 # ---------- Frontend build (cached independently from Python source) ----------
 # Copy only the frontend source trees first so that Python-only changes don't
 # invalidate the (relatively slow) web + ui-tui build layer.
-COPY web/ web/
-COPY ui-tui/ ui-tui/
-COPY apps/shared/ apps/shared/
-RUN cd web && npm run build && \
+COPY app/web/ app/web/
+COPY app/ui-tui/ app/ui-tui/
+COPY packages/shared/ packages/shared/
+RUN cd app/web && npm run build && \
     cd ../ui-tui && npm run build
 
 # ---------- Source code ----------
@@ -357,7 +359,7 @@ COPY --chmod=0755 docker/cont-init.d/015-supervise-perms /etc/cont-init.d/015-su
 COPY --chmod=0755 docker/cont-init.d/02-reconcile-profiles /etc/cont-init.d/02-reconcile-profiles
 
 # ---------- Runtime ----------
-ENV JIMMY_WEB_DIST=/opt/jimmy/jimmy_cli/web_dist
+ENV JIMMY_WEB_DIST=/opt/jimmy/agent/jimmy_cli/web_dist
 # Point the TUI launcher at the prebuilt bundle baked at build time (Layer 8:
 # `ui-tui && npm run build`). This makes _make_tui_argv take the prebuilt-bundle
 # fast path (`node --expose-gc /opt/jimmy/ui-tui/dist/entry.js`) and skip the
@@ -374,7 +376,7 @@ ENV JIMMY_WEB_DIST=/opt/jimmy/jimmy_cli/web_dist
 # embedded-chat (/api/pty) connections → ENOTEMPTY → the chat tab dies with a
 # 502 / "[session ended]". Pointing at the prebuilt bundle sidesteps the whole
 # check. (A separate launcher hardening is tracked independently.)
-ENV JIMMY_TUI_DIR=/opt/jimmy/ui-tui
+ENV JIMMY_TUI_DIR=/opt/jimmy/app/ui-tui
 ENV JIMMY_HOME=/opt/data
 ENV JIMMY_WRITE_SAFE_ROOT=/opt/data
 ENV JIMMY_DISABLE_LAZY_INSTALLS=1

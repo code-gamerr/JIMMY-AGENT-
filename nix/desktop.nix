@@ -45,8 +45,8 @@ let
   # Build the renderer (dist/ + electron/ + package.json).
   renderer = jimmyNpmLib.buildNpmPackage {
     dirs = [
-      "apps/desktop"
-      "apps/shared"
+      "app/desktop"
+      "packages/shared"
     ];
     pname = "jimmy-desktop-renderer";
 
@@ -55,11 +55,11 @@ let
     buildPhase = ''
       runHook preBuild
 
-      mkdir -p apps/desktop/build
+      mkdir -p app/desktop/build
 
       patchShebangs .
 
-      pushd apps/desktop
+      pushd app/desktop
         # typecheck :3
         npm exec -- tsc -b
 
@@ -98,7 +98,7 @@ let
     checkPhase = ''
       runHook preCheck
 
-      pushd apps/desktop
+      pushd app/desktop
 
         npm run postbuild
 
@@ -119,16 +119,16 @@ let
     installPhase = ''
       runHook preInstall
       mkdir -p $out
-      # vite writes to apps/desktop/dist/ (we cd'd there in buildPhase).
+      # vite writes to app/desktop/dist/ (we cd'd there in buildPhase).
       # stage-native-deps.mjs stages node-pty into dist/node_modules/node-pty,
       # so copying dist/ wholesale carries the native dep along with the
-      # esbuild bundle that require()s it. apps/desktop/build was created
+      # esbuild bundle that require()s it. app/desktop/build was created
       # before the cd.
-      cp -rn apps/desktop/dist $out/
+      cp -rn app/desktop/dist $out/
 
       echo '{"schemaVersion":1,"commit":"nix-dummy-commit","branch":"nix","dirty":false,"source":"nix"}' > $out/install-stamp.json
 
-      cp -n apps/desktop/package.json $out/
+      cp -n app/desktop/package.json $out/
       runHook postInstall
     '';
   };
@@ -172,7 +172,7 @@ stdenv.mkDerivation {
 
     # XDG launcher entry
     mkdir -p $out/share/applications $out/share/icons/hicolor/1024x1024/apps
-    install -m 0644 ${../apps/desktop/assets/icon.png} \
+    install -m 0644 ${../app/desktop/assets/icon.png} \
       $out/share/icons/hicolor/1024x1024/apps/jimmy.png
     export PYTHONPATH=$(mktemp -d)
     cp ${../jimmy_cli/linux_desktop_entry.py} "$PYTHONPATH/linux_desktop_entry.py"

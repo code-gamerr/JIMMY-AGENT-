@@ -119,13 +119,13 @@ def test_no_stray_lockfiles_in_workspace_subdirs(main_mod) -> None:
     # two levels deep and even less likely to get accidental lockfiles,
     # but we check them too for completeness.)
     subdirs = [
-        root / "ui-tui",
-        root / "web",
-        root / "apps" / "desktop",
-        root / "apps" / "shared",
+        root / "app" / "ui-tui",
+        root / "app" / "web",
+        root / "app" / "desktop",
+        root / "packages" / "shared",
     ]
     # Also sweep ui-tui/packages/* (jimmy-ink etc.)
-    tui_pkgs = root / "ui-tui" / "packages"
+    tui_pkgs = root / "app" / "ui-tui" / "packages"
     if tui_pkgs.is_dir():
         subdirs.extend(d for d in tui_pkgs.iterdir() if d.is_dir())
 

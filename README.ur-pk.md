@@ -1,7 +1,7 @@
 <div dir="rtl">
 
 <p align="center">
-  <img src="assets/banner.png" alt="Jimmy" width="100%">
+  <img src="docs/assets/banner.png" alt="Jimmy" width="100%">
 </p>
 
 # ہرمیس ایجنٹ ☤ (Jimmy)

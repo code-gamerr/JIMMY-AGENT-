@@ -142,11 +142,10 @@ let
             # This keeps SKILL.md edits from rebuilding the Python venv.
             "skills"
             "optional-skills"
-            # locales/ and optional-mcps/ are bare data dirs (no
-            # __init__.py) shipped via symlinks + JIMMY_BUNDLED_LOCALES
-            # / JIMMY_OPTIONAL_MCPS, not via the wheel. Excluding them
-            # keeps catalog edits from rebuilding the Python venv.
-            "locales"
+            # Locale catalogs and the FTS tokenizer live under agent/ but are
+            # not part of the Python wheel. Excluding them keeps catalog and
+            # C edits from rebuilding the venv. optional-mcps/ stays at the
+            # workspace root and is shipped the same way.
             "optional-mcps"
           ];
         excludedFiles = [
@@ -171,12 +170,18 @@ let
           ".gitignore"
           "setup-jimmy.sh"
         ];
+        excludedPrefixes = [
+          "agent/locales"
+          "agent/native"
+        ];
       in
       if relPath == "" then
         true
       else if builtins.elem relPath excludedFiles then
         false
       else if builtins.elem topComponent excludedDirs then
+        false
+      else if builtins.any (p: relPath == p || lib.hasPrefix (p + "/") relPath) excludedPrefixes then
         false
       else
         true;
