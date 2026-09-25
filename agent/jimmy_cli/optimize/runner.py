@@ -885,7 +885,7 @@ def _apply_fake_side_effects(task: OptimizeTask, workspace: Path) -> None:
         ),
         "coding_json_parse": (
             "parse_cfg.py",
-            "import json\ndef load_cfg(path):\n    with open(path) as f:\n        return json.load(f)\n",
+            "import json\ndef load_cfg(path):\n    with open(path, encoding='utf-8') as f:\n        return json.load(f)\n",
         ),
         "debug_off_by_one": (
             "bug.py",

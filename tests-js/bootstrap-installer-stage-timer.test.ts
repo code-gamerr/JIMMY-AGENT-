@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatDuration,
   formatElapsed,
-} from '../apps/bootstrap-installer/src/lib/format'
+} from '../app/bootstrap-installer/src/lib/format'
 
 const SEC = 1000
 const MIN = 60 * SEC

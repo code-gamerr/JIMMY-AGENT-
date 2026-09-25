@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 
 # Allow importing from repo root
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, REPO_ROOT)
+sys.path.insert(0, os.path.join(REPO_ROOT, "agent"))
 
 # Ensure JIMMY_HOME is set (needed by tools/skills_hub.py imports)
 os.environ.setdefault("JIMMY_HOME", os.path.join(os.path.expanduser("~"), ".jimmy"))
@@ -44,7 +44,7 @@ from tools.skills_hub import (
 )
 import httpx
 
-OUTPUT_PATH = os.path.join(REPO_ROOT, "website", "static", "api", "skills-index.json")
+OUTPUT_PATH = os.path.join(REPO_ROOT, "app", "website", "static", "api", "skills-index.json")
 INDEX_VERSION = 1
 
 

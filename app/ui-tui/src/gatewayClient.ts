@@ -342,16 +342,16 @@ export class GatewayClient extends EventEmitter {
     }
   }
 
-  private startSpawnedGateway(root: string) {
-    const python = resolvePython(root)
-    const cwd = process.env.JIMMY_CWD || root
+  private startSpawnedGateway(workspaceRoot: string, pythonRoot: string) {
+    const python = resolvePython(workspaceRoot)
+    const cwd = process.env.JIMMY_CWD || workspaceRoot
     const env = { ...process.env }
     const pyPath = env.PYTHONPATH?.trim()
 
-    env.PYTHONPATH = pyPath ? `${root}${delimiter}${pyPath}` : root
-    // Tell the gateway child where the Jimmy source root is so its import
-    // guard can force it ahead of any same-named package in the launch cwd.
-    env.JIMMY_PYTHON_SRC_ROOT = root
+    env.PYTHONPATH = pyPath ? `${pythonRoot}${delimiter}${pyPath}` : pythonRoot
+    // Tell the gateway child where the importable Jimmy distribution is so its
+    // import guard can force it ahead of any same-named package in the launch cwd.
+    env.JIMMY_PYTHON_SRC_ROOT = pythonRoot
     this.startReadyTimer(python, cwd)
     this.proc = spawn(python, ['-m', 'tui_gateway.entry'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] })
     this.lifecycle(`[lifecycle] spawned gateway child ${describeChild(this.proc)} python=${python} cwd=${cwd}`)
@@ -521,7 +521,10 @@ export class GatewayClient extends EventEmitter {
   }
 
   start() {
-    const root = process.env.JIMMY_PYTHON_SRC_ROOT ?? resolve(import.meta.dirname, '../../')
+    // src/ and dist/ are both one level under app/ui-tui, so three parents
+    // up is the workspace and agent/ is the importable distribution.
+    const workspaceRoot = resolve(import.meta.dirname, '../../..')
+    const pythonRoot = process.env.JIMMY_PYTHON_SRC_ROOT?.trim() || resolve(workspaceRoot, 'agent')
     const attachUrl = resolveGatewayAttachUrl()
     const sidecarUrl = resolveSidecarUrl()
 
@@ -544,7 +547,7 @@ export class GatewayClient extends EventEmitter {
       return
     }
 
-    this.startSpawnedGateway(root)
+    this.startSpawnedGateway(workspaceRoot, pythonRoot)
   }
 
   private dispatch(msg: Record<string, unknown>) {

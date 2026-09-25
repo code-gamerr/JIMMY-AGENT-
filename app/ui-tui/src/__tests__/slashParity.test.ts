@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
+import { delimiter, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
@@ -52,7 +52,14 @@ const loadCommandRegistryNames = (): CommandRegistryLoad => {
           '-c',
           'import json; from jimmy_cli.commands import COMMAND_REGISTRY; print(json.dumps([c.name for c in COMMAND_REGISTRY]))'
         ],
-        { cwd: resolve(here, '../../..'), encoding: 'utf8' }
+        { 
+          cwd: resolve(here, '../../../..'),
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PYTHONPATH: [resolve(here, '../../../../agent'), process.env.PYTHONPATH].filter(Boolean).join(delimiter)
+          }
+        }
       )
     ) as string[]
 

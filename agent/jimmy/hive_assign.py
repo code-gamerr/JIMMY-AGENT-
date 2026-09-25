@@ -49,7 +49,12 @@ def is_munder_running() -> bool:
         except (OSError, subprocess.CalledProcessError):
             return False
     try:
-        out = subprocess.check_output(["pgrep", "-fl", "electron"], text=True, errors="replace")
+        out = subprocess.check_output(
+            ["pgrep", "-fl", "electron"],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
         return "munder" in out.lower() or "electron" in out.lower()
     except (OSError, subprocess.CalledProcessError):
         return False

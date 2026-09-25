@@ -20,8 +20,8 @@ from typing import Any
 
 import yaml
 
-REPO = Path(__file__).resolve().parent.parent.parent
-DOCS = REPO / "website" / "docs"
+REPO = Path(__file__).resolve().parents[3]
+DOCS = REPO / "app" / "website" / "docs"
 SKILLS_PAGES = DOCS / "user-guide" / "skills"
 
 SKILL_SOURCES = [
@@ -694,7 +694,7 @@ def write_sidebar(entries):
     }
     skills_subtree = "\n".join(_render_sidebar_item(skills_top, 8)) + "\n"
 
-    sidebar_path = REPO / "website" / "sidebars.ts"
+    sidebar_path = REPO / "app" / "website" / "sidebars.ts"
     text = sidebar_path.read_text(encoding="utf-8")
     # Replace the existing Skills block.
     pattern = re.compile(
